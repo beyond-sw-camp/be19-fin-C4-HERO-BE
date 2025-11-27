@@ -16,10 +16,13 @@
 > 주요 변경 사항을 구체적으로 작성해주세요.
 
 ### 변경된 파일
-- `src/components/FinalDraw.vue`
-  -
-- `src/composables/useKakaoMap.js`
-  -
+-
+<!-- `src/components/FinalDraw.vue`
+-->
+  
+  <!--`src/composables/useKakaoMap.js`
+  -->
+
 
 ### 주요 로직 설명
 -
