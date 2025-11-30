@@ -1,0 +1,44 @@
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+
+### IntelliJ build output ###
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### Gradle ###
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+### Java ###
+*.class
+*.jar
+*.war
+*.ear
+*.log
+
+### Spring configuration ###
+application-*.yml
+application-*.properties
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### Logs ###
+logs/
+*.log
+
+### Environment files ###
+.env
+.env.*
+.env.local
+
+### Others ###
+*.tmp
+*.swp
