@@ -63,10 +63,12 @@ public class SecurityConfig {
 
                 // URL별 권한 설정
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()      // 인증 API는 모두 허용
-                        .requestMatchers("/api/public/**").permitAll()    // 공개 API 허용
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // 관리자만 접근
-                        .anyRequest().authenticated()                      // 나머지는 인증 필요
+                        .anyRequest().permitAll()
+//                        .requestMatchers("/api/auth/**").permitAll()      // 인증 API는 모두 허용
+//                        .requestMatchers("/api/public/**").permitAll()    // 공개 API 허용
+//                        .requestMatchers("/api/me/payroll/**").permitAll() // 급여 조회 개발용 허용
+//                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // 관리자만 접근
+//                        .anyRequest().authenticated()                      // 나머지는 인증 필요
                 );
 
         return http.build();
