@@ -4,6 +4,19 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 
+
+/**
+ * <pre>
+ * Class Name: AccountEntity
+ * Description: 급여 계좌 정보를 저장하는 엔티티
+ *
+ * History
+ * 2025/12/08 동근 최초 작성
+ * </pre>
+ *
+ * @author 동근
+ * @version 1.0
+ */
 @Entity
 @Table(name = "tbl_bank_account")
 @Getter
