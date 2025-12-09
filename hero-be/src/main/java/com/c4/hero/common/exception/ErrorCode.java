@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
  *
  * History
  * 2025/11/28 (혜원) 최초 작성
+ * 2025/12/09 (승건) 사원 추가 시 발생할 수 있는 에러 추가
  * </pre>
  *
  * @author 혜원
@@ -90,13 +91,7 @@ public enum ErrorCode {
     /**
      * 이메일 발송 실패
      */
-    EMAIL_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "M001", "이메일 발송에 실패했습니다."),
-
-    // ===== 회사(Company) 관련 에러 =====
-    /**
-     * 회사 정보를 찾을 수 없음
-     */
-    COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND, "C101", "회사 정보를 찾을 수 없습니다.");
+    EMAIL_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "M001", "이메일 발송에 실패했습니다.");
 
 
     /** HTTP 상태 코드 */

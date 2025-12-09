@@ -45,6 +45,19 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+/**
+ * <pre>
+ * Class Name: EmployeeServiceImpl
+ * Description: 직원 관련 API를 처리하는 서비스 계층
+ *
+ * History
+ * 2025/12/09 이승건 최초 작성 (사원 추가 로직 처리)
+ * </pre>
+ *
+ * @author 이승건
+ * @version 1.0
+ */
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -62,11 +75,17 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final EmployeeGradeHistoryRepository employeeGradeHistoryRepository;
     private final PasswordEncoder passwordEncoder;
     private final JavaMailSender mailSender;
-    private final CompanyRepository companyRepository;
 
     @Value("${spring.mail.username}")
     private String defaultMailSenderUsername;
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * 이 구현체는 새로운 직원 정보를 데이터베이스에 저장하고,
+     * 계정 생성 후 임시 비밀번호를 직원의 이메일로 발송합니다.
+     * 모든 과정은 트랜잭션 내에서 처리됩니다.
+     */
     @Override
     public void signup(SignupRequestDTO request) {
         // 1. 중복 체크 (사번, 이메일, 전화번호)
@@ -185,15 +204,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         // 회사 대표 이메일 조회 시도
         // Google의 SMTP의 경우 인증된 이메일로만 보내져서 현재 회사 이메일을 불러오는게 무의미함..
         // TODO: 회사 이메일을 불러와서 가능하게 만들어보자(google이 아닌 다른 SMTP를 사용해야 한다.)
-        String fromEmail = companyRepository.findById(1) // Company 조회
-                .map(company -> { // Company가 존재하면
-                    log.info(company.getContactEmail());
-                    if (StringUtils.hasText(company.getContactEmail())) { // contactEmail이 유효하면
-                        return company.getContactEmail(); // contactEmail 사용
-                    }
-                    return defaultMailSenderUsername; // 아니면 기본 발신자 사용
-                })
-                .orElse(defaultMailSenderUsername); // Company가 없으면 기본 발신자 사용
+        String fromEmail = defaultMailSenderUsername; // Company가 없으면 기본 발신자 사용
 
         log.info("Final sender email determined: {}", fromEmail);
 
