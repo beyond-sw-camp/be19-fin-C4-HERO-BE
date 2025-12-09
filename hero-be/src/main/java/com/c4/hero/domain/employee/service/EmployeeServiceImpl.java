@@ -3,7 +3,6 @@ package com.c4.hero.domain.employee.service;
 import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
 import com.c4.hero.common.util.EncryptionUtil;
-import com.c4.hero.domain.employee.repository.CompanyRepository;
 import com.c4.hero.domain.employee.dto.SignupRequestDTO;
 import com.c4.hero.domain.employee.entity.Account;
 import com.c4.hero.domain.employee.entity.AccountRole;
