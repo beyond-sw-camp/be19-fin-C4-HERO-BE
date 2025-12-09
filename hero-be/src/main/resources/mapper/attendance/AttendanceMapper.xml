@@ -1,3 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.c4.hero.domain.attendance.mapper.AttendanceMapper">
+
+    <!-- =========================================================
+     1) 개인 근태 기록 페이지
+     ========================================================= -->
+
+    <resultMap id="PersonalMap" type="com.c4.hero.domain.attendance.dto.PersonalDTO">
+        <result property="attendanceId" column="attendance_id"/>
+        <result property="workDate" column="work_date"/>
+        <result property="state" column="state"/>
+        <result property="startTime" column="start_time"/>
+        <result property="endTime" column="end_time"/>
+        <result property="workDuration" column="work_duration"/>
+        <result property="workSystemName" column="work_system_name"/>
+    </resultMap>
+
+    <select id="selectPersonal" resultMap="PersonalMap">
+        SELECT
+            att.attendance_id,
+            att.work_date,
+            att.state,
+            att.start_time,
+            att.end_time,
+            COALESCE(
+                TIMESTAMPDIFF(
+                    MINUTE,
+                    att.start_time,
+                    att.end_time
+                ), 0
+            ) AS work_duration,
+            wst.name AS work_system_name
+          FROM tbl_attendance att
+                    JOIN tbl_work_system_type wst ON att.work_system_type_id = wst.work_system_type_id
+    </select>
+</mapper>

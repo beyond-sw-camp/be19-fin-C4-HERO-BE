@@ -1,3 +1,14 @@
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: com.c4.hero.domain.**.dto
+
 spring:
-  profiles:
-    active: dev
+  config:
+    import: optional:classpath:application-secret.yml
+
+  datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
