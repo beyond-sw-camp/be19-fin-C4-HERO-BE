@@ -1,5 +1,7 @@
 package com.c4.hero.common.util;
 
+import lombok.extern.slf4j.Slf4j;
+
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
@@ -23,6 +25,7 @@ import java.util.Base64;
  * @author 혜원
  * @version 1.0
  */
+@Slf4j
 public class EncryptionUtil {
 
     /** 암호화 알고리즘 (AES) */
@@ -33,7 +36,7 @@ public class EncryptionUtil {
      * TODO: application.yml에서 주입받아 사용
      * 예: @Value("${encryption.secret-key}")
      */
-    private static final String SECRET_KEY = "YOUR-SECRET-KEY-32-CHARACTERS!!";
+    private static final String SECRET_KEY = "P9qR1sT3uV5wX7yZ9aB1cD3eF5gH7iJ9";
 
     /**
      * 문자열을 AES 암호화하여 바이트 배열로 반환

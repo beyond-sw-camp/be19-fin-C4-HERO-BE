@@ -25,6 +25,8 @@ bin/
 *.iws
 *.iml
 *.ipr
+
+### IntelliJ build output ###
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
@@ -36,5 +38,38 @@ out/
 /nbdist/
 /.nb-gradle/
 
+### Gradle ###
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+### Java ###
+*.class
+*.jar
+*.war
+*.ear
+*.log
+
 ### VS Code ###
 .vscode/
+### Spring configuration ###
+application-*.yml
+application-*.properties
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### Logs ###
+logs/
+*.log
+
+### Environment files ###
+.env
+.env.*
+.env.local
+
+### Others ###
+*.tmp
+*.swp
