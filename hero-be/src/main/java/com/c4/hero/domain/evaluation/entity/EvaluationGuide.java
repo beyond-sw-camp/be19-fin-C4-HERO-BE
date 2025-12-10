@@ -3,6 +3,8 @@ package com.c4.hero.domain.evaluation.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 /**
  * <pre>
  * Class Name: EvaluationGuideEntity
@@ -35,6 +37,12 @@ public class EvaluationGuide {
     @Column(name = "content")
     private String content;
 
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
     @Column(name = "employee_id")
     private Integer employeeId;
+
+    @Column(name = "department_id")
+    private Integer departmentId;
 }

@@ -24,7 +24,7 @@
         <result property="evaluationTemplateEmployeeName" column="employee_name"/>
         <result property="evaluationTemplateDepartmentId" column="department_id"/>
         <result property="evaluationTemplateDepartmentName" column="department_name"/>
-        <result property="evaluationTemplatePosition" column="position"/>
+        <result property="evaluationTemplateGradeId" column="grade_id"/>
         <result property="evaluationTemplateGrade" column="grade"/>
         <result property="evaluationTemplateType" column="type"/>
         <result property="evaluationPeriodEvaluationPeriodId" column="evaluation_period_id"/>
@@ -57,7 +57,7 @@
             e.employee_name AS employee_name,
             e.department_id AS department_id,
             d.department_name AS department_name,
-            e.position AS position,
+            e.grade_id AS grade_id,
             g.grade AS grade,
             t.type AS type,
             p.evaluation_period_id AS evaluation_period_id,
@@ -78,7 +78,7 @@
         FROM tbl_evaluation_template t
         JOIN tbl_employee e ON t.employee_id = e.employee_id
         JOIN tbl_department d ON e.department_id = d.department_id
-        JOIN tbl_grade g ON e.position = g.grade_id
+        JOIN tbl_grade g ON e.grade_id = g.grade_id
         JOIN tbl_evaluation_period p ON t.template_id = p.template_id
         JOIN tbl_template_item i ON t.template_id = i.template_id
         JOIN tbl_criteria c ON i.item_id = c.item_id
@@ -94,7 +94,7 @@
             e.employee_name AS employee_name,
             e.department_id AS department_id,
             d.department_name AS department_name,
-            e.position AS position,
+            e.grade_id AS grade_id,
             g.grade AS grade,
             t.type AS type,
             p.evaluation_period_id AS evaluation_period_id,
@@ -115,7 +115,7 @@
         FROM tbl_evaluation_template t
         JOIN tbl_employee e ON t.employee_id = e.employee_id
         JOIN tbl_department d ON e.department_id = d.department_id
-        JOIN tbl_grade g ON e.position = g.grade_id
+        JOIN tbl_grade g ON e.grade_id = g.grade_id
         JOIN tbl_evaluation_period p ON t.template_id = p.template_id
         JOIN tbl_template_item i ON t.template_id = i.template_id
         JOIN tbl_criteria c ON i.item_id = c.item_id
