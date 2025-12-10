@@ -1,4 +1,4 @@
 package com.c4.hero.domain.auth.entity;
 
-public class AuthEntity {
+public class Auth {
 }

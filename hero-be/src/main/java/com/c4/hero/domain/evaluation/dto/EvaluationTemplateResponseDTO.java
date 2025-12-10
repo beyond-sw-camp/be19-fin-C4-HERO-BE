@@ -38,7 +38,7 @@ public class EvaluationTemplateResponseDTO {
 
     private String evaluationTemplateDepartmentName;
 
-    private Integer evaluationTemplatePosition;
+    private Integer evaluationTemplateGradeId;
 
     private String evaluationTemplateGrade;
 

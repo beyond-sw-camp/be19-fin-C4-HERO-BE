@@ -1,6 +1,6 @@
 package com.c4.hero.domain.employee.repository;
 
-import com.c4.hero.domain.employee.entity.Department;
+import com.c4.hero.domain.employee.entity.EmployeeDepartment;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
@@ -17,7 +17,7 @@ import java.util.Optional;
  * @author 이승건
  * @version 1.0
  */
-public interface EmployeeDepartmentRepository extends JpaRepository<Department, Integer> {
+public interface EmployeeDepartmentRepository extends JpaRepository<EmployeeDepartment, Integer> {
 
     /**
      * 부서 이름으로 부서 엔티티 조회
@@ -25,5 +25,5 @@ public interface EmployeeDepartmentRepository extends JpaRepository<Department, 
      * @param departmentName 부서 이름
      * @return Optional<Department>
      */
-    Optional<Department> findByDepartmentName(String departmentName);
+    Optional<EmployeeDepartment> findByDepartmentName(String departmentName);
 }

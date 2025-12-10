@@ -1,14 +1,15 @@
-package com.c4.hero.domain.payroll.account.repository;
+package com.c4.hero.domain.payroll.bankaccount.repository;
 
-import com.c4.hero.domain.payroll.account.entity.AccountEntity;
+import com.c4.hero.domain.payroll.bankaccount.entity.BankAccountEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 
 /**
  * <pre>
- * Class Name: AccountRepository
+ * Class Name: BankAccountRepository
  * Description: 사원 급여 계좌 조회/저장용 JPA Repository
  *
  * History
@@ -18,14 +19,14 @@ import java.util.List;
  * @author 동근
  * @version 1.0
  */
-public interface AccountRepository extends JpaRepository<AccountEntity, Integer> {
+public interface BankAccountRepository extends JpaRepository<BankAccountEntity, Integer> {
 
     /**
     사원의 계좌 목록을 생성일 내림차순으로 조회
      @param  employeeId 사원id (현재 하드코딩, id=1)
      @return 계좌 목록
      */
-    List<AccountEntity> findByEmployeeIdOrderByCreatedAtDesc(Integer employeeId);
+    List<BankAccountEntity> findByEmployeeIdOrderByCreatedAtDesc(Integer employeeId);
 
 
     /**
@@ -33,7 +34,7 @@ public interface AccountRepository extends JpaRepository<AccountEntity, Integer>
      @param  employeeId 사원id (현재 하드코딩, id=1)
      @return 계좌 목록
      */
-    List<AccountEntity> findByEmployeeId(Integer employeeId);
+    List<BankAccountEntity> findByEmployeeId(Integer employeeId);
 
 
     /**
@@ -43,4 +44,6 @@ public interface AccountRepository extends JpaRepository<AccountEntity, Integer>
      @return 존재하면 true
      */
     boolean existsByEmployeeIdAndIsPrimary(Integer employeeId, Integer isPrimary);
+
+    Optional<BankAccountEntity> findByIdAndEmployeeId(Integer id, Integer employeeId);
 }

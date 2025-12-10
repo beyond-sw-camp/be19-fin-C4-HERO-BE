@@ -1,4 +1,4 @@
 package com.c4.hero.domain.notification.entity;
 
-public class NotificationEntity {
+public class Notification {
 }

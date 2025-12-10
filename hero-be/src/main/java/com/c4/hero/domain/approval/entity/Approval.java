@@ -1,5 +1,5 @@
 package com.c4.hero.domain.approval.entity;
 
 
-public class ApprovalEntity {
+public class Approval {
 }

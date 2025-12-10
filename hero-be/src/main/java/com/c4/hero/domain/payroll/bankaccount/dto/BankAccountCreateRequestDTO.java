@@ -1,4 +1,4 @@
-package com.c4.hero.domain.payroll.account.dto;
+package com.c4.hero.domain.payroll.bankaccount.dto;
 
 /**
  * <pre>

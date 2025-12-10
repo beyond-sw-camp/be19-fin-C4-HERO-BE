@@ -1,5 +1,4 @@
 package com.c4.hero.domain.evaluation.entity;
-
 import jakarta.persistence.*;
 import lombok.*;
 

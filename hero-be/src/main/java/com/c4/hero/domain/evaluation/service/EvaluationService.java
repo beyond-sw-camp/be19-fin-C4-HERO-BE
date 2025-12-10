@@ -1,17 +1,13 @@
 package com.c4.hero.domain.evaluation.service;
 
 import com.c4.hero.domain.evaluation.dto.*;
-import com.c4.hero.domain.evaluation.entity.Criteria;
-import com.c4.hero.domain.evaluation.entity.EvaluationPeriod;
-import com.c4.hero.domain.evaluation.entity.EvaluationTemplate;
-import com.c4.hero.domain.evaluation.entity.TemplateItem;
+import com.c4.hero.domain.evaluation.entity.*;
+import com.c4.hero.domain.evaluation.mapper.EvaluationGuideMapper;
 import com.c4.hero.domain.evaluation.mapper.EvaluationTemplateMapper;
-import com.c4.hero.domain.evaluation.repository.CriteriaRepository;
-import com.c4.hero.domain.evaluation.repository.EvaluationPeriodRepository;
-import com.c4.hero.domain.evaluation.repository.EvaluationTemplateRepository;
-import com.c4.hero.domain.evaluation.repository.TemplateItemRepository;
+import com.c4.hero.domain.evaluation.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -42,8 +38,14 @@ public class EvaluationService {
     /** 평가 기간 저장소 의존성 주입 */
     private final EvaluationPeriodRepository evaluationPeriodRepository;
 
-    /** 평가 템플릿 mapper 저장소 의존성 주입 */
+    /** 평가 가이드 저장소 의존성 주입 */
+    private final EvaluationGuideRepository guideRepository;
+
+    /** 평가 템플릿 mapper 의존성 주입 */
     private final EvaluationTemplateMapper evaluationTemplateMapper;
+
+    /** 평가 가이드 mapper 의존성 주입 */
+    private final EvaluationGuideMapper evaluationGuideMapper;
 
 
 
@@ -55,6 +57,7 @@ public class EvaluationService {
      * @return templateId Integer
      *     생성된 평가 템플릿 테이블의 pk를 응답함
      */
+    @Transactional
     public Integer createTemplate(EvaluationTemplateRequestDTO templateDTO) {
 
         /** 새로운 평가 템플릿 생성 */
@@ -156,6 +159,7 @@ public class EvaluationService {
      * @return templateId Integer
      *     수정된 평가 템플릿 테이블의 pk를 응답함.
      */
+    @Transactional
     public Integer updateTemplate(EvaluationTemplateUpdateDTO evaluationTemplateDTO) {
 
         /** 기존 평가 템플릿 수정 */
@@ -221,11 +225,83 @@ public class EvaluationService {
      * @return void
      *     삭제 후 특정 데이터를 반환하지 않음.
      */
+    @Transactional
     public void deleteTemplate(Integer id) {
 
         if(!templateRepository.existsById(id)) {
             throw new IllegalArgumentException("존재하지 않는 평가 템플릿입니다.");
         }
         templateRepository.deleteById(id);
+    }
+
+    /**
+     * 평가 템플릿 생성 로직
+     *
+     * @param guideRequestDTO EvaluationGuideRequestDTO
+     *      평가 가이드 생성 데이터를 파라미터로 받음.
+     * @return templateId Integer
+     *     생성된 평가 템플릿 테이블의 pk를 응답함
+     */
+    @Transactional
+    public Integer createGuide(EvaluationGuideRequestDTO guideRequestDTO) {
+
+        /** 평가 가이드 생성 로직 */
+        EvaluationGuide guide = new EvaluationGuide();
+        guide.setName(guideRequestDTO.getEvaluationGuideName());
+        guide.setContent(guideRequestDTO.getEvaluationGuideContent());
+        guide.setCreatedAt(guideRequestDTO.getEvaluationGuideCreatedAt());
+        guide.setEmployeeId(guideRequestDTO.getEvaluationGuideEmployeeId());
+        guide.setDepartmentId(guideRequestDTO.getEvaluationGuideDepartmentId());
+
+        guideRepository.save(guide);
+
+        Integer guideId = guide.getEvaluationGuideId();
+
+        return guideId;
+    }
+
+    /**
+     * 평가 가이드 조회(개별) 서비스 로직
+     *
+     * @param id Integer
+     *      평가 가이드 키(evaluation_guide_id)를 파라미터로 받음.
+     * @return result EvaluationGuideResponseDTO
+     *     평가 가이드 테이블의 pk로 특정 평가 템플릿 데이터를 응답함
+     */
+    public EvaluationGuideResponseDTO selectGuide(Integer id) {
+
+        EvaluationGuideResponseDTO result = evaluationGuideMapper.selectGuide(id);
+
+        return result;
+    }
+
+    /**
+     * 평가 가이드 조회 서비스 로직
+     *
+     * @return result EvaluationGuideResponseDTO
+     *     평가 가이드 테이블의 pk로 특정 평가 템플릿 데이터를 응답함
+     */
+    public List<EvaluationGuideResponseDTO> selectAllGuide() {
+
+        List<EvaluationGuideResponseDTO> result = evaluationGuideMapper.selectAllTemplate();
+
+        return result;
+    }
+
+    /**
+     * 평가 가이드 삭제 서비스 로직
+     *
+     * @param id Integer
+     *      삭제할 평가 가이드의 pk(evaluation_guide_id)를 받음
+     * @return void
+     *     삭제 후 특정 데이터를 반환하지 않음.
+     */
+    @Transactional
+    public void deleteGuide(Integer id) {
+
+        if(!guideRepository.existsById(id)) {
+            throw new IllegalArgumentException("존재하지 않는 평가 가이드입니다.");
+        }
+        guideRepository.deleteById(id);
     }
 }

@@ -1,4 +1,4 @@
 package com.c4.hero.domain.department.entity;
 
-public class DepartmentEntity {
+public class Department {
 }

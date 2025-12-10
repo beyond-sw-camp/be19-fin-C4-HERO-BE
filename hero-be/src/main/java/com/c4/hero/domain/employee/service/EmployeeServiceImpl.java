@@ -4,15 +4,8 @@ import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
 import com.c4.hero.common.util.EncryptionUtil;
 import com.c4.hero.domain.employee.dto.SignupRequestDTO;
-import com.c4.hero.domain.employee.entity.Account;
-import com.c4.hero.domain.employee.entity.AccountRole;
-import com.c4.hero.domain.employee.entity.Department;
-import com.c4.hero.domain.employee.entity.Employee;
-import com.c4.hero.domain.employee.entity.EmployeeDepartmentHistory;
-import com.c4.hero.domain.employee.entity.EmployeeGradeHistory;
-import com.c4.hero.domain.employee.entity.Grade;
-import com.c4.hero.domain.employee.entity.JobTitle;
-import com.c4.hero.domain.employee.entity.Role;
+import com.c4.hero.domain.employee.entity.*;
+import com.c4.hero.domain.employee.entity.EmployeeDepartment;
 import com.c4.hero.domain.employee.repository.EmployeeAccountRepository;
 import com.c4.hero.domain.employee.repository.EmployeeAccountRoleRepository;
 import com.c4.hero.domain.employee.repository.EmployeeDepartmentRepository;
@@ -107,7 +100,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         });
 
         // 2. DTO -> Employee 엔티티 변환
-        Department department = departmentRepository.findByDepartmentName(request.getDepartmentName())
+        EmployeeDepartment employeeDepartment = departmentRepository.findByDepartmentName(request.getDepartmentName())
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEPARTMENT_NOT_FOUND));
         Grade grade = gradeRepository.findByGrade(request.getGradeName())
                 .orElseThrow(() -> new BusinessException(ErrorCode.GRADE_NOT_FOUND));
@@ -125,7 +118,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .contractType(request.getContractType())
                 .imagePath(request.getImagePath())
                 .address(request.getAddress() != null ? EncryptionUtil.encrypt(request.getAddress()) : null)
-                .department(department)
+                .employeeDepartment(employeeDepartment)
                 .grade(grade)
                 .jobTitle(jobTitle)
                 .status(EmployeeStatus.ACTIVE)
@@ -162,7 +155,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .employee(savedEmployee)
                 .changedBy(null) // TODO: 변경자 정보 -> 나중에 토큰을 통해서 읽을수 있게 변경 필요
                 .changeType(ChangeType.CREATE)
-                .departmentName(department.getDepartmentName())
+                .departmentName(employeeDepartment.getDepartmentName())
                 .build();
         employeeDepartmentHistoryRepository.save(departmentHistory);
 

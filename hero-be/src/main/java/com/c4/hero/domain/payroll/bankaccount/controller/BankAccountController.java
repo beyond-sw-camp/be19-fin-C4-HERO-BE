@@ -1,8 +1,8 @@
-package com.c4.hero.domain.payroll.account.controller;
+package com.c4.hero.domain.payroll.bankaccount.controller;
 
-import com.c4.hero.domain.payroll.account.dto.BankAccountCreateRequestDTO;
-import com.c4.hero.domain.payroll.account.dto.BankAccountDTO;
-import com.c4.hero.domain.payroll.account.service.AccountService;
+import com.c4.hero.domain.payroll.bankaccount.dto.BankAccountCreateRequestDTO;
+import com.c4.hero.domain.payroll.bankaccount.dto.BankAccountDTO;
+import com.c4.hero.domain.payroll.bankaccount.service.BankAccountService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -12,7 +12,7 @@ import java.util.List;
 
 /**
  * <pre>
- * Class Name: AccountController
+ * Class Name: BankAccountController
  * Description: 사원 계좌 관련 컨트롤러
  *
  * History
@@ -26,9 +26,9 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/me")
 @RequiredArgsConstructor
-public class AccountController {
+public class BankAccountController {
 
-    private final AccountService accountService;
+    private final BankAccountService bankAccountService;
 
 
     // @param EmployeeId = 사용자 id 1으로 하드코딩
@@ -46,7 +46,7 @@ public class AccountController {
     @GetMapping("/bank-accounts")
     public ResponseEntity<List<BankAccountDTO>> getMyBankAccounts(Principal principal) {
         Integer employeeId = getEmployeeId(principal);
-        List<BankAccountDTO> accounts = accountService.getMyBankAccounts(employeeId);
+        List<BankAccountDTO> accounts = bankAccountService.getMyBankAccounts(employeeId);
         return ResponseEntity.ok(accounts);
     }
 
@@ -62,7 +62,7 @@ public class AccountController {
             Principal principal
     ) {
         Integer employeeId = getEmployeeId(principal);
-        BankAccountDTO created = accountService.createMyBankAccount(employeeId, request);
+        BankAccountDTO created = bankAccountService.createMyBankAccount(employeeId, request);
         return ResponseEntity.ok(created);
     }
 
@@ -78,7 +78,38 @@ public class AccountController {
             Principal principal
     ) {
         Integer employeeId = getEmployeeId(principal);
-        accountService.setPrimaryBankAccount(employeeId, bankAccountId);
+        bankAccountService.setPrimaryBankAccount(employeeId, bankAccountId);
+        return ResponseEntity.noContent().build();
+    }
+
+
+    /**
+     * 계좌 정보 수정
+     * @param bankAccountId 계좌 ID
+     * @param request 수정할 계좌 정보
+     */
+    @PutMapping("/bank-accounts/{bankAccountId}")
+    public ResponseEntity<Void> updateMyBankAccount(
+            @PathVariable Integer bankAccountId,
+            @RequestBody BankAccountCreateRequestDTO request,
+            Principal principal
+    ) {
+        Integer employeeId = getEmployeeId(principal);
+        bankAccountService.updateMyBankAccount(employeeId, bankAccountId, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * 계좌 삭제
+     * @param bankAccountId 계좌 ID
+     */
+    @DeleteMapping("/bank-accounts/{bankAccountId}")
+    public ResponseEntity<Void> deleteMyBankAccount(
+            @PathVariable Integer bankAccountId,
+            Principal principal
+    ) {
+        Integer employeeId = getEmployeeId(principal);
+        bankAccountService.deleteMyBankAccount(employeeId, bankAccountId);
         return ResponseEntity.noContent().build();
     }
 }

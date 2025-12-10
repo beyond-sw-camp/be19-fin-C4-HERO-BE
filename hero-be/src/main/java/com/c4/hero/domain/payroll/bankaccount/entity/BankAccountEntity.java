@@ -1,4 +1,4 @@
-package com.c4.hero.domain.payroll.account.entity;
+package com.c4.hero.domain.payroll.bankaccount.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 /**
  * <pre>
- * Class Name: AccountEntity
+ * Class Name: BankAccountEntity
  * Description: 급여 계좌 정보를 저장하는 엔티티
  *
  * History
@@ -24,7 +24,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AccountEntity {
+public class BankAccountEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

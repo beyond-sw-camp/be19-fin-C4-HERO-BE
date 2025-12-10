@@ -24,7 +24,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "tbl_department")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Department {
+public class EmployeeDepartment {
 
     /**
      * 부서 ID (PK)

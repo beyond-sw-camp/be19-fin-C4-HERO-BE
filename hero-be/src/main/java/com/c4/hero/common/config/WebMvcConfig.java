@@ -16,6 +16,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * History
  * 2025/11/28 (혜원) 최초 작성
  * 2025/12/08 (승민) addCorsMappings 메서드 추가
+ * 2025/12/10 (승민) addCorsMappings 메서드 삭제
  * </pre>
  *
  * @author 혜원
@@ -40,18 +41,5 @@ public class WebMvcConfig implements WebMvcConfigurer {
         // /files/** URL로 접근 시 ./files/ 폴더의 파일 반환
         registry.addResourceHandler("/files/**")
                 .addResourceLocations("file:./files/");
-    }
-
-    /**
-     * Vue(http://localhost:5173)와 연동 하기 위한 CORS 처리
-     *
-     * @param registry CorsRegistry
-     */
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")
-                .allowedOrigins("http://localhost:5173")
-                .allowCredentials(true)
-                .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS");
     }
 }
