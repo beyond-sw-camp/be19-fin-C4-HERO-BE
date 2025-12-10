@@ -1,13 +1,13 @@
 package com.c4.hero.domain.evaluation.repository;
 
-import com.c4.hero.domain.evaluation.entity.Evaluation;
+import com.c4.hero.domain.evaluation.entity.Criteria;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
 /**
  * <pre>
- * Class Name: EvaluationRepository
- * Description: JPA 사용을 위한 평가 저장소
+ * Class Name: CriteriaRepository
+ * Description: JPA 사용을 위한 평가 기준 저장소
  *
  * History
  * 2025/12/07 (김승민) 최초 작성
@@ -17,6 +17,5 @@ import org.springframework.stereotype.Repository;
  */
 
 @Repository
-public interface EvaluationRepository extends CrudRepository<Evaluation,Integer> {
-
+public interface CriteriaRepository extends CrudRepository<Criteria,Integer> {
 }
