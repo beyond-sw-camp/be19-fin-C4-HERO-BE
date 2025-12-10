@@ -26,7 +26,7 @@ public class EvaluationTemplateUpdateDTO {
 
     private String evaluationTemplateDepartmentName;
 
-    private Integer evaluationTemplatePosition;
+    private Integer evaluationTemplateGradeId;
 
     private String evaluationTemplateGrade;
 

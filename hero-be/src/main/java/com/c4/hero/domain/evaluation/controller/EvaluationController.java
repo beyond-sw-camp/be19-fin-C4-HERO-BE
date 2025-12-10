@@ -1,8 +1,6 @@
 package com.c4.hero.domain.evaluation.controller;
 
-import com.c4.hero.domain.evaluation.dto.EvaluationTemplateRequestDTO;
-import com.c4.hero.domain.evaluation.dto.EvaluationTemplateResponseDTO;
-import com.c4.hero.domain.evaluation.dto.EvaluationTemplateUpdateDTO;
+import com.c4.hero.domain.evaluation.dto.*;
 import com.c4.hero.domain.evaluation.service.EvaluationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +21,7 @@ import java.util.List;
  */
 
 @RestController
-@RequestMapping("/api/public/")
+@RequestMapping("/api/eval")
 @RequiredArgsConstructor
 public class EvaluationController {
 
@@ -113,5 +111,65 @@ public class EvaluationController {
         return ResponseEntity.ok().build();
     }
 
+    /**
+     * 평가 가이드 전체 조회
+     *
+     * @return result List<EvaluationGuideResponseDTO>
+     *     전체 평가 가이드 데이터를 반환
+     */
+    @GetMapping("/evaluation-guide/selectall")
+    public ResponseEntity<List<EvaluationGuideResponseDTO>> selectAllGuide(){
 
+        List<EvaluationGuideResponseDTO> result = evaluationService.selectAllGuide();
+
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 평가 가이드 evaluation_guide_id로 조회
+     *
+     * @param id Integer
+     *      클라이언트로 부터 evaluation_guide_id를 요청함
+     * @return result EvaluationGuideResponseDTO
+     *     조회된 평가 가이드 데이터를 반환
+     */
+    @GetMapping("/evaluation-guide/select/{id}")
+    public ResponseEntity<EvaluationGuideResponseDTO> selectGuide(@PathVariable Integer id){
+
+        EvaluationGuideResponseDTO result = evaluationService.selectGuide(id);
+
+        return ResponseEntity.ok(result);
+    }
+
+
+    /**
+     * 평가 가이드 생성
+     *
+     * @param evaluationGuideRequestDTO EvaluationGuideRequestDTO
+     *      클라이언트로 부터 받아온 평가 가이드 데이터
+     * @return id Integer
+     *     생성된 평가 가이드 테이블 pk 값 반환
+     */
+    @PostMapping("/evaluation-guide/create")
+    public ResponseEntity<Integer> createGuide(@RequestBody EvaluationGuideRequestDTO evaluationGuideRequestDTO){
+
+        Integer id = evaluationService.createGuide(evaluationGuideRequestDTO);
+
+        return ResponseEntity.ok(id);
+    }
+
+    /**
+     * 평가 가이드 evaluation_guide_id로 조회 후, 삭제
+     *
+     * @param id Integer
+     *      삭제할 평가 가이드의 키(evaluation_guide_id)를 클라이언트로 부터 요청
+     * @return Void
+     *     평가 가이드 삭제 후 반환하는 값은 없음
+     */
+    @DeleteMapping("/evaluation-guide/delete/{id}")
+    public ResponseEntity<Void> deleteGuide(@PathVariable Integer id){
+        evaluationService.deleteGuide(id);
+
+        return ResponseEntity.ok().build();
+    }
 }

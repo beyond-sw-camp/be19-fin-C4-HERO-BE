@@ -1,7 +1,7 @@
 package com.c4.hero.domain.evaluation.repository;
 
 import com.c4.hero.domain.evaluation.entity.EvaluationPeriod;
-import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -17,5 +17,5 @@ import org.springframework.stereotype.Repository;
  */
 
 @Repository
-public interface EvaluationPeriodRepository extends CrudRepository<EvaluationPeriod,Integer> {
+public interface EvaluationPeriodRepository extends JpaRepository<EvaluationPeriod,Integer> {
 }
