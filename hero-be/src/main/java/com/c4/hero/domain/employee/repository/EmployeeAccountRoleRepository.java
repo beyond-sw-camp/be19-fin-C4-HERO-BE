@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
  * <pre>
- * Interface Name: AccountRoleRepository
+ * Interface Name: EmployeeAccountRoleRepository
  * Description: AccountRole 엔티티에 대한 데이터 접근을 위한 Repository
  *
  * History
@@ -15,5 +15,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * @author 이승건
  * @version 1.0
  */
-public interface AccountRoleRepository extends JpaRepository<AccountRole, Integer> {
+public interface EmployeeAccountRoleRepository extends JpaRepository<AccountRole, Integer> {
 }

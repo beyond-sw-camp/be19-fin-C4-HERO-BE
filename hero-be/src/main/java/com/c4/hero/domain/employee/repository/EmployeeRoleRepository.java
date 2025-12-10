@@ -8,7 +8,7 @@ import java.util.Optional;
 
 /**
  * <pre>
- * Interface Name: RoleRepository
+ * Interface Name: EmployeeRoleRepository
  * Description: Role 엔티티에 대한 데이터 접근을 위한 Repository
  *
  * History
@@ -18,7 +18,7 @@ import java.util.Optional;
  * @author 이승건
  * @version 1.0
  */
-public interface RoleRepository extends JpaRepository<Role, Integer> {
+public interface EmployeeRoleRepository extends JpaRepository<Role, Integer> {
 
     /**
      * 권한 타입으로 Role 엔티티 조회

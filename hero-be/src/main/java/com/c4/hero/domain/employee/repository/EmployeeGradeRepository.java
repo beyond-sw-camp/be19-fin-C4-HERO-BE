@@ -7,7 +7,7 @@ import java.util.Optional;
 
 /**
  * <pre>
- * Interface Name: GradeRepository
+ * Interface Name: EmployeeGradeRepository
  * Description: Grade 엔티티에 대한 데이터 접근을 위한 Repository
  *
  * History
@@ -17,7 +17,7 @@ import java.util.Optional;
  * @author 이승건
  * @version 1.0
  */
-public interface GradeRepository extends JpaRepository<Grade, Integer> {
+public interface EmployeeGradeRepository extends JpaRepository<Grade, Integer> {
 
     /**
      * 직급명으로 직급 엔티티 조회

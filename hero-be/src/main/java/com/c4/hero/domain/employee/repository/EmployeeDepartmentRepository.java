@@ -7,7 +7,7 @@ import java.util.Optional;
 
 /**
  * <pre>
- * Interface Name: DepartmentRepository
+ * Interface Name: EmployeeDepartmentRepository
  * Description: Department 엔티티에 대한 데이터 접근을 위한 Repository
  *
  * History
@@ -17,7 +17,7 @@ import java.util.Optional;
  * @author 이승건
  * @version 1.0
  */
-public interface DepartmentRepository extends JpaRepository<Department, Integer> {
+public interface EmployeeDepartmentRepository extends JpaRepository<Department, Integer> {
 
     /**
      * 부서 이름으로 부서 엔티티 조회

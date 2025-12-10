@@ -7,7 +7,7 @@ import java.util.Optional;
 
 /**
  * <pre>
- * Interface Name: JobTitleRepository
+ * Interface Name: EmployeeJobTitleRepository
  * Description: JobTitle 엔티티에 대한 데이터 접근을 위한 Repository
  *
  * History
@@ -17,7 +17,7 @@ import java.util.Optional;
  * @author 이승건
  * @version 1.0
  */
-public interface JobTitleRepository extends JpaRepository<JobTitle, Integer> {
+public interface EmployeeJobTitleRepository extends JpaRepository<JobTitle, Integer> {
 
     /**
      * 직책명으로 직책 엔티티 조회
