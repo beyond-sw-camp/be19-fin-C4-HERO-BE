@@ -1,6 +1,7 @@
 package com.c4.hero.domain.attendance.service;
 
 import com.c4.hero.domain.attendance.dto.PersonalDTO;
+import com.c4.hero.domain.attendance.dto.PersonalPageResponseDTO;
 import com.c4.hero.domain.attendance.mapper.AttendanceMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -32,7 +33,29 @@ public class AttendanceService {
      *
      * @return 개인 근태 기록 리스트(List<PersonalDTO>)
      */
-    public List<PersonalDTO> getPersonalList() {
-        return attendanceMapper.selectPersonal();
+    public PersonalPageResponseDTO getPersonalList(int page, int size) {
+
+        int safePage = Math.max(page, 1);
+        int safeSize = Math.max(size, 1);
+
+        int offset = (safePage - 1) * safeSize;
+
+        int totalCount = attendanceMapper.selectPersonalCount();
+        List<PersonalDTO> items =
+                attendanceMapper.selectPersonalPage(offset, safeSize);
+
+        int totalPages = (int)Math.ceil((double)totalCount / safeSize);
+
+        if (totalPages > 0 && safePage > totalPages) {
+            safePage = totalPages;
+        }
+
+        return new PersonalPageResponseDTO(
+                items,
+                safePage,
+                safeSize,
+                totalCount,
+                totalPages
+        );
     }
 }

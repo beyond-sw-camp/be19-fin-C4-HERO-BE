@@ -32,7 +32,7 @@
          1-2) 개인 근태 기록 SELECT
          AttendanceMapper.selectPersonal()
          ============================================================ -->
-    <select id="selectPersonal" resultMap="PersonalMap">
+    <select id="selectPersonalPage" resultMap="PersonalMap" parameterType="map">
         SELECT
             att.attendance_id,
             att.work_date,
@@ -44,6 +44,16 @@
                     0
             ) AS work_duration,
             wst.name AS work_system_name
+        FROM tbl_attendance att
+                 JOIN tbl_work_system_type wst
+                      ON att.work_system_type_id = wst.work_system_type_id
+        ORDER BY att.work_date DESC
+            LIMIT #{size}
+        OFFSET #{offset}
+    </select>
+
+    <select id="selectPersonalCount" resultType="int">
+        SELECT COUNT(*)
         FROM tbl_attendance att
                  JOIN tbl_work_system_type wst
                       ON att.work_system_type_id = wst.work_system_type_id

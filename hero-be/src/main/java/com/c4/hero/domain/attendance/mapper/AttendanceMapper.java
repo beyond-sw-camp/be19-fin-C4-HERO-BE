@@ -2,6 +2,7 @@ package com.c4.hero.domain.attendance.mapper;
 
 import com.c4.hero.domain.attendance.dto.PersonalDTO;
 import org.apache.ibatis.annotations.Mapper;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
@@ -26,5 +27,8 @@ public interface AttendanceMapper {
      *
      * @return 개인 근태 기록 리스트(List<PersonalDTO>)
      */
-    List<PersonalDTO> selectPersonal();
+    List<PersonalDTO> selectPersonalPage(@Param("offset") int offset,
+                                         @Param("size") int size);
+
+    int selectPersonalCount();
 }

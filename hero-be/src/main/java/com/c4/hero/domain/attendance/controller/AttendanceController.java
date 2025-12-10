@@ -1,10 +1,11 @@
 package com.c4.hero.domain.attendance.controller;
 
-import com.c4.hero.domain.attendance.dto.PersonalDTO;
+import com.c4.hero.domain.attendance.dto.PersonalPageResponseDTO;
 import com.c4.hero.domain.attendance.service.AttendanceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -36,7 +37,10 @@ public class AttendanceController {
      * @return 개인 근태 기록 리스트(List<PersonalDTO>)
      */
     @GetMapping("/personal")
-    public List<PersonalDTO> setPersonalList() {
-        return attendanceService.getPersonalList();
+    public PersonalPageResponseDTO setPersonalList(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return attendanceService.getPersonalList(page, size);
     }
 }
