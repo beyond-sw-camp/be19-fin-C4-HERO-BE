@@ -1,5 +1,6 @@
 package com.c4.hero.domain.attendance.mapper;
 
+import com.c4.hero.domain.attendance.dto.CorrectionDTO;
 import com.c4.hero.domain.attendance.dto.OvertimeDTO;
 import com.c4.hero.domain.attendance.dto.PersonalDTO;
 import org.apache.ibatis.annotations.Mapper;
@@ -98,6 +99,18 @@ public interface AttendanceMapper {
      * </p>
      */
     int selectOvertimeCount(
+            @Param("startDate") String startDate,
+            @Param("endDate") String endDate
+    );
+
+    List<CorrectionDTO> selectCorrectionPage(
+            @Param("offset") int offset,
+            @Param("size") int size,
+            @Param("startDate") String startDate,
+            @Param("endDate") String endDate
+    );
+
+    int selectCorrectionCount(
             @Param("startDate") String startDate,
             @Param("endDate") String endDate
     );

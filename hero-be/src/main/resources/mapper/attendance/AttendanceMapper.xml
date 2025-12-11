@@ -42,6 +42,16 @@
         <result property="reason"        column="reason"/>
     </resultMap>
 
+    <resultMap id="CorrectionMap" type="com.c4.hero.domain.attendance.dto.CorrectionDTO">
+        <result property="correctionId" column="correction_request_id"/>
+        <result property="date" column="target_date"/>
+        <result property="prevStartTime" column="start_time"/>
+        <result property="prevEndTime" column="end_time"/>
+        <result property="reason" column="reason"/>
+        <result property="newStartTime" column="corrected_start"/>
+        <result property="newEndTime" column="corrected_end"/>
+    </resultMap>
+
     <!-- ============================================================
          2) 개인 근태 기록 SELECT (페이지 조회)
             AttendanceMapper.selectPersonalPage(...)
@@ -130,6 +140,45 @@
             </if>
             <if test="endDate != null and endDate != ''">
                 AND ove.date &lt;= #{endDate}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectCorrectionPage" resultMap="CorrectionMap" parameterType="map">
+        SELECT
+        cor.correction_request_id,
+        cor.target_date,
+        cor.corrected_start,
+        cor.corrected_end,
+        cor.reason,
+        att.start_time,
+        att.end_time
+        FROM tbl_attendance_correction_request cor
+        JOIN tbl_attendance att
+        ON cor.attendance_id = att.attendance_id
+        <where>
+            <if test="startDate != null and startDate != ''">
+                AND cor.target_date &gt;= #{startDate}
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND cor.target_date &lt;= #{endDate}
+            </if>
+        </where>
+        ORDER BY cor.target_date DESC, cor.correction_request_id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="selectCorrectionCount" resultType="int" parameterType="map">
+        SELECT COUNT(*)
+        FROM tbl_attendance_correction_request cor
+        JOIN tbl_attendance att
+        ON cor.attendance_id = att.attendance_id
+        <where>
+            <if test="startDate != null and startDate != ''">
+                AND cor.target_date &gt;= #{startDate}
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND cor.target_date &lt;= #{endDate}
             </if>
         </where>
     </select>

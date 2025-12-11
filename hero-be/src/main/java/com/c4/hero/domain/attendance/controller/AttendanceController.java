@@ -1,5 +1,6 @@
 package com.c4.hero.domain.attendance.controller;
 
+import com.c4.hero.domain.attendance.dto.CorrectionDTO;
 import com.c4.hero.domain.attendance.dto.OvertimeDTO;
 import com.c4.hero.domain.attendance.dto.PageResponseDTO;
 import com.c4.hero.domain.attendance.dto.PersonalDTO;
@@ -59,5 +60,15 @@ public class AttendanceController {
             @RequestParam(required = false) String endDate
     ){
         return attendanceService.getOvertimeList(page, size, startDate, endDate);
+    }
+
+    @GetMapping("/correction")
+    public PageResponseDTO<CorrectionDTO> getCorrectionList(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
+    ){
+        return attendanceService.getCorrectionList(page, size, startDate, endDate);
     }
 }

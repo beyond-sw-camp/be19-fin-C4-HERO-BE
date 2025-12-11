@@ -1,5 +1,6 @@
 package com.c4.hero.domain.attendance.service;
 
+import com.c4.hero.domain.attendance.dto.CorrectionDTO;
 import com.c4.hero.domain.attendance.dto.OvertimeDTO;
 import com.c4.hero.domain.attendance.dto.PageResponseDTO;
 import com.c4.hero.domain.attendance.dto.PersonalDTO;
@@ -117,6 +118,48 @@ public class AttendanceService {
 
         // 4. 현재 페이지 데이터 조회
         List<OvertimeDTO> items = attendanceMapper.selectOvertimePage(
+                offset,
+                safeSize,
+                startDate,
+                endDate
+        );
+
+        // 5. 페이지 응답 DTO 구성
+        return new PageResponseDTO<>(
+                items,
+                safePage,
+                safeSize,
+                totalCount,
+                totalPages
+        );
+    }
+
+    public PageResponseDTO<CorrectionDTO> getCorrectionList(
+            int page,
+            int size,
+            String startDate,
+            String endDate
+    ){
+        // 0. 페이지/사이즈 유효 범위 보정
+        int safePage = Math.max(page, 1);
+        int safeSize = Math.max(size, 1);
+
+        // 1. 전체 개수 조회 (날짜 필터 반영)
+        int totalCount = attendanceMapper.selectCorrectionCount(startDate, endDate);
+        int totalPages = (int) Math.ceil((double) totalCount / safeSize);
+
+        // 2. 페이지 번호 보정
+        if (totalPages == 0) {
+            safePage = 1;
+        } else if (safePage > totalPages) {
+            safePage = totalPages;
+        }
+
+        // 3. OFFSET 계산 (보정된 safePage 기준)
+        int offset = (safePage - 1) * safeSize;
+
+        // 4. 현재 페이지 데이터 조회
+        List<CorrectionDTO> items = attendanceMapper.selectCorrectionPage(
                 offset,
                 safeSize,
                 startDate,

@@ -10,11 +10,11 @@ import lombok.Setter;
 @Getter
 @Setter
 public class CorrectionDTO {
-    private int correction_request_id;
-    private String target_date;
-    private String corrected_start;
-    private String corrected_end;
+    private int correctionId;
+    private String date;
+    private String prevStartTime;
+    private String prevEndTime;
     private String reason;
-    private String startTime;
-    private String endTime;
+    private String newStartTime;
+    private String newEndTime;
 }
