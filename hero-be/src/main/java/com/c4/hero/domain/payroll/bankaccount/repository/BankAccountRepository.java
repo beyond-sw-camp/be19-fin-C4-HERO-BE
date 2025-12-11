@@ -1,6 +1,6 @@
 package com.c4.hero.domain.payroll.bankaccount.repository;
 
-import com.c4.hero.domain.payroll.bankaccount.entity.BankAccountEntity;
+import com.c4.hero.domain.payroll.bankaccount.entity.BankAccount;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -19,14 +19,14 @@ import java.util.Optional;
  * @author 동근
  * @version 1.0
  */
-public interface BankAccountRepository extends JpaRepository<BankAccountEntity, Integer> {
+public interface BankAccountRepository extends JpaRepository<BankAccount, Integer> {
 
     /**
     사원의 계좌 목록을 생성일 내림차순으로 조회
      @param  employeeId 사원id (현재 하드코딩, id=1)
      @return 계좌 목록
      */
-    List<BankAccountEntity> findByEmployeeIdOrderByCreatedAtDesc(Integer employeeId);
+    List<BankAccount> findByEmployeeIdOrderByCreatedAtDesc(Integer employeeId);
 
 
     /**
@@ -34,7 +34,7 @@ public interface BankAccountRepository extends JpaRepository<BankAccountEntity, 
      @param  employeeId 사원id (현재 하드코딩, id=1)
      @return 계좌 목록
      */
-    List<BankAccountEntity> findByEmployeeId(Integer employeeId);
+    List<BankAccount> findByEmployeeId(Integer employeeId);
 
 
     /**
@@ -45,5 +45,5 @@ public interface BankAccountRepository extends JpaRepository<BankAccountEntity, 
      */
     boolean existsByEmployeeIdAndIsPrimary(Integer employeeId, Integer isPrimary);
 
-    Optional<BankAccountEntity> findByIdAndEmployeeId(Integer id, Integer employeeId);
+    Optional<BankAccount> findByIdAndEmployeeId(Integer id, Integer employeeId);
 }

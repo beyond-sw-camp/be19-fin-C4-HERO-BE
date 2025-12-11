@@ -2,7 +2,7 @@ package com.c4.hero.domain.payroll.bankaccount.service;
 
 import com.c4.hero.domain.payroll.bankaccount.dto.BankAccountCreateRequestDTO;
 import com.c4.hero.domain.payroll.bankaccount.dto.BankAccountDTO;
-import com.c4.hero.domain.payroll.bankaccount.entity.BankAccountEntity;
+import com.c4.hero.domain.payroll.bankaccount.entity.BankAccount;
 import com.c4.hero.domain.payroll.bankaccount.repository.BankAccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -55,7 +55,7 @@ public class BankAccountService {
 //        대표계좌 존재 여부 확인
         boolean hasPrimary = bankAccountRepository.existsByEmployeeIdAndIsPrimary(employeeId, 1);
 //    새 계좌 엔티티 생성
-        BankAccountEntity entity = BankAccountEntity.builder()
+        BankAccount entity = BankAccount.builder()
                 .bankName(request.bankCode())
                 .accountNumber(request.accountNumber())
                 .accountHolder(request.accountHolder())
@@ -63,15 +63,15 @@ public class BankAccountService {
                 .isPrimary(hasPrimary ? 0 : 1)
                 .build();
 
-        BankAccountEntity saved = bankAccountRepository.save(entity);
+        BankAccount saved = bankAccountRepository.save(entity);
         return toDto(saved);
     }
 
 //    선택한 계좌 대표계좌로 변경
     public void setPrimaryBankAccount(Integer employeeId, Integer bankAccountId) {
-        List<BankAccountEntity> accounts = bankAccountRepository.findByEmployeeId(employeeId);
+        List<BankAccount> accounts = bankAccountRepository.findByEmployeeId(employeeId);
 
-        for (BankAccountEntity account : accounts) {
+        for (BankAccount account : accounts) {
             if (account.getId().equals(bankAccountId)) {
                 account.setIsPrimary(1);
             } else {
@@ -87,7 +87,7 @@ public class BankAccountService {
      * @param entity AccountEntity(-> BankAccountDTO로 변환하는 메서드)
      * @return BankAccountDTO
      */
-    private BankAccountDTO toDto(BankAccountEntity entity) {
+    private BankAccountDTO toDto(BankAccount entity) {
         return new BankAccountDTO(
                 entity.getId(),
                 entity.getBankName(),
@@ -107,7 +107,7 @@ public class BankAccountService {
     public void updateMyBankAccount(Integer employeeId, Integer bankAccountId,
                                     BankAccountCreateRequestDTO request) {
 
-        BankAccountEntity entity = bankAccountRepository
+        BankAccount entity = bankAccountRepository
                 .findByIdAndEmployeeId(bankAccountId, employeeId)
                 .orElseThrow(() -> new IllegalArgumentException("계좌를 찾을 수 없습니다."));
 
@@ -125,7 +125,7 @@ public class BankAccountService {
      * @param bankAccountId
      */
     public void deleteMyBankAccount(Integer employeeId, Integer bankAccountId) {
-        BankAccountEntity target = bankAccountRepository
+        BankAccount target = bankAccountRepository
                 .findByIdAndEmployeeId(bankAccountId, employeeId)
                 .orElseThrow(() -> new IllegalArgumentException("계좌를 찾을 수 없습니다."));
 
@@ -135,7 +135,7 @@ public class BankAccountService {
 
         if (wasPrimary) {
             // 남은 계좌 중 하나를 기본 계좌로 승격
-            List<BankAccountEntity> remain = bankAccountRepository.findByEmployeeId(employeeId);
+            List<BankAccount> remain = bankAccountRepository.findByEmployeeId(employeeId);
             if (!remain.isEmpty()) {
                 remain.get(0).setIsPrimary(1);
             }
