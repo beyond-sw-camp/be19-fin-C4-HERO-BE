@@ -6,23 +6,48 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
+/**
+ * <pre>
+ * Class Name: WebSocketConfig
+ * Description: WebSocket 및 STOMP 메시징 설정
+ *              실시간 알림 전송을 위한 WebSocket 엔드포인트 및 메시지 브로커 구성
+ *
+ * History
+ * 2025/12/11 (최혜원) 최초 작성
+ * </pre>
+ *
+ * @author 최혜원
+ * @version 1.0
+ */
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
-    
+
+    /**
+     * 메시지 브로커 설정
+     *
+     * @param registry MessageBrokerRegistry 메시지 브로커 레지스트리
+     */
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry){
-        // 메세지 브로드캐스팅을 위한 접두사
+        // 서버 -> 클라이언트 메시지 브로드캐스팅 접두사
+        // 클라이언트는 /topic/notifications/{employeeId} 형태로 구독
         registry.enableSimpleBroker("/topic");
-        // 클라이언트-서버 통신을 위한 접두사
+
+        // 클라이언트 -> 서버 메시지 전송 접두사
+        // 클라이언트는 /app/notifications/read 형태로 메시지 전송
         registry.setApplicationDestinationPrefixes("/app");
     }
 
+    /**
+     * STOMP 엔드포인트 등록
+     *
+     * @param registry StompEndpointRegistry STOMP 엔드포인트 레지스트리
+     */
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry){
-        registry.addEndpoint("/ws") // WebSocket 엔드포인트
-                .setAllowedOrigins("https://localhost:5173") // 프론트엔드 origin 허용
-                .withSockJS();
+        registry.addEndpoint("/ws/notifications")  // WebSocket 연결 엔드포인트
+                .setAllowedOriginPatterns("*")
+                .withSockJS();  // WebSocket 미지원 브라우저 대응
     }
-
 }
