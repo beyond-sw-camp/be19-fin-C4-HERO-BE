@@ -9,6 +9,7 @@
 
     History
     2025/12/09 (이지윤) 최초 작성 및 컨벤션 적용
+    2025/12/10 (이지윤) 초과 근무(Overtime) 조회 쿼리 추가
     ============================================================
 -->
 
@@ -28,13 +29,17 @@
         <result property="workSystemName" column="work_system_name"/>
     </resultMap>
 
+    <!-- ============================================================
+         1-2) 초과 근무 기록 ResultMap
+              OvertimeDTO 매핑 정의
+         ============================================================ -->
     <resultMap id="OvertimeMap" type="com.c4.hero.domain.attendance.dto.OvertimeDTO">
-        <result property="overtimeId" column="overtime_id"/>
-        <result property="date" column="date"/>
-        <result property="startTime" column="start_time"/>
-        <result property="endTime" column="end_time"/>
+        <result property="overtimeId"    column="overtime_id"/>
+        <result property="date"          column="date"/>
+        <result property="startTime"     column="start_time"/>
+        <result property="endTime"       column="end_time"/>
         <result property="overtimeHours" column="overtime_hours"/>
-        <result property="reason" column="reason"/>
+        <result property="reason"        column="reason"/>
     </resultMap>
 
     <!-- ============================================================
@@ -87,27 +92,35 @@
         </where>
     </select>
 
+    <!-- ============================================================
+         4) 초과 근무(Overtime) 기록 SELECT (페이지 조회)
+            AttendanceMapper.selectOvertimePage(...)
+         ============================================================ -->
     <select id="selectOvertimePage" resultMap="OvertimeMap" parameterType="map">
         SELECT
-            ove.overtime_id,
-            ove.date,
-            ove.start_time,
-            ove.end_time,
-            ove.overtime_hours,
-            ove.reason
-          FROM tbl_overtime ove
-          <where>
-              <if test="startDate != null and startDate != ''">
-                  AND ove.date &gt;= #{startDate}
-              </if>
-              <if test="endDate != null and endDate != ''">
-                  AND ove.date &lt;= #{endDate}
-              </if>
-          </where>
-          ORDER BY ove.date DESC, ove.overtime_id DESC
-          LIMIT #{size} OFFSET #{offset}
+        ove.overtime_id,
+        ove.date,
+        ove.start_time,
+        ove.end_time,
+        ove.overtime_hours,
+        ove.reason
+        FROM tbl_overtime ove
+        <where>
+            <if test="startDate != null and startDate != ''">
+                AND ove.date &gt;= #{startDate}
+            </if>
+            <if test="endDate != null and endDate != ''">
+                AND ove.date &lt;= #{endDate}
+            </if>
+        </where>
+        ORDER BY ove.date DESC, ove.overtime_id DESC
+        LIMIT #{size} OFFSET #{offset}
     </select>
 
+    <!-- ============================================================
+         5) 초과 근무(Overtime) 기록 총 개수 조회
+            AttendanceMapper.selectOvertimeCount(...)
+         ============================================================ -->
     <select id="selectOvertimeCount" resultType="int" parameterType="map">
         SELECT COUNT(*)
         FROM tbl_overtime ove
