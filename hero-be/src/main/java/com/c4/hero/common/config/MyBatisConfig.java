@@ -60,11 +60,11 @@ public class MyBatisConfig {
         // Mapper XML 파일 위치 설정
         // classpath:mapper/**/*.xml 패턴으로 모든 Mapper XML 파일 자동 로드
         // 주석 해제 시 사용:
-        // PathMatchingResourcePatternResolver resolver =
-        //     new PathMatchingResourcePatternResolver();
-        // sessionFactory.setMapperLocations(
-        //     resolver.getResources("classpath:mapper/**/*.xml")
-        // );
+         PathMatchingResourcePatternResolver resolver =
+             new PathMatchingResourcePatternResolver();
+         sessionFactory.setMapperLocations(
+             resolver.getResources("classpath:mapper/**/*.xml")
+         );
 
         // Type Alias 패키지 설정 (XML에서 풀 패키지명 대신 클래스명만 사용 가능)
         // 예: com.c4.hero.domain.employee.dto.EmployeeDto → EmployeeDto

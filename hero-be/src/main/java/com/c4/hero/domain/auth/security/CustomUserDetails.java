@@ -42,8 +42,8 @@ public class CustomUserDetails implements UserDetails {
         Employee employee = account.getEmployee();
         this.employeeId = employee.getEmployeeId();
         this.employeeName = employee.getEmployeeName();
-        this.departmentId = employee.getDepartment() != null ? employee.getDepartment().getDepartmentId() : null;
-        this.departmentName = employee.getDepartment() != null ? employee.getDepartment().getDepartmentName() : null;
+        this.departmentId = employee.getEmployeeDepartment() != null ? employee.getEmployeeDepartment().getDepartmentId() : null;
+        this.departmentName = employee.getEmployeeDepartment() != null ? employee.getEmployeeDepartment().getDepartmentName() : null;
         this.gradeId = employee.getGrade() != null ? employee.getGrade().getGradeId() : null;
         this.gradeName = employee.getGrade() != null ? employee.getGrade().getGrade() : null;
         this.jobTitleId = employee.getJobTitle() != null ? employee.getJobTitle().getJobTitleId() : null;

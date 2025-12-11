@@ -1,6 +1,7 @@
 package com.c4.hero.common.config;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -14,6 +15,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  *
  * History
  * 2025/11/28 (혜원) 최초 작성
+ * 2025/12/08 (승민) addCorsMappings 메서드 추가
+ * 2025/12/10 (승민) addCorsMappings 메서드 삭제
  * </pre>
  *
  * @author 혜원

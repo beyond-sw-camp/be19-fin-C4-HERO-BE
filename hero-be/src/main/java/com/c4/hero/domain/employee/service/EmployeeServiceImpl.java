@@ -4,24 +4,17 @@ import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
 import com.c4.hero.common.util.EncryptionUtil;
 import com.c4.hero.domain.employee.dto.SignupRequestDTO;
-import com.c4.hero.domain.employee.entity.Account;
-import com.c4.hero.domain.employee.entity.AccountRole;
-import com.c4.hero.domain.employee.entity.Department;
-import com.c4.hero.domain.employee.entity.Employee;
-import com.c4.hero.domain.employee.entity.EmployeeDepartmentHistory;
-import com.c4.hero.domain.employee.entity.EmployeeGradeHistory;
-import com.c4.hero.domain.employee.entity.Grade;
-import com.c4.hero.domain.employee.entity.JobTitle;
-import com.c4.hero.domain.employee.entity.Role;
-import com.c4.hero.domain.employee.repository.AccountRepository;
-import com.c4.hero.domain.employee.repository.AccountRoleRepository;
-import com.c4.hero.domain.employee.repository.DepartmentRepository;
+import com.c4.hero.domain.employee.entity.*;
+import com.c4.hero.domain.employee.entity.EmployeeDepartment;
+import com.c4.hero.domain.employee.repository.EmployeeAccountRepository;
+import com.c4.hero.domain.employee.repository.EmployeeAccountRoleRepository;
+import com.c4.hero.domain.employee.repository.EmployeeDepartmentRepository;
 import com.c4.hero.domain.employee.repository.EmployeeDepartmentHistoryRepository;
 import com.c4.hero.domain.employee.repository.EmployeeGradeHistoryRepository;
 import com.c4.hero.domain.employee.repository.EmployeeRepository;
-import com.c4.hero.domain.employee.repository.GradeRepository;
-import com.c4.hero.domain.employee.repository.JobTitleRepository;
-import com.c4.hero.domain.employee.repository.RoleRepository;
+import com.c4.hero.domain.employee.repository.EmployeeGradeRepository;
+import com.c4.hero.domain.employee.repository.EmployeeJobTitleRepository;
+import com.c4.hero.domain.employee.repository.EmployeeRoleRepository;
 import com.c4.hero.domain.employee.type.AccountStatus;
 import com.c4.hero.domain.employee.type.ChangeType;
 import com.c4.hero.domain.employee.type.EmployeeStatus;
@@ -37,7 +30,6 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.security.SecureRandom;
 import java.util.Arrays;
@@ -64,12 +56,12 @@ import java.util.stream.IntStream;
 public class EmployeeServiceImpl implements EmployeeService {
 
     private final EmployeeRepository employeeRepository;
-    private final DepartmentRepository departmentRepository;
-    private final GradeRepository gradeRepository;
-    private final JobTitleRepository jobTitleRepository;
-    private final AccountRepository accountRepository;
-    private final RoleRepository roleRepository;
-    private final AccountRoleRepository accountRoleRepository;
+    private final EmployeeDepartmentRepository departmentRepository;
+    private final EmployeeGradeRepository gradeRepository;
+    private final EmployeeJobTitleRepository jobTitleRepository;
+    private final EmployeeAccountRepository accountRepository;
+    private final EmployeeRoleRepository roleRepository;
+    private final EmployeeAccountRoleRepository accountRoleRepository;
     private final EmployeeDepartmentHistoryRepository employeeDepartmentHistoryRepository;
     private final EmployeeGradeHistoryRepository employeeGradeHistoryRepository;
     private final PasswordEncoder passwordEncoder;
@@ -108,7 +100,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         });
 
         // 2. DTO -> Employee 엔티티 변환
-        Department department = departmentRepository.findByDepartmentName(request.getDepartmentName())
+        EmployeeDepartment employeeDepartment = departmentRepository.findByDepartmentName(request.getDepartmentName())
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEPARTMENT_NOT_FOUND));
         Grade grade = gradeRepository.findByGrade(request.getGradeName())
                 .orElseThrow(() -> new BusinessException(ErrorCode.GRADE_NOT_FOUND));
@@ -126,7 +118,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .contractType(request.getContractType())
                 .imagePath(request.getImagePath())
                 .address(request.getAddress() != null ? EncryptionUtil.encrypt(request.getAddress()) : null)
-                .department(department)
+                .employeeDepartment(employeeDepartment)
                 .grade(grade)
                 .jobTitle(jobTitle)
                 .status(EmployeeStatus.ACTIVE)
@@ -163,7 +155,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .employee(savedEmployee)
                 .changedBy(null) // TODO: 변경자 정보 -> 나중에 토큰을 통해서 읽을수 있게 변경 필요
                 .changeType(ChangeType.CREATE)
-                .departmentName(department.getDepartmentName())
+                .departmentName(employeeDepartment.getDepartmentName())
                 .build();
         employeeDepartmentHistoryRepository.save(departmentHistory);
 

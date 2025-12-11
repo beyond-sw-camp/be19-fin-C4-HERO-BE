@@ -4,7 +4,7 @@ import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
 import com.c4.hero.domain.auth.security.CustomUserDetails;
 import com.c4.hero.domain.auth.security.JwtUtil;
-import com.c4.hero.domain.employee.repository.AccountRepository;
+import com.c4.hero.domain.employee.repository.EmployeeAccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -30,7 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class AuthServiceImpl implements AuthService {
 
-    private final AccountRepository accountRepository;
+    private final EmployeeAccountRepository accountRepository;
     private final JwtUtil jwtUtil;
 
     /**
