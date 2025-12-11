@@ -6,6 +6,7 @@ import com.c4.hero.domain.auth.security.JwtVerificationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -82,11 +83,14 @@ public class SecurityConfig {
 
                 // URL별 권한 설정
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/employee/signup").permitAll()    // 회원가입 - 나중에 토큰 처리되면 인사팀만 가능하게 변경
-                        .requestMatchers("/api/auth/**").permitAll()      // 인증 API는 모두 허용
-                        .requestMatchers("/api/public/**").permitAll()    // 공개 API 허용
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // 관리자만 접근
-                        .anyRequest().authenticated()                      // 나머지는 인증 필요
+                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Preflight 요청은 모두 허용
+                                .requestMatchers("/api/auth/test").hasRole("EMPLOYEE")
+                                .anyRequest().permitAll()
+//                        .requestMatchers("/api/auth/**").permitAll()      // 인증 API는 모두 허용
+//                        .requestMatchers("/api/public/**").permitAll()    // 공개 API 허용
+//                        .requestMatchers("/api/me/payroll/**").permitAll() // 급여 조회 개발용 허용
+//                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // 관리자만 접근
+//                        .anyRequest().authenticated()                      // 나머지는 인증 필요
                 )
 
                 // 커스텀 필터 추가
@@ -148,6 +152,11 @@ public class SecurityConfig {
 
         // 쿠키/인증 정보 포함 허용
         configuration.setAllowCredentials(true);
+
+        // 클라이언트에서 접근할 수 있도록 헤더 노출
+        configuration.setExposedHeaders(Arrays.asList(
+                JwtUtil.AUTHORIZATION_HEADER
+        ));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

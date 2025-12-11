@@ -4,6 +4,7 @@ import com.c4.hero.domain.auth.dto.RequestLoginDTO;
 import tools.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -22,13 +23,13 @@ import java.io.IOException;
  * Description: 사용자의 로그인 요청을 가로채 인증을 처리하는 필터
  *
  * History
- * 2025/12/09 (이승건) 최초 작성
+ * 2025-12-09 (이승건) 최초 작성
+ * 2025-12-10 (이승건) Refresh Token을 HttpOnly 쿠키로 전달하도록 수정
  * </pre>
  *
  * @author 이승건
- * @version 1.0
+ * @version 1.1
  */
-
 @Slf4j
 @RequiredArgsConstructor
 public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
@@ -73,11 +74,11 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
         String accessToken = jwtUtil.createAccessToken(authResult);
         String refreshToken = jwtUtil.createRefreshToken(authResult);
 
-        // 2. 응답 헤더에 토큰 추가
+        // 2. Access Token은 헤더에, Refresh Token은 HttpOnly 쿠키에 추가
         response.addHeader(JwtUtil.AUTHORIZATION_HEADER, JwtUtil.BEARER_PREFIX + accessToken);
-        response.addHeader(JwtUtil.REFRESH_HEADER, refreshToken); // Bearer 접두사 없이 추가
+        response.addCookie(createRefreshTokenCookie(refreshToken));
 
-        // (선택) 응답 본문에 사용자 정보 추가
+        // 3. 응답 본문 작성
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         response.getWriter().write("{\"message\": \"로그인 성공\"}");
@@ -95,5 +96,19 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         response.getWriter().write("{\"error\": \"로그인 실패\", \"message\": \"" + failed.getMessage() + "\"}");
+    }
+
+    /**
+     * Refresh Token을 담을 HttpOnly 쿠키 생성
+     * @param token Refresh Token 값
+     * @return 생성된 쿠키 객체
+     */
+    private Cookie createRefreshTokenCookie(String token) {
+        Cookie cookie = new Cookie(JwtUtil.REFRESH_TOKEN_COOKIE_NAME, token);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true); // HTTPS 환경에서만 쿠키 전송
+        cookie.setPath("/"); // 모든 경로에서 쿠키 사용
+        cookie.setMaxAge((int) (jwtUtil.getRefreshTokenExpirationTime() / 1000)); // 쿠키 만료 시간을 초 단위로 설정
+        return cookie;
     }
 }

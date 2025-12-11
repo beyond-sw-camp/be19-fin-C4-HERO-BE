@@ -4,6 +4,7 @@ import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,13 +28,16 @@ import java.util.stream.Collectors;
  * Description: JWT 토큰의 생성, 검증, 정보 추출을 담당하는 유틸리티 클래스
  *
  * History
- * 2025/12/09 (이승건) 최초 작성
+ * 2025-12-09 (이승건) 최초 작성
+ * 2025-12-09 (이승건) 토큰 만료 예외 처리 추가
+ * 2025-12-10 (이승건) 권한 정보에 'ROLE_' 접두사 추가
  * </pre>
  *
  * @author 이승건
- * @version 1.0
+ * @version 1.2
  */
 @Slf4j
+@Getter
 @Component
 public class JwtUtil {
 
@@ -42,7 +46,7 @@ public class JwtUtil {
     private final long refreshTokenExpirationTime;
 
     public static final String AUTHORIZATION_HEADER = "Authorization";
-    public static final String REFRESH_HEADER = "Refresh";
+    public static final String REFRESH_TOKEN_COOKIE_NAME = "refresh_token";
     public static final String BEARER_PREFIX = "Bearer ";
 
     public JwtUtil(@Value("${token.secret}") String secretKey,
@@ -60,10 +64,11 @@ public class JwtUtil {
      * @return Access Token
      */
     public String createAccessToken(Authentication auth) {
-        // "FACTOR_PASSWORD" 같은 불필요한 권한 필터링
+        // 권한 정보에 "ROLE_" 접두사를 붙여서 문자열로 변환
         String authorities = auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .filter(role -> !role.equals("FACTOR_PASSWORD"))
+                .map(role -> "ROLE_" + role) // "ROLE_" 접두사 추가
                 .collect(Collectors.joining(","));
 
         CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
@@ -120,7 +125,6 @@ public class JwtUtil {
             log.warn("유효하지 않은 JWT 서명입니다.");
         } catch (ExpiredJwtException e) {
             // 만료된 토큰의 경우, 예외를 그대로 던져서 호출한 쪽에서 처리하도록 함
-            log.warn("만료된 토큰입니다.");
             throw e;
         } catch (UnsupportedJwtException e) {
             log.warn("지원하지 않는 JWT 토큰입니다.");
