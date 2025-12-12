@@ -43,7 +43,7 @@ public class Evaluation {
     private String name;
 
     @Column(name = "status")
-    private boolean status;
+    private Integer status;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

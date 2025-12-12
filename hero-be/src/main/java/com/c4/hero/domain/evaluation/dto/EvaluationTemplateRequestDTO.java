@@ -1,5 +1,7 @@
 package com.c4.hero.domain.evaluation.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -24,14 +26,19 @@ import java.util.List;
 @AllArgsConstructor
 public class EvaluationTemplateRequestDTO {
 
+    @NotBlank(message = "생성할 평가 템플릿명은 필수 입니다.")
     private String evaluationTemplateName;
 
+    @NotNull(message = "생성할 평가 템플릿 작성일은 필수 입니다.")
     private LocalDateTime evaluationTemplateCreatedAt;
 
+    @NotNull(message = "생성할 평가 템플릿 작성자 ID는 필수 입니다.")
     private Integer evaluationTemplateEmployeeId;
 
+    @NotNull(message = "생성할 평가 템플릿 작성 부서 ID는 필수 입니다.")
     private Integer evaluationTemplateDepartmentId;
 
+    @NotNull(message = "생성할 평가 템플릿 타입값은 필수 입니다.")
     private Integer evaluationTemplateType;
 
     private List<TemplateItemRequestDTO> templateItems;

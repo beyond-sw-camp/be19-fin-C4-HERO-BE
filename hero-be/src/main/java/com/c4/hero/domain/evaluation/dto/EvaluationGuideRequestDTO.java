@@ -4,6 +4,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -27,13 +29,18 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class EvaluationGuideRequestDTO {
 
+    @NotBlank(message = "생성할 평가 가이드명은 필수 입니다.")
     private String evaluationGuideName;
 
+    @NotBlank(message = "생성할 평가 가이드 내용은 필수 입니다.")
     private String evaluationGuideContent;
 
+    @NotNull(message = "생성할 평가 가이드 작성일은 필수 입니다.")
     private LocalDateTime evaluationGuideCreatedAt;
 
+    @NotNull(message = "생성할 평가 가이드 작성자 ID는 필수 입니다.")
     private Integer evaluationGuideEmployeeId;
 
+    @NotNull(message = "생성할 평가 가이드 작성 부서 ID는 필수 입니다.")
     private Integer evaluationGuideDepartmentId;
 }
