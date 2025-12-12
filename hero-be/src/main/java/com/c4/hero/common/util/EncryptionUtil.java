@@ -1,6 +1,8 @@
 package com.c4.hero.common.util;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
@@ -26,17 +28,24 @@ import java.util.Base64;
  * @version 1.0
  */
 @Slf4j
+@Component
 public class EncryptionUtil {
 
-    /** 암호화 알고리즘 (AES) */
-    private static final String ALGORITHM = "AES";
+//    private static final String ALGORITHM = "AES";
+//    private static final String SECRET_KEY = "P9qR1sT3uV5wX7yZ9aB1cD3eF5gH7iJ9";
 
     /**
      * 암호화 키 (32자 = 256비트)
      * TODO: application.yml에서 주입받아 사용
      * 예: @Value("${encryption.secret-key}")
      */
-    private static final String SECRET_KEY = "P9qR1sT3uV5wX7yZ9aB1cD3eF5gH7iJ9";
+    private final String ALGORITHM = "AES";
+
+    private final String SECRET_KEY;
+
+    public EncryptionUtil(@Value("${encryption.secret-key}") String secretKey) {
+        SECRET_KEY = secretKey;
+    }
 
     /**
      * 문자열을 AES 암호화하여 바이트 배열로 반환
@@ -46,7 +55,7 @@ public class EncryptionUtil {
      * @return 암호화된 바이트 배열
      * @throws RuntimeException 암호화 실패 시
      */
-    public static byte[] encrypt(String plainText) {
+    public byte[] encrypt(String plainText) {
         try {
             // 암호화 키 생성
             SecretKeySpec secretKey = new SecretKeySpec(SECRET_KEY.getBytes(), ALGORITHM);
@@ -70,7 +79,8 @@ public class EncryptionUtil {
      * @return 복호화된 평문
      * @throws RuntimeException 복호화 실패 시
      */
-    public static String decrypt(byte[] encryptedData) {
+    public String decrypt(byte[] encryptedData) {
+        if (encryptedData == null) return null;
         try {
             // 복호화 키 생성
             SecretKeySpec secretKey = new SecretKeySpec(SECRET_KEY.getBytes(), ALGORITHM);
@@ -78,8 +88,6 @@ public class EncryptionUtil {
             // Cipher 인스턴스 생성 및 복호화 모드 설정
             Cipher cipher = Cipher.getInstance(ALGORITHM);
             cipher.init(Cipher.DECRYPT_MODE, secretKey);
-
-            // 암호화된 데이터를 복호화 후 문자열로 변환
             byte[] decryptedData = cipher.doFinal(encryptedData);
             return new String(decryptedData, StandardCharsets.UTF_8);
         } catch (Exception e) {
@@ -94,7 +102,7 @@ public class EncryptionUtil {
      * @param plainText 암호화할 평문
      * @return Base64 인코딩된 암호화 문자열
      */
-    public static String encryptToBase64(String plainText) {
+    public String encryptToBase64(String plainText) {
         byte[] encrypted = encrypt(plainText);
         return Base64.getEncoder().encodeToString(encrypted);
     }
@@ -106,7 +114,7 @@ public class EncryptionUtil {
      * @param base64Encrypted Base64 인코딩된 암호화 문자열
      * @return 복호화된 평문
      */
-    public static String decryptFromBase64(String base64Encrypted) {
+    public String decryptFromBase64(String base64Encrypted) {
         byte[] decoded = Base64.getDecoder().decode(base64Encrypted);
         return decrypt(decoded);
     }
