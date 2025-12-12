@@ -55,15 +55,21 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
           # optional
-          MODEL: o3-mini # https://platform.openai.com/docs/models
+          MODEL: gpt-4o-mini # https://platform.openai.com/docs/models
+          MAX_PATCH_TOKENS: 4096         # (선택) 처리할 코드 조각의 최대 토큰 제한 (길이가 긴 PR의 비용 방지)
+          EXCLUDE_PATTERNS: |            # (선택) 리뷰에서 제외할 파일 패턴 (예: 설정 파일, 마크다운)
+            **/*.md
+            **/*.yml
+            **/*.yaml
+            **/build/**
           OPENAI_API_ENDPOINT: https://api.openai.com/v1
           LANGUAGE: Korean
           PROMPT: |
             이 PR을 Google/Meta/Stripe 수준의 엄격한 코드 리뷰 관점으로 분석해주세요:
             
             피드백은:
-              - 핵심적이고 중요한 부분만 100줄만 작성
               - P0(반드시 수정)/P1(중요)/P2(권장) 우선순위로 분류
               - 문제보다 해결책 중심으로 제시
               - 구체적인 코드 예시 포함

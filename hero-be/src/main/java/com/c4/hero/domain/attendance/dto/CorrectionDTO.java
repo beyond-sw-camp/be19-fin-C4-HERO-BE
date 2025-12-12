@@ -1,0 +1,46 @@
+package com.c4.hero.domain.attendance.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+/**
+ * <pre>
+ * Class Name: CorrectionDTO
+ * Description: 근태 정정(출퇴근 시간 수정) 요청 정보를 담는 DTO
+ *
+ * History
+ * 2025/12/10 (이지윤) 최초 작성 및 컨벤션 적용
+ * </pre>
+ *
+ * @author 이지윤
+ * @version 1.0
+ */
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+@Setter
+public class CorrectionDTO {
+
+    /** 근태 정정 요청 PK (식별자) */
+    private int correctionId;
+
+    /** 정정 대상 근무 일자 (yyyy-MM-dd) */
+    private String date;
+
+    /** 정정 전 출근 시간 (HH:mm 또는 HH:mm:ss) */
+    private String prevStartTime;
+
+    /** 정정 전 퇴근 시간 (HH:mm 또는 HH:mm:ss) */
+    private String prevEndTime;
+
+    /** 정정 사유 */
+    private String reason;
+
+    /** 정정 후 출근 시간 (HH:mm 또는 HH:mm:ss) */
+    private String newStartTime;
+
+    /** 정정 후 퇴근 시간 (HH:mm 또는 HH:mm:ss) */
+    private String newEndTime;
+}
