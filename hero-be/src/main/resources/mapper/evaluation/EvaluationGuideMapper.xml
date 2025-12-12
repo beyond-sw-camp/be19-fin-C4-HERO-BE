@@ -29,21 +29,21 @@
         <result property="evaluationGuideGrade" column="grade"/>
     </resultMap>
 
-    <select id="selectAllTemplate" resultMap="EvaluationGuideMap">
+    <select id="selectAllGuide" resultMap="EvaluationGuideMap">
         SELECT
             g.evaluation_guide_id AS evaluation_guide_id,
             g.name AS name,
             g.content AS content,
             g.created_at AS created_at,
-            g.employee_id AS employee_id,
+            e.employee_id AS employee_id,
             e.employee_name AS employee_name,
-            g.department_id AS department_id,
+            d.department_id AS department_id,
             d.department_name AS department_name,
-            e.grade_id AS grade_id,
+            t.grade_id AS grade_id,
             t.grade AS grade
         FROM tbl_evaluation_guide g
         JOIN tbl_employee e ON g.employee_id = e.employee_id
-        JOIN tbl_department d ON d.department_id = e.employee_id
+        JOIN tbl_department d ON d.department_id = e.department_id
         JOIN tbl_grade t ON t.grade_id = e.grade_id
     </select>
 
@@ -53,15 +53,15 @@
             g.name AS name,
             g.content AS content,
             g.created_at AS created_at,
-            g.employee_id AS employee_id,
+            e.employee_id AS employee_id,
             e.employee_name AS employee_name,
-            g.department_id AS department_id,
+            d.department_id AS department_id,
             d.department_name AS department_name,
-            e.grade_id AS grade_id,
+            t.grade_id AS grade_id,
             t.grade AS grade
         FROM tbl_evaluation_guide g
             JOIN tbl_employee e ON g.employee_id = e.employee_id
-            JOIN tbl_department d ON d.department_id = e.employee_id
+            JOIN tbl_department d ON d.department_id = e.department_id
             JOIN tbl_grade t ON t.grade_id = e.grade_id
         WHERE g.evaluation_guide_id = #{guideId}
     </select>

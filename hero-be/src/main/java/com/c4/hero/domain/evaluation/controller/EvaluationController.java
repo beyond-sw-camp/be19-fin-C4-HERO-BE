@@ -21,7 +21,7 @@ import java.util.List;
  */
 
 @RestController
-@RequestMapping("/api/eval")
+@RequestMapping("/api/evaluation")
 @RequiredArgsConstructor
 public class EvaluationController {
 
@@ -159,6 +159,22 @@ public class EvaluationController {
     }
 
     /**
+     * 평가 가이드 수정
+     *
+     * @param evaluationGuideUpdateDTO EvaluationGuideUpdateDTO
+     *      평가 가이드 수정 데이터를 파라미터로 받음.
+     * @return updatedId Integer
+     *     수정된 평가 가이드 테이블의 pk를 응답함.
+     */
+    @PutMapping("/evaluation-guide/update")
+    public ResponseEntity<Integer> updateGuide(@RequestBody EvaluationGuideUpdateDTO evaluationGuideUpdateDTO){
+
+        Integer updateId = evaluationService.updateGuide(evaluationGuideUpdateDTO);
+
+        return ResponseEntity.ok(updateId);
+    }
+
+    /**
      * 평가 가이드 evaluation_guide_id로 조회 후, 삭제
      *
      * @param id Integer
@@ -171,5 +187,68 @@ public class EvaluationController {
         evaluationService.deleteGuide(id);
 
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 피평가자들 department_id로 조회
+     *
+     * @param id Integer
+     *      삭제할 평가 가이드의 키(evaluation_guide_id)를 클라이언트로 부터 요청
+     * @return result List<EmployeeResponseDTO>
+     *     평가 가이드 삭제 후 반환하는 값은 없음
+     */
+    @GetMapping("/evaluation/select/employee/{id}")
+    public ResponseEntity<List<EmployeeResponseDTO>> selectEmployeeByDepartmentId(@PathVariable Integer id){
+
+        List<EmployeeResponseDTO> result = evaluationService.selectEmployeeByDepartmentId(id);
+
+        return ResponseEntity.ok(result);
+    }
+
+
+    /**
+     * 평가 전체 조회
+     *
+     * @return result List<EvaluationResponseDTO>
+     *     전체 평가 데이터를 응답함
+     */
+    @GetMapping("/evaluation/selectall")
+    public ResponseEntity<List<EvaluationResponseDTO>> selectAllEvaluation(){
+
+        List<EvaluationResponseDTO> result = evaluationService.selectAllEvaluation();
+
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 평가 evaluation_id로 조회
+     *
+     * @return result EvaluationResponseDTO
+     *     evaluation_id로 조회한 평가 데이터를 응답함
+     */
+    @GetMapping("/evaluation/select/{id}")
+    public ResponseEntity<EvaluationResponseDTO> selectEvaluation(@PathVariable Integer id){
+
+        EvaluationResponseDTO result = evaluationService.selectEvaluation(id);
+
+        return ResponseEntity.ok(result);
+    }
+
+
+
+    /**
+     * 평가 생성
+     *
+     * @param evaluationRequestDTO EvaluationRequestDTO
+     *      클라이언트로 부터 받아온 생성할 평가 데이터
+     * @return id Integer
+     *     생성된 평가 pk 값 반환
+     */
+    @PostMapping("/evaluation/create")
+    public ResponseEntity<Integer> createEvaluation(@RequestBody EvaluationRequestDTO evaluationRequestDTO){
+
+        Integer id = evaluationService.createEvaluation(evaluationRequestDTO);
+
+        return ResponseEntity.ok(id);
     }
 }
