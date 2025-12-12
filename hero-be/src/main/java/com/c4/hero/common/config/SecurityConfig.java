@@ -32,10 +32,12 @@ import java.util.Arrays;
  * - JWT 기반 인증 방식 사용
  * - CORS 설정
  * - 비밀번호 암호화 설정
+ * - 웹소켓 설정
  *
  * History
  * 2025/11/28 (혜원) 최초 작성
  * 2025/12/09 (승건) 토큰 필터 추가
+ * 2025/12/11 (혜원) WebSocket 설정 추가
  * </pre>
  *
  * @author 혜원
@@ -73,7 +75,10 @@ public class SecurityConfig {
 
         http
                 // CSRF 보호 비활성화 (JWT 사용)
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf
+                        .ignoringRequestMatchers("/ws/**")  // WebSocket 경로 CSRF 무시
+                        .disable()
+                )
 
                 // CORS 설정
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -85,6 +90,7 @@ public class SecurityConfig {
 
                 // URL별 권한 설정
                 .authorizeHttpRequests(auth -> auth
+                                .requestMatchers("/ws/**").permitAll()
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Preflight 요청은 모두 허용
                                 .requestMatchers("/api/auth/test").hasRole("EMPLOYEE")
                                 .anyRequest().permitAll()
@@ -94,12 +100,17 @@ public class SecurityConfig {
 //                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // 관리자만 접근
 //                        .anyRequest().authenticated()                      // 나머지는 인증 필요
                 )
-
                 // 커스텀 필터 추가
                 // 1. 로그인 필터: UsernamePasswordAuthenticationFilter 위치에 추가
                 .addFilterAt(authenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 // 2. JWT 검증 필터: 로그인 필터 이전에 추가
-                .addFilterBefore(new JwtVerificationFilter(jwtUtil), AuthenticationFilter.class);
+                .addFilterBefore(new JwtVerificationFilter(jwtUtil), AuthenticationFilter.class)
+                // WebSocket을 위한 프레임 옵션 설정
+                .headers(headers -> headers
+                        .frameOptions(frame -> frame.sameOrigin())
+                );
+
+
 
 
         return http.build();
