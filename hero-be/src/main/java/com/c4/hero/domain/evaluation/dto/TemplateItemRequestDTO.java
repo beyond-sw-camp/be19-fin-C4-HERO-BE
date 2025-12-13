@@ -1,5 +1,7 @@
 package com.c4.hero.domain.evaluation.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -23,8 +25,10 @@ import java.util.List;
 @NoArgsConstructor
 public class TemplateItemRequestDTO {
 
+    @NotNull(message = "생성할 평가 템플릿 ID는 필수 입니다.")
     private Integer templateItemTemplateId;
 
+    @NotBlank(message = "생성할 평가 템플릿 평가 항목명은 필수 입니다.")
     private String templateItemItem;
 
     private String templateItemDescription;

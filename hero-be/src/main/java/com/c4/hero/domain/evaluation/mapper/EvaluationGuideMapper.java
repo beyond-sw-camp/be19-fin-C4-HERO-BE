@@ -23,5 +23,5 @@ public interface EvaluationGuideMapper {
 
     EvaluationGuideResponseDTO selectGuide(@Param("guideId") Integer id);
 
-    List<EvaluationGuideResponseDTO> selectAllTemplate();
+    List<EvaluationGuideResponseDTO> selectAllGuide();
 }
