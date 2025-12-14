@@ -3,7 +3,6 @@ package com.c4.hero.domain.payroll.report.controller;
 
 import com.c4.hero.domain.payroll.report.dto.MyPaySummaryDTO;
 import com.c4.hero.domain.payroll.report.dto.PayHistoryResponseDTO;
-import com.c4.hero.domain.payroll.report.dto.PayslipDetailDTO;
 import com.c4.hero.domain.payroll.report.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,17 +15,21 @@ import org.springframework.web.bind.annotation.RestController;
 import java.security.Principal;
 
 /**
- * 사원 개인 급여 조회용 컨트롤러
+ * 사원 급여 리포트 조회 컨트롤러
+ *
  * <pre>
  * Class Name: ReportController
- * Description: 내 급여, 명세서, 급여 이력 조회 API 컨트롤러
+ * Description: 사원의 급여 요약 및 급여 이력 조회 API를 제공한다.
+ *              - 월별 급여 요약 조회
+ *              - 최근 12개월 급여 이력 및 통계 조회
  *
  * History
  * 2025/12/08 동근 최초 작성
+ * 2025/12/14 동근 payslip 조회 API 분리 (명세서 관련 API 제거)
  * </pre>
  *
  * @author 동근
- * @version 1.0
+ * @version 1.1
  */
 @RestController
 @RequestMapping("/api/me/payroll")
@@ -55,22 +58,6 @@ public class ReportController {
     ) {
         Integer employeeId = getEmployeeId(principal);
         return ResponseEntity.ok(service.getMyPayroll(employeeId, month));
-    }
-
-
-    /**
-     * 급여명세서 모달
-     * @param month 조회 할 급여 월(YYYY-MM)
-     * @param principal 사용자 인증 정보
-     * @return 명세서 상세 정보
-     */
-    @GetMapping("/payslip")
-    public ResponseEntity<PayslipDetailDTO> getPayslip(
-            @RequestParam String month,
-            Principal principal
-    ) {
-        Integer employeeId = getEmployeeId(principal);
-        return ResponseEntity.ok(service.getPayslipDetail(employeeId, month));
     }
 
 
