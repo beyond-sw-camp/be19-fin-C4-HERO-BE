@@ -37,6 +37,7 @@ import java.util.Arrays;
  * 2025/11/28 (혜원) 최초 작성
  * 2025/12/09 (승건) 토큰 필터 추가
  * 2025/12/11 (혜원) WebSocket 설정 추가
+ * 2025/12/14 (혜원) 개발 편의성을 위해 모든 시큐리티 허용
  * </pre>
  *
  * @author 혜원
@@ -88,11 +89,13 @@ public class SecurityConfig {
 
                 // URL별 권한 설정
                 .authorizeHttpRequests(auth -> auth
-                                .requestMatchers("/ws/**").permitAll()
-                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Preflight 요청은 모두 허용
-                                .requestMatchers("/api/auth/test").hasRole("EMPLOYEE")
+//                                .requestMatchers("/ws/**").permitAll()
+//                                .requestMatchers("/api/notifications/**").permitAll()  // 알림 API 추가
+//                                .requestMatchers("/api/test/**").permitAll()  // 테스트 API
+//                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Preflight 요청은 모두 허용
+//                                .requestMatchers("/api/auth/**").permitAll()      // 인증 API는 모두 허용
+//                                .requestMatchers("/api/auth/test").hasRole("EMPLOYEE")
                                 .anyRequest().permitAll()
-//                        .requestMatchers("/api/auth/**").permitAll()      // 인증 API는 모두 허용
 //                        .requestMatchers("/api/public/**").permitAll()    // 공개 API 허용
 //                        .requestMatchers("/api/me/payroll/**").permitAll() // 급여 조회 개발용 허용
 //                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // 관리자만 접근
