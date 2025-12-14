@@ -45,5 +45,7 @@ public interface BankAccountRepository extends JpaRepository<BankAccount, Intege
      */
     boolean existsByEmployeeIdAndIsPrimary(Integer employeeId, Integer isPrimary);
 
+    long countByEmployeeId(Integer employeeId);
+
     Optional<BankAccount> findByIdAndEmployeeId(Integer id, Integer employeeId);
 }
