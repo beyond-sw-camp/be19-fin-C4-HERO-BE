@@ -13,10 +13,10 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
  *              실시간 알림 전송을 위한 WebSocket 엔드포인트 및 메시지 브로커 구성
  *
  * History
- * 2025/12/11 (최혜원) 최초 작성
+ * 2025/12/11 (혜원) 최초 작성
  * </pre>
  *
- * @author 최혜원
+ * @author 혜원
  * @version 1.0
  */
 @Configuration
