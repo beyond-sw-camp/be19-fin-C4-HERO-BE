@@ -5,9 +5,13 @@ import com.c4.hero.common.pagination.PageInfo;
 import com.c4.hero.common.response.PageResponse;
 import com.c4.hero.domain.attendance.dto.*;
 import com.c4.hero.domain.attendance.mapper.AttendanceMapper;
+import com.c4.hero.domain.attendance.repository.AttendanceRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -29,6 +33,7 @@ public class AttendanceService {
 
     /** 근태 정보 조회를 위한 Mapper */
     private final AttendanceMapper attendanceMapper;
+    private final AttendanceRepository attendanceRepository;
 
     /**
      * 개인 근태 기록 페이지를 조회합니다.
@@ -179,6 +184,50 @@ public class AttendanceService {
                 pageInfo.getPage() - 1,
                 pageInfo.getSize(),
                 totalCount
+        );
+    }
+
+    /**
+     * 부서 근태 현황 페이지 조회
+     *
+     * @param departmentId 부서 ID
+     * @param workDate     조회 날짜
+     * @param page         요청 페이지 번호 (1부터 시작)
+     * @param size         페이지 크기
+     * @return PageResponse<DeptWorkSystemRowDTO>
+     */
+    public PageResponse<DeptWorkSystemRowDTO> getDeptWorkSystemList(
+        Integer departmentId,
+        LocalDate workDate,
+        int page,
+        int size
+    ){
+        // 1. 전체 개수 조회는 Repository의 countQuery가 담당
+        //    → Page<T>를 통해 totalElements 확보 가능
+
+        // 2. 페이지 계산 (우리 프로젝트 기준: 1-based)
+        PageInfo pageInfo = PageCalculator.calculate(
+                page,
+                size,
+                Integer.MAX_VALUE // JPA Page에서는 실제 count는 repository가 처리
+        );
+
+        // 3. JPA Pageable (0-based 변환은 여기서만)
+        PageRequest pageable = PageRequest.of(pageInfo.getPage() - 1, pageInfo.getSize());
+
+        // 4. Repository 조회
+        Page<DeptWorkSystemRowDTO> pageResult = attendanceRepository.findDeptWorkSystemRows(
+                departmentId,
+                workDate,
+                pageable
+        );
+
+        //5. PageResponse로 변환(응답 전담)
+        return PageResponse.of(
+                pageResult.getContent(),
+                pageResult.getNumber(),
+                pageResult.getSize(),
+                pageResult.getTotalElements()
         );
     }
 }

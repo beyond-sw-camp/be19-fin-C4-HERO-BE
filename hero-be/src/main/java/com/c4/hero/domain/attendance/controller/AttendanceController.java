@@ -3,16 +3,18 @@ package com.c4.hero.domain.attendance.controller;
 import com.c4.hero.common.response.PageResponse;
 import com.c4.hero.domain.attendance.dto.ChangeLogDTO;
 import com.c4.hero.domain.attendance.dto.CorrectionDTO;
+import com.c4.hero.domain.attendance.dto.DeptWorkSystemRowDTO;
 import com.c4.hero.domain.attendance.dto.OvertimeDTO;
-import com.c4.hero.domain.attendance.dto.PageResponseDTO;
 import com.c4.hero.domain.attendance.dto.PersonalDTO;
 import com.c4.hero.domain.attendance.service.AttendanceService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -82,5 +84,29 @@ public class AttendanceController {
             @RequestParam(required = false) String endDate
     ){
         return attendanceService.getChangeLogList(page, size, startDate, endDate);
+    }
+
+    /**
+     * 부서 근태 현황 조회
+     *
+     * @param departmentId 부서 ID
+     * @param workDate     조회 날짜 (yyyy-MM-dd)
+     * @param page         페이지 번호 (1부터 시작, 기본값 1)
+     * @param size         페이지 크기 (기본값 10)
+     * @return PageResponse<DeptWorkSystemRowDTO>
+     */
+
+    @GetMapping("/DeptWorkSystem")
+    public PageResponse<DeptWorkSystemRowDTO> getDeptWorkSystemList(
+            @RequestParam Integer departmentId,
+            @RequestParam
+            @DateTimeFormat(iso= DateTimeFormat.ISO.DATE)
+            LocalDate workDate,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ){
+        return attendanceService.getDeptWorkSystemList(
+                departmentId, workDate, page, size
+        );
     }
 }

@@ -1,6 +1,5 @@
 package com.c4.hero.domain.attendance.entity;
 
-import com.c4.hero.domain.employee.entity.Employee;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -14,29 +13,24 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Entity
-@Table(name = "tbl_attendance")
+@Table(name = "tbl_work_system_template")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-public class Attendance {
+public class WorkSystemTemplate {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "attendance_id")
-    private Integer attendanceId;
+    @Column(name = "work_system_template_id")
+    private Integer id;
 
-    @Column(name = "state")
-    private String state;
+    @Column(name = "start_time", nullable = false)
+    private LocalTime startTime;
 
-    @Column(name = "work_date")
-    private LocalDate workDate;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id")
-    private Employee employee;
+    @Column(name = "end_time", nullable= false)
+    private LocalTime endTime;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "work_system_type_id")
