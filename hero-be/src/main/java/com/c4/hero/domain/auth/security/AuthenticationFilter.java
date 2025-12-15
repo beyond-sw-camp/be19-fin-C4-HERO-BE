@@ -36,6 +36,7 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
 
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
+    private final ObjectMapper objectMapper;
 
     /**
      * 로그인 요청 시 인증을 시도하는 메소드
@@ -44,7 +45,7 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
         try {
             // 1. 요청 본문(JSON)을 DTO로 변환
-            ObjectMapper objectMapper = new ObjectMapper();
+//            ObjectMapper objectMapper = new ObjectMapper();
             RequestLoginDTO loginDTO = objectMapper.readValue(request.getInputStream(), RequestLoginDTO.class);
 
             log.info("로그인 시도: {}", loginDTO.getAccount());

@@ -20,6 +20,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.Arrays;
 
@@ -51,6 +52,7 @@ public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
     private final AuthenticationConfiguration authenticationConfiguration;
+    private final ObjectMapper objectMapper;
 
     /**
      * Spring Security 필터 체인 설정
@@ -69,7 +71,7 @@ public class SecurityConfig {
         AuthenticationManager authenticationManager = authenticationConfiguration.getAuthenticationManager();
 
         // 로그인 필터 생성
-        AuthenticationFilter authenticationFilter = new AuthenticationFilter(authenticationManager, jwtUtil);
+        AuthenticationFilter authenticationFilter = new AuthenticationFilter(authenticationManager, jwtUtil, objectMapper);
         authenticationFilter.setFilterProcessesUrl("/api/auth/login");
 
         http

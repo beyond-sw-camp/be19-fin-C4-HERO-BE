@@ -99,10 +99,9 @@ public class JwtUtil {
      */
     public String createRefreshToken(Authentication auth) {
         CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
-
         Claims claims = Jwts.claims().setSubject(userDetails.getUsername());
-        // Refresh Token에는 재발급에 필요한 최소한의 정보(subject)만 담는다.
 
+        // Refresh Token에는 재발급에 필요한 최소한의 정보(subject)만 담는다.
         return Jwts.builder()
                 .setClaims(claims)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
@@ -141,16 +140,13 @@ public class JwtUtil {
      */
     public Authentication getAuthentication(String accessToken) {
         Claims claims = parseClaims(accessToken);
-
         if (claims.get("auth") == null) {
             throw new RuntimeException("권한 정보가 없는 토큰입니다.");
         }
-
         Collection<? extends GrantedAuthority> authorities =
                 Arrays.stream(claims.get("auth").toString().split(","))
                         .map(SimpleGrantedAuthority::new)
                         .collect(Collectors.toList());
-
         UserDetails principal = new User(claims.getSubject(), "", authorities);
 
         return new UsernamePasswordAuthenticationToken(principal, "", authorities);
@@ -176,6 +172,15 @@ public class JwtUtil {
      */
     public String getUsername(String token) {
         return parseClaims(token).getSubject();
+    }
+
+    /**
+     * 토큰에서 사용자 번호 추출
+     * @param token JWT 토큰
+     * @return 사용자 번호
+     */
+    public Integer getEmployeeId(String token) {
+        return parseClaims(token).get("employeeId", Integer.class);
     }
 
     /**

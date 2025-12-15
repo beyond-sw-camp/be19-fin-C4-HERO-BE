@@ -1,8 +1,10 @@
 package com.c4.hero.domain.employee.entity;
 
 import com.c4.hero.domain.employee.type.AccountStatus;
+import com.c4.hero.domain.employee.type.converter.AccountStatusConverter;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -71,6 +73,7 @@ public class Account {
     /**
      * 계정 상태 (예: 활성, 비활성, 잠김)
      */
+    @Convert(converter = AccountStatusConverter.class)
     @Column(name = "account_status", nullable = false, length = 20)
     private AccountStatus accountStatus;
 

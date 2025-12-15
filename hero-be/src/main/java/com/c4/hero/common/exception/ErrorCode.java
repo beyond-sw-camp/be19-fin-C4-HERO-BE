@@ -99,13 +99,19 @@ public enum ErrorCode {
      */
     ROLE_NOT_FOUND(HttpStatus.NOT_FOUND, "E007", "해당 역할을 찾을 수 없습니다."),
 
+    /**
+     * 직원을 찾을 수 없음
+     */
+    EMPLOYEE_NOT_FOUND(HttpStatus.NOT_FOUND, "E008", "해당 직원을 찾을 수 없습니다."),
+    
+    
     // ===== 메일 관련 에러 =====
     /**
      * 이메일 발송 실패
      */
     EMAIL_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "M001", "이메일 발송에 실패했습니다.");
 
-
+    
     /** HTTP 상태 코드 */
     private final HttpStatus status;
 
