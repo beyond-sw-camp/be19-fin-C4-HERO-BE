@@ -2,7 +2,11 @@ package com.c4.hero.domain.employee.repository;
 
 import com.c4.hero.domain.employee.entity.Employee;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -28,4 +32,22 @@ public interface EmployeeRepository extends JpaRepository<Employee, Integer> {
      * @return Optional<Employee>
      */
     Optional<Employee> findByEmployeeNumberOrEmailOrPhone(String employeeNumber, byte[] email, byte[] phone);
+
+    /**
+     * 주어진 부서 ID 목록에 속한 모든 직원의 부서를 새로운 부서 ID로 일괄 업데이트합니다.
+     *
+     * @param newDepartmentId    새롭게 할당될 부서의 ID
+     * @param oldDepartmentIds   변경 대상이 되는 기존 부서 ID 목록
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Employee e SET e.employeeDepartment.departmentId = :newDepartmentId WHERE e.employeeDepartment.departmentId IN :oldDepartmentIds")
+    void updateDepartmentByDepartmentIds(@Param("newDepartmentId") Integer newDepartmentId, @Param("oldDepartmentIds") List<Integer> oldDepartmentIds);
+
+    List<Employee> findAllByEmployeeDepartment_DepartmentIdIn(List<Integer> departmentIds);
+
+    List<Employee> findAllByGrade_GradeIdIn(List<Integer> gradeIds);
+
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Employee e SET e.grade = null WHERE e.grade.gradeId IN :gradeIds")
+    void updateGradeByGradeIds(@Param("gradeIds") List<Integer> gradeIds);
 }

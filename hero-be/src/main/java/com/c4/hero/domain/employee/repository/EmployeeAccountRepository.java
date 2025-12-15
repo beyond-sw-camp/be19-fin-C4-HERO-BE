@@ -39,4 +39,6 @@ public interface EmployeeAccountRepository extends JpaRepository<Account, Intege
      */
     @Query("SELECT a FROM Account a JOIN FETCH a.accountRoles ar JOIN FETCH ar.role WHERE a.account = :account")
     Optional<Account> findByAccountWithRoles(@Param("account") String account);
+
+    Optional<Account> findByEmployee_EmployeeId(Integer employeeId);
 }

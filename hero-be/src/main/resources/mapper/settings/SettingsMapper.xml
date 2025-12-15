@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.c4.hero.domain.settings.mapper.SettingsMapper">
+
+    <!-- 만약 설정값이 없다면 5를 반환 -->
+    <select id = "selectPolicy" resultType="int">
+        SELECT IFNULL(
+            (SELECT
+                    l.value
+               FROM tbl_login_policies AS l
+              WHERE l.login_policy_id = 1)
+          , 5
+        )
+    </select>
+
+    <resultMap id="permissionsResultMap" type="com.c4.hero.domain.settings.dto.response.SettingsPermissionsResponseDTO">
+        <id property="employeeId" column="employeeId"/>
+        <result property="department" column="department"/>
+        <result property="grade" column="grade"/>
+        <result property="jobTitle" column="jobTitle"/>
+        <collection property="role" ofType="java.lang.String">
+            <result column="roleName"/>
+        </collection>
+    </resultMap>
+
+    <select id="findEmployeePermissions" resultMap="permissionsResultMap">
+        SELECT
+            e.employee_id AS employeeId,
+            d.department_name AS department,
+            g.grade AS grade,
+            jt.job_title AS jobTitle,
+            r.role AS roleName
+        FROM
+            tbl_employee e
+        LEFT JOIN
+            tbl_department d ON e.department_id = d.department_id
+        LEFT JOIN
+            tbl_grade g ON e.grade_id = g.grade_id
+        LEFT JOIN
+            tbl_job_title jt ON e.job_title_id = jt.job_title_id
+        LEFT JOIN
+            tbl_account a ON e.employee_id = a.employee_id
+        LEFT JOIN
+            tbl_account_role ar ON a.account_id = ar.account_id
+        LEFT JOIN
+            tbl_roles r ON ar.role_id = r.role_id
+        WHERE e.employee_id IN (
+            SELECT employee_id FROM (
+                SELECT DISTINCT e.employee_id
+                FROM tbl_employee e
+                LEFT JOIN tbl_department d ON e.department_id = d.department_id
+                <where>
+                    <if test="params.query != null and params.query != ''">
+                        e.employee_name LIKE CONCAT('%', #{params.query}, '%')
+                        OR d.department_name LIKE CONCAT('%', #{params.query}, '%')
+                        OR g.grade LIKE CONCAT('%', #{params.query}, '%')
+                        OR jt.job_title LIKE CONCAT('%', #{params.query}, '%')
+                    </if>
+                </where>
+                ORDER BY e.employee_id
+                LIMIT #{pageable.pageSize} OFFSET #{pageable.offset}
+            ) as t
+        )
+        ORDER BY
+            e.employee_id
+    </select>
+
+    <select id="countEmployeePermissions" resultType="int">
+        SELECT
+            COUNT(DISTINCT e.employee_id)
+        FROM
+            tbl_employee e
+        LEFT JOIN
+            tbl_department d ON e.department_id = d.department_id
+        <where>
+            <if test="params.query != null and params.query != ''">
+                e.employee_name LIKE CONCAT('%', #{params.query}, '%')
+                OR d.department_name LIKE CONCAT('%', #{params.query}, '%')
+            </if>
+        </where>
+    </select>
+
+</mapper>

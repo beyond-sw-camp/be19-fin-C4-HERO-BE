@@ -64,6 +64,11 @@ public enum ErrorCode {
      */
     ACCESS_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "C007", "Access Token이 만료되었습니다."),
 
+    /**
+     * 관리자 데이터 수정/삭제 불가
+     */
+    CANNOT_MODIFY_ADMIN_DATA(HttpStatus.FORBIDDEN, "C008", "관리자 데이터는 수정/삭제할 수 없습니다."),
+
     // ===== 사원(Employee) 관련 에러 =====
     /**
      * 부서를 찾을 수 없음
