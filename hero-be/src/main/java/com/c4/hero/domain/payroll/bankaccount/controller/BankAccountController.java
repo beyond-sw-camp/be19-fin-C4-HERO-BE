@@ -24,7 +24,7 @@ import java.util.List;
  */
 
 @RestController
-@RequestMapping("/api/me")
+@RequestMapping("/api/me/payroll")
 @RequiredArgsConstructor
 public class BankAccountController {
 

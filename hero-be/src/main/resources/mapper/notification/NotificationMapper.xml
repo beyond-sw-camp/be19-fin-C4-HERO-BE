@@ -2,6 +2,19 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
+<!--
+<pre>
+  Xml Name: NotificationMapper.xml
+  Description: 알림 조회 관리 Mybatis Mapper
+
+  History
+  2025/12/12 (혜원) 최초 작성
+</pre>
+
+  @author 혜원
+  @version 1.0
+-->
+
 <mapper namespace="com.c4.hero.domain.notification.mapper.NotificationMapper">
     
     <resultMap id="notificationResultMap" type="com.c4.hero.domain.notification.dto.NotificationDTO">

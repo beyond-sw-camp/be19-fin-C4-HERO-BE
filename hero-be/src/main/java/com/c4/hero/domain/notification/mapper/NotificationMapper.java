@@ -11,10 +11,10 @@ import java.util.List;
  * Description: 알림 데이터 접근 매퍼
  *
  * History
- * 2025/12/11 (최혜원) 최초 작성
+ * 2025/12/11 (혜원) 최초 작성
  * </pre>
  *
- * @author 최혜원
+ * @author 혜원
  * @version 1.0
  */
 @Mapper

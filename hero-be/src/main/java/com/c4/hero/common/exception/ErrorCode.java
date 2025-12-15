@@ -99,13 +99,42 @@ public enum ErrorCode {
      */
     ROLE_NOT_FOUND(HttpStatus.NOT_FOUND, "E007", "해당 역할을 찾을 수 없습니다."),
 
+    /**
+     * 직원을 찾을 수 없음
+     */
+    EMPLOYEE_NOT_FOUND(HttpStatus.NOT_FOUND, "E008", "해당 직원을 찾을 수 없습니다."),
+    
+    
     // ===== 메일 관련 에러 =====
     /**
      * 이메일 발송 실패
      */
-    EMAIL_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "M001", "이메일 발송에 실패했습니다.");
+    EMAIL_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "M001", "이메일 발송에 실패했습니다."),
 
 
+    // ===== 급여(Payroll) - 계좌 관련 에러 =====
+
+    /**
+     * 대표(기본) 계좌 삭제 불가
+     */
+    BANK_PRIMARY_DELETE_NOT_ALLOWED(HttpStatus.CONFLICT, "P001", "대표(기본) 계좌는 삭제할 수 없습니다."),
+
+    /**
+     * 계좌가 1개뿐이라 삭제 불가
+     */
+    BANK_MIN_ONE_REQUIRED(HttpStatus.CONFLICT, "P002", "계좌가 1개뿐이라 삭제할 수 없습니다. (대표 계좌는 반드시 필요)"),
+
+    /**
+     * 급여 계좌를 찾을 수 없음
+     */
+    BANK_ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "P003", "급여 계좌를 찾을 수 없습니다."),
+
+    /**
+     * 지급 이력 있으면 급여 계좌 삭제 불가
+     */
+    BANK_ACCOUNT_HAS_PAYMENT_HISTORY(HttpStatus.CONFLICT, "P004", "지급 이력이 있는 계좌는 삭제할 수 없습니다.");
+
+    
     /** HTTP 상태 코드 */
     private final HttpStatus status;
 

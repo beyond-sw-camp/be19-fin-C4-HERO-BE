@@ -1,4 +1,4 @@
-package com.c4.hero.domain.payroll.report.dto;
+package com.c4.hero.domain.payroll.payslip.dto;
 
 /**
  * 급여명세서(Payslip) 기본 정보 DTO
@@ -10,10 +10,11 @@ package com.c4.hero.domain.payroll.report.dto;
  *
  * History
  * 2025/12/08 동근 최초 작성
+ * 2025/12/14 동근 report 도메인에서 payslip 도메인으로 분리
  * </pre>
  *
  * @author 동근
- * @version 1.0
+ * @version 1.1
  */
 public record PayslipBaseDTO(
         String salaryMonth,

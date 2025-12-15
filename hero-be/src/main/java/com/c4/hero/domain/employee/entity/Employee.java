@@ -1,10 +1,10 @@
 package com.c4.hero.domain.employee.entity;
 
 import com.c4.hero.domain.employee.type.EmployeeStatus;
+import com.c4.hero.domain.employee.type.converter.EmployeeStatusConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -91,10 +92,7 @@ public class Employee {
     @Column(name = "gender", nullable = false, length = 50)
     private String gender;
 
-    /**
-     * 직원 상태 (예: 재직, 휴직, 퇴사)
-     */
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = EmployeeStatusConverter.class)
     @Column(name = "status", nullable = false, length = 50)
     private EmployeeStatus status;
 
@@ -168,8 +166,22 @@ public class Employee {
     @JoinColumn(name = "job_title_id")
     private JobTitle jobTitle;
 
+    @Column(name = "evaluation_point")
+    private Integer evaluationPoint;
+
+    @Column(name = "base_salary")
+    private Integer baseSalary;
+
+    @Transient // DB 컬럼과 매핑되지 않음
+    private String departmentPath;
+
     @Builder
-    public Employee(EmployeeDepartment employeeDepartment, String employeeNumber, String employeeName, byte[] email, byte[] phone, LocalDate birthDate, String gender, EmployeeStatus status, String contractType, byte[] address, LocalDate hireDate, String imagePath, Grade grade, JobTitle jobTitle) {
+    public Employee(EmployeeDepartment employeeDepartment, String employeeNumber, String employeeName,
+                    byte[] email, byte[] phone, LocalDate birthDate,
+                    String gender, EmployeeStatus status, String contractType,
+                    byte[] address, LocalDate hireDate, String imagePath,
+                    Grade grade, JobTitle jobTitle, Integer evaluationPoint,
+                    Integer baseSalary) {
         this.employeeDepartment = employeeDepartment;
         this.employeeNumber = employeeNumber;
         this.employeeName = employeeName;
@@ -184,5 +196,7 @@ public class Employee {
         this.imagePath = imagePath;
         this.grade = grade;
         this.jobTitle = jobTitle;
+        this.evaluationPoint = evaluationPoint;
+        this.baseSalary = baseSalary;
     }
 }
