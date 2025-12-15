@@ -25,7 +25,6 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class EvaluationPeriodRequestDTO {
 
-    @NotNull(message = "생성할 평가 템플릿 ID는 필수 입니다.")
     private Integer evaluationPeriodTemplateId;
 
     @NotBlank(message = "생성할 평가 템플릿 평가 기간명은 필수 입니다.")
