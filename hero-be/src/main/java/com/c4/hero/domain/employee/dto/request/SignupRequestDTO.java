@@ -1,4 +1,4 @@
-package com.c4.hero.domain.employee.dto;
+package com.c4.hero.domain.employee.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -73,6 +73,14 @@ public class SignupRequestDTO {
      */
     @NotBlank(message = "이력서 사진 경로는 필수입니다.")
     private String imagePath;
+
+    /**
+     * 기본급
+     */
+    @NotNull(message = "기본급은 필수 입력 항목입니다.")
+    private Integer baseSalary;
+
+    /**
 
     /**
      * 생년월일 (선택)

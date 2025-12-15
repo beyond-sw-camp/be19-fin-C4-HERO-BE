@@ -1,5 +1,6 @@
-package com.c4.hero.domain.employee.type;
+package com.c4.hero.domain.employee.type.converter;
 
+import com.c4.hero.domain.employee.type.ChangeType;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 import java.util.stream.Stream;

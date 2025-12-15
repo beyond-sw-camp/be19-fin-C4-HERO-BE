@@ -3,6 +3,8 @@ package com.c4.hero.domain.employee.type;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+import java.util.stream.Stream;
+
 /**
  * <pre>
  * Class Name: EmployeeStatus
@@ -42,4 +44,15 @@ public enum EmployeeStatus {
      * 화면에 표시될 설명
      */
     private final String description;
+
+    /**
+     * DB 코드 값으로 Enum 상수를 찾는 정적 메서드
+     */
+    public static EmployeeStatus fromCode(String code) {
+        return Stream.of(EmployeeStatus.values())
+                .filter(c -> c.getCode().equals(code))
+                .findFirst()
+                // 예외 처리를 명확히 하는 것이 좋습니다.
+                .orElseThrow(() -> new IllegalArgumentException("Invalid EmployeeStatus code: " + code));
+    }
 }

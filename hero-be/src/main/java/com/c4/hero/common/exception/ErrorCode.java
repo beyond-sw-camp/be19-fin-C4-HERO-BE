@@ -99,6 +99,12 @@ public enum ErrorCode {
      */
     ROLE_NOT_FOUND(HttpStatus.NOT_FOUND, "E007", "해당 역할을 찾을 수 없습니다."),
 
+    /**
+     * 직원을 찾을 수 없음
+     */
+    EMPLOYEE_NOT_FOUND(HttpStatus.NOT_FOUND, "E008", "해당 직원을 찾을 수 없습니다."),
+    
+    
     // ===== 메일 관련 에러 =====
     /**
      * 이메일 발송 실패
@@ -128,7 +134,7 @@ public enum ErrorCode {
      */
     BANK_ACCOUNT_HAS_PAYMENT_HISTORY(HttpStatus.CONFLICT, "P004", "지급 이력이 있는 계좌는 삭제할 수 없습니다.");
 
-
+    
     /** HTTP 상태 코드 */
     private final HttpStatus status;
 

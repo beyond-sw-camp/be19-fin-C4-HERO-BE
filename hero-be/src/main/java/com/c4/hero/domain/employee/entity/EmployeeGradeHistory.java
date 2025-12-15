@@ -1,7 +1,7 @@
 package com.c4.hero.domain.employee.entity;
 
 import com.c4.hero.domain.employee.type.ChangeType;
-import com.c4.hero.domain.employee.type.ChangeTypeConverter;
+import com.c4.hero.domain.employee.type.converter.ChangeTypeConverter;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;

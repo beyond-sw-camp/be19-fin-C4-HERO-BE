@@ -17,10 +17,10 @@ import org.springframework.transaction.event.TransactionalEventListener;
  *              다른 도메인에서 발행한 알림 이벤트를 수신하여 알림 생성 및 전송
  *
  * History
- * 2025/12/11 (최혜원) 최초 작성
+ * 2025/12/11 (혜원) 최초 작성
  * </pre>
  *
- * @author 최혜원
+ * @author 혜원
  * @version 1.0
  */
 @Slf4j

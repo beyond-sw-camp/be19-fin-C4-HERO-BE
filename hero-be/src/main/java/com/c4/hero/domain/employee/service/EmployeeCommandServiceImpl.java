@@ -3,17 +3,9 @@ package com.c4.hero.domain.employee.service;
 import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
 import com.c4.hero.common.util.EncryptionUtil;
-import com.c4.hero.domain.employee.dto.SignupRequestDTO;
-
-import com.c4.hero.domain.employee.entity.Account;
-import com.c4.hero.domain.employee.entity.AccountRole;
-import com.c4.hero.domain.employee.entity.Employee;
+import com.c4.hero.domain.employee.dto.request.SignupRequestDTO;
+import com.c4.hero.domain.employee.entity.*;
 import com.c4.hero.domain.employee.entity.EmployeeDepartment;
-import com.c4.hero.domain.employee.entity.EmployeeDepartmentHistory;
-import com.c4.hero.domain.employee.entity.EmployeeGradeHistory;
-import com.c4.hero.domain.employee.entity.Grade;
-import com.c4.hero.domain.employee.entity.JobTitle;
-import com.c4.hero.domain.employee.entity.Role;
 import com.c4.hero.domain.employee.repository.EmployeeAccountRepository;
 import com.c4.hero.domain.employee.repository.EmployeeAccountRoleRepository;
 import com.c4.hero.domain.employee.repository.EmployeeDepartmentRepository;
@@ -61,7 +53,7 @@ import java.util.stream.IntStream;
 @RequiredArgsConstructor
 @Transactional
 @Slf4j
-public class EmployeeServiceImpl implements EmployeeService {
+public class EmployeeCommandServiceImpl implements EmployeeCommandService {
 
     private final EmployeeRepository employeeRepository;
     private final EmployeeDepartmentRepository departmentRepository;
@@ -74,6 +66,8 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final EmployeeGradeHistoryRepository employeeGradeHistoryRepository;
     private final PasswordEncoder passwordEncoder;
     private final JavaMailSender mailSender;
+
+    private final EncryptionUtil encryptionUtil;
 
     @Value("${spring.mail.username}")
     private String defaultMailSenderUsername;
@@ -88,8 +82,8 @@ public class EmployeeServiceImpl implements EmployeeService {
     @Override
     public void signup(SignupRequestDTO request) {
         // 1. 중복 체크 (사번, 이메일, 전화번호)
-        byte[] encryptedEmail = EncryptionUtil.encrypt(request.getEmail());
-        byte[] encryptedPhone = EncryptionUtil.encrypt(request.getPhone());
+        byte[] encryptedEmail = encryptionUtil.encrypt(request.getEmail());
+        byte[] encryptedPhone = encryptionUtil.encrypt(request.getPhone());
 
         employeeRepository.findByEmployeeNumberOrEmailOrPhone(
                 request.getEmployeeNumber(),
@@ -125,17 +119,17 @@ public class EmployeeServiceImpl implements EmployeeService {
                 .hireDate(request.getHireDate())
                 .contractType(request.getContractType())
                 .imagePath(request.getImagePath())
-                .address(request.getAddress() != null ? EncryptionUtil.encrypt(request.getAddress()) : null)
+                .address(request.getAddress() != null ? encryptionUtil.encrypt(request.getAddress()) : null)
                 .employeeDepartment(employeeDepartment)
+                .baseSalary(request.getBaseSalary())
                 .grade(grade)
                 .jobTitle(jobTitle)
                 .status(EmployeeStatus.ACTIVE)
+                .evaluationPoint(0) // 초기값 0으로 설정
                 .build();
 
-        // 3. Employee 엔티티 저장
         Employee savedEmployee = employeeRepository.save(employee);
 
-        // 4. 계정 생성 로직
         String accountId = request.getEmail().split("@")[0];
         String tempPassword = createRandomPassword();
 
@@ -179,6 +173,8 @@ public class EmployeeServiceImpl implements EmployeeService {
         // 8. 이메일 발송 로직 (tempPassword 발송)
         sendTemporaryPasswordEmail(request.getEmail(), accountId, tempPassword);
     }
+
+    /* =================== private =================== */
 
     /**
      * 10자리의 랜덤 비밀번호 생성 (영문 대/소문자 + 숫자)

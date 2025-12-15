@@ -21,12 +21,12 @@ public enum AccountStatus {
     /**
      * 정상 사용 가능한 계정
      */
-    ACTIVE("ACTIVE", "정상"),
+    ACTIVE("A", "정상"),
 
     /**
      * 관리자에 의해 비활성화된 계정
      */
-    DISABLED("DISABLED", "비활성화");
+    DISABLED("D", "비활성화");
 
     /**
      * DB에 저장될 코드 값

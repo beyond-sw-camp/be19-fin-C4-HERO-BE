@@ -10,10 +10,10 @@ import org.springframework.stereotype.Repository;
  * Description: 알림 레포지토리
  *
  * History
- * 2025/12/11 (최혜원) 최초 작성
+ * 2025/12/11 (혜원) 최초 작성
  * </pre>
  *
- * @author 최혜원
+ * @author 혜원
  * @version 1.0
  */
 
