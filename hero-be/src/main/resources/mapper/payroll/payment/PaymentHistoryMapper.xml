@@ -2,16 +2,46 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-
+<!--
+ * <pre>
+ * Mapper Name : PaymentHistoryMapper
+ * Description : 급여 지급 이력 조회 전용 매퍼
+ *
+ * 역할
+ *  - 특정 급여 계좌가 지급 이력에 사용된 적이 있는지 여부 확인
+ *
+ * 설계 의도
+ *  - 계좌 삭제/변경 시 데이터 무결성 보호를 위한 사전 검증
+ *
+ * 연계 테이블
+ *  - tbl_payment_history
+ *
+ * 사용 위치
+ *  - 급여 계좌 삭제 검증 로직
+ *  - 지급 이력 참조 여부 확인
+ *
+ * History
+ *  2025/12/15 - 동근 최초 작성
+ * </pre>
+ *
+ *  @author 동근
+ *  @version 1.0
+ -->
 <mapper namespace="com.c4.hero.domain.payroll.payment.mapper.PaymentHistoryMapper">
 
-    <select id="existsByBankAccountId" parameterType="int" resultType="int">
-        SELECT CASE WHEN EXISTS (
-            SELECT 1
-            FROM tbl_payment_history
-            WHERE bank_account_id = #{bankAccountId}
-            LIMIT 1
-        ) THEN 1 ELSE 0 END
-    </select>
+    <!--
+    * 급여 지급 이력 존재 여부 조회
+    *
+    * @param bankAccountId 급여 계좌 ID
+    * @return 존재 여부 (1: 존재함, 0: 존재하지 않음)
+    -->
+   <select id="existsByBankAccountId" parameterType="int" resultType="int">
+       SELECT CASE WHEN EXISTS (
+           SELECT 1
+           FROM tbl_payment_history
+           WHERE bank_account_id = #{bankAccountId}
+           LIMIT 1
+       ) THEN 1 ELSE 0 END
+   </select>
 
 </mapper>

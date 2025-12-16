@@ -97,7 +97,7 @@
     <!-- 근무 요약 -->
     <select id="selectAttendanceSummary"
             parameterType="map"
-            resultType="com.c4.hero.domain.payroll.integration.attendance.AttendanceSummaryDto">
+            resultType="com.c4.hero.domain.payroll.integration.attendance.dto.AttendanceSummaryDto">
         SELECT
             COUNT(*)                                   AS workDays,
             SUM(TIMESTAMPDIFF(HOUR, start_time, end_time)) AS workHours,
