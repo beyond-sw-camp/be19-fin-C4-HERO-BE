@@ -147,7 +147,7 @@ public class NotificationController {
     public ResponseEntity<Void> modifyNotification(
             @PathVariable Integer notificationId) {
         notificationCommandService.modifyNotification(notificationId);
-        return ResponseEntity.ok().build();  // ← 추가!
+        return ResponseEntity.ok().build();
     }
 
     /**
@@ -165,7 +165,7 @@ public class NotificationController {
     @DeleteMapping("/{notificationId}")
     public ResponseEntity<Void> removeNotification(
             @PathVariable Integer notificationId) {
-        notificationCommandService.removeNotification(notificationId);  // ← 영구 삭제 메소드로 수정!
+        notificationCommandService.removeNotification(notificationId); 
         return ResponseEntity.ok().build();
     }
 
