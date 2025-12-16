@@ -1,6 +1,12 @@
 package com.c4.hero.domain.payroll.report.service;
 
-import com.c4.hero.domain.payroll.report.dto.*;
+
+import com.c4.hero.domain.payroll.report.dto.MyPaySummaryCoreDTO;
+import com.c4.hero.domain.payroll.report.dto.MyPaySummaryDTO;
+import com.c4.hero.domain.payroll.report.dto.PayHistoryChartPointDTO;
+import com.c4.hero.domain.payroll.report.dto.PayHistoryResponseDTO;
+import com.c4.hero.domain.payroll.report.dto.PayHistoryRowDTO;
+import com.c4.hero.domain.payroll.report.dto.PayItemDTO;
 import com.c4.hero.domain.payroll.report.mapper.EmployeePayrollReportMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -10,17 +16,22 @@ import java.util.List;
 
 
 /**
- * 급여 리포트 서비스 (사원의 내 급여 요약, 명세서 상세, 급여 이력(차트/테이블) 조회를 담당)
+ * 급여 리포트 조회 서비스
+ *
  * <pre>
  * Class Name: ReportService
- * Description: 내 급여, 명세서, 급여 이력 조회 비즈니스 로직 처리 서비스
+ * Description: 사원의 급여 리포트 조회 비즈니스 로직을 담당
+ *              - 내 급여 요약 조회
+ *              - 최근 급여 이력 조회 (차트/테이블)
+ *
  *
  * History
  * 2025/12/08 동근 최초 작성
+ * 2025/12/14 동근 payslip 조회 로직 제거 및 report 역할 명확화
  * </pre>
  *
  * @author 동근
- * @version 1.0
+ * @version 1.1
  */
 @Service
 @RequiredArgsConstructor
@@ -71,40 +82,6 @@ public class ReportService {
         );
     }
 
-    /**
-     * 명세서 상세 조회(PayslipBaseDto로 기본 정보 조회)
-     * PayslipBaseDTO로 기본 정보를 조회하고, 수당/공제 항목을 조합해서 PayslipDetailDTO로 반환
-     * @param employeeId 사원 ID
-     * @param month 조회할 급여월(YYYY-MM)
-     * @return 명세서 상세 DTO
-     */
-    public PayslipDetailDTO getPayslipDetail(Integer employeeId, String month) {
-        String targetMonth = (month != null && !month.isBlank())
-                ? month
-                : YearMonth.now().toString();
-
-        PayslipBaseDTO base = mapper.selectPayslipBase(employeeId, targetMonth);
-        if (base == null) {
-            throw new IllegalArgumentException("해당 월 명세서가 없습니다.");
-        }
-        // 수당/공제 항목 조회
-        List<PayItemDTO> allowances = mapper.selectAllowanceItems(employeeId, targetMonth);
-        List<PayItemDTO> deductions = mapper.selectDeductionItems(employeeId, targetMonth);
-
-        // 상세 DTO 조립
-        return new PayslipDetailDTO(
-                base.salaryMonth(),
-                base.employeeName(),
-                base.departmentName(),
-                base.baseSalary(),
-                allowances,
-                deductions,
-                base.grossPay(),
-                base.totalDeduction(),
-                base.netPay(),
-                base.pdfUrl()
-        );
-    }
 
     /**
      *  최근 12개월 급여 이력 + 차트 데이터

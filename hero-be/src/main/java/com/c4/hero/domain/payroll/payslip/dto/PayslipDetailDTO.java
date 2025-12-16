@@ -1,4 +1,6 @@
-package com.c4.hero.domain.payroll.report.dto;
+package com.c4.hero.domain.payroll.payslip.dto;
+
+import com.c4.hero.domain.payroll.report.dto.PayItemDTO;
 
 import java.util.List;
 
@@ -11,10 +13,11 @@ import java.util.List;
  *
  * History
  * 2025/12/08 동근 최초 작성
+ * 2025/12/14 동근 report 도메인에서 payslip 도메인으로 분리
  * </pre>
  *
  * @author 동근
- * @version 1.0
+ * @version 1.1
  */
 public record PayslipDetailDTO(
         String salaryMonth,
