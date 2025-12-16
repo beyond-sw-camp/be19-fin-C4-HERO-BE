@@ -1,5 +1,7 @@
 package com.c4.hero.common.config;
 
+import org.modelmapper.ModelMapper;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -41,5 +43,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
         // /files/** URL로 접근 시 ./files/ 폴더의 파일 반환
         registry.addResourceHandler("/files/**")
                 .addResourceLocations("file:./files/");
+    }
+
+    @Bean
+    public ModelMapper modelMapper() {
+        return new ModelMapper();
     }
 }
