@@ -78,5 +78,4 @@ public class Notification {
             this.isRead = false;
         }
     }
-    
 }
