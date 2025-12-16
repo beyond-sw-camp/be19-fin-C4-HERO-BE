@@ -165,7 +165,7 @@ public class NotificationController {
     @DeleteMapping("/{notificationId}")
     public ResponseEntity<Void> removeNotification(
             @PathVariable Integer notificationId) {
-        notificationCommandService.removeNotification(notificationId); 
+        notificationCommandService.removeNotification(notificationId);
         return ResponseEntity.ok().build();
     }
 
@@ -179,7 +179,7 @@ public class NotificationController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공"),
             @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content)
-    })  // ← 닫는 괄호 추가!
+    }) 
     @GetMapping("/{employeeId}/deleted")
     public ResponseEntity<List<NotificationDTO>> findDeletedNotifications(
             @PathVariable Integer employeeId) {
