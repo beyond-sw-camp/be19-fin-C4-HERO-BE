@@ -20,6 +20,18 @@ import java.util.List;
 
 @Mapper
 public interface EvaluationTemplateMapper {
+
+    List<Integer> selectTemplateIdsWithPaging(
+            @Param("offset") int offset,
+            @Param("size") int size
+    );
+
+    List<EvaluationTemplateResponseDTO> selectTemplatesByIds(
+            @Param("templateIds") List<Integer> templateIds
+    );
+
+    Long countAllTemplates();
+
     EvaluationTemplateResponseDTO selectTemplate(@Param("templateId") Integer id);
 
     List<EvaluationTemplateResponseDTO> selectAllTemplate();

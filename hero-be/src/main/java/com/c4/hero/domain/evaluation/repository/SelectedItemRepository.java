@@ -18,4 +18,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface SelectedItemRepository extends JpaRepository<SelectedItem, Integer> {
+
+    void deleteByEvaluationId(Integer evaluationId);
 }

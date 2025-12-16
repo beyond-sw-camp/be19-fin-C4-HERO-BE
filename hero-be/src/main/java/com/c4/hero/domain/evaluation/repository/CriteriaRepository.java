@@ -4,6 +4,8 @@ import com.c4.hero.domain.evaluation.entity.Criteria;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 /**
  * <pre>
  * Class Name: CriteriaRepository
@@ -18,4 +20,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface CriteriaRepository extends JpaRepository<Criteria,Integer> {
+
+    void deleteByItemId(Integer itemId);
+
+    void deleteByItemIdIn(List<Integer> itemIds);
 }

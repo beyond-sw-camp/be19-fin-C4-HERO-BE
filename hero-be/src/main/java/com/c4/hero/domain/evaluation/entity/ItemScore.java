@@ -39,5 +39,5 @@ public class ItemScore {
     private String description;
 
     @Column(name = "rank")
-    private Integer rank;
+    private String rank;
 }

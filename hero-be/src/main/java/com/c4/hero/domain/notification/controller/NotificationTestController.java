@@ -3,7 +3,6 @@ package com.c4.hero.domain.notification.controller;
 import com.c4.hero.common.event.NotificationEvent;
 import com.c4.hero.domain.notification.dto.NotificationDTO;
 import com.c4.hero.domain.notification.dto.NotificationRegistDTO;
-import com.c4.hero.domain.notification.service.NotificationQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
