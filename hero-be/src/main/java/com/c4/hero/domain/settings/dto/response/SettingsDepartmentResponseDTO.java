@@ -1,5 +1,6 @@
 package com.c4.hero.domain.settings.dto.response;
 
+import com.c4.hero.domain.employee.entity.Employee;
 import lombok.Builder;
 import lombok.Data;
 
@@ -13,6 +14,6 @@ public class SettingsDepartmentResponseDTO {
     private String departmentPhone;
     private Integer depth;
     private Integer parentDepartmentId;
-    private Integer managerId;
+    private SettingsDepartmentManagerDTO manager;
     private List<SettingsDepartmentResponseDTO> children;
 }

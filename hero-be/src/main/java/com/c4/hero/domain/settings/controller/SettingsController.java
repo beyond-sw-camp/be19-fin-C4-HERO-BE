@@ -15,6 +15,7 @@ import com.c4.hero.domain.settings.dto.response.SettingsPermissionsResponseDTO;
 import com.c4.hero.domain.settings.service.SettingsCommandService;
 import com.c4.hero.domain.settings.service.SettingsQueryService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,6 +31,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/settings")
 @RequiredArgsConstructor
+@Slf4j
 public class SettingsController {
 
     private final SettingsCommandService settingsCommandService;
@@ -41,6 +43,7 @@ public class SettingsController {
     @GetMapping("/departments")
     public ResponseEntity<ApiResponse<List<SettingsDepartmentResponseDTO>>> getDepartments() {
         List<SettingsDepartmentResponseDTO> departmentTree = settingsQueryService.getDepartmentTree();
+        log.info("department: {}", departmentTree);
         return ResponseEntity.ok(ApiResponse.success(departmentTree));
     }
 
@@ -59,6 +62,8 @@ public class SettingsController {
     @GetMapping("/grades")
     public ResponseEntity<ApiResponse<List<Grade>>> getGrades() {
         List<Grade> grades = settingsQueryService.getAllGrades();
+        log.info("grades: {}", grades);
+
         return ResponseEntity.ok(ApiResponse.success(grades));
     }
 
@@ -77,6 +82,8 @@ public class SettingsController {
     @GetMapping("/job-titles")
     public ResponseEntity<ApiResponse<List<JobTitle>>> getJobTitles() {
         List<JobTitle> jobTitles = settingsQueryService.getAllJobTitles();
+        log.info("jobTitles: {}", jobTitles);
+
         return ResponseEntity.ok(ApiResponse.success(jobTitles));
     }
 

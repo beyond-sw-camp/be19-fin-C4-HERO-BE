@@ -109,6 +109,11 @@ public enum ErrorCode {
      * 직원을 찾을 수 없음
      */
     EMPLOYEE_NOT_FOUND(HttpStatus.NOT_FOUND, "E008", "해당 직원을 찾을 수 없습니다."),
+
+    /**
+     * 부서장은 해당 부서 소속이어야 함
+     */
+    MANAGER_NOT_IN_DEPARTMENT(HttpStatus.BAD_REQUEST, "E009", "부서장은 해당 부서의 소속이어야 합니다."),
     
     
     // ===== 메일 관련 에러 =====

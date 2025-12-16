@@ -17,6 +17,8 @@
 
     <resultMap id="permissionsResultMap" type="com.c4.hero.domain.settings.dto.response.SettingsPermissionsResponseDTO">
         <id property="employeeId" column="employeeId"/>
+        <result property="employeeName" column="employee_name"/>
+        <result property="employeeNumber" column="employee_number"/>
         <result property="department" column="department"/>
         <result property="grade" column="grade"/>
         <result property="jobTitle" column="jobTitle"/>
@@ -28,6 +30,8 @@
     <select id="findEmployeePermissions" resultMap="permissionsResultMap">
         SELECT
             e.employee_id AS employeeId,
+            e.employee_name,
+            e.employee_number,
             d.department_name AS department,
             g.grade AS grade,
             jt.job_title AS jobTitle,

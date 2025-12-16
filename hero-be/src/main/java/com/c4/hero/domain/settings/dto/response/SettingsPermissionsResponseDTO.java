@@ -13,6 +13,8 @@ import java.util.List;
 @AllArgsConstructor
 public class SettingsPermissionsResponseDTO {
     private Integer employeeId;
+    private String employeeName;
+    private String employeeNumber;
     private String department;
     private String grade;
     private String jobTitle;

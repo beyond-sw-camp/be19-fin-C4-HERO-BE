@@ -16,6 +16,7 @@ import com.c4.hero.domain.employee.repository.EmployeeRepository;
 import com.c4.hero.domain.employee.repository.EmployeeRoleRepository;
 import com.c4.hero.domain.employee.service.EmployeeCommandService;
 import com.c4.hero.domain.employee.type.ChangeType;
+import com.c4.hero.domain.employee.type.RoleType;
 import com.c4.hero.domain.settings.dto.request.SettingsDepartmentRequestDTO;
 import com.c4.hero.domain.settings.dto.request.SettingsGradeRequestDTO;
 import com.c4.hero.domain.settings.dto.request.SettingsJobTitleRequestDTO;
@@ -26,11 +27,13 @@ import com.c4.hero.domain.settings.entity.SettingsLoginPolicy;
 import com.c4.hero.domain.settings.repository.SettingsDepartmentRepository;
 import com.c4.hero.domain.settings.repository.SettingsLoginPolicesRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -38,6 +41,7 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 @RequiredArgsConstructor
+@Slf4j
 public class SettingsCommandService {
 
     private final SettingsDepartmentRepository departmentRepository;
@@ -57,44 +61,49 @@ public class SettingsCommandService {
     private static final int ADMIN_ID = 0;
 
     public void updateDepartments(List<SettingsDepartmentRequestDTO> departmentDtos) {
-        // 1. DB에 있는 모든 부서 ID를 가져와 Set에 저장 (단, 0번과 -1번은 제외)
+        // 1. DEPT_MANAGER 역할 조회
+        Role deptManagerRole = roleRepository.findByRole(RoleType.DEPT_MANAGER)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ROLE_NOT_FOUND, "DEPT_MANAGER 역할을 찾을 수 없습니다."));
+
+        // 2. DB에 있는 모든 부서 ID를 가져와 Set에 저장 (단, 0번과 -1번은 제외)
         Set<Integer> existingDeptIds = departmentRepository.findAll().stream()
                 .map(SettingsDepartment::getDepartmentId)
                 .filter(id -> id != ADMIN_DEPARTMENT_ID && id != TEMP_DEPARTMENT_ID) // 0번과 -1번은 삭제 대상 후보에서 제외
                 .collect(Collectors.toSet());
 
-        // 2. 새로운 ID 생성을 위해 현재 MAX ID 조회
+        // 3. 새로운 ID 생성을 위해 현재 MAX ID 조회
         Integer maxId = departmentRepository.findMaxDepartmentId();
         AtomicInteger newIdCounter = new AtomicInteger(maxId == null ? 0 : maxId);
 
-        // 3. 재귀적으로 부서를 저장/업데이트하면서 Set에서 해당 ID를 제거
-        // 최상위 부서이므로 depth는 1부터 시작
+        // 4. 재귀적으로 부서를 저장/업데이트하면서 Set에서 해당 ID를 제거
         for (SettingsDepartmentRequestDTO departmentDto : departmentDtos) {
-            saveOrUpdateDepartment(departmentDto, null, 1, existingDeptIds, newIdCounter);
+            saveOrUpdateDepartment(departmentDto, null, 1, existingDeptIds, newIdCounter, deptManagerRole);
         }
 
-        // 4. Set에 남아있는 ID는 요청에 포함되지 않은 부서이므로 삭제
-        // 삭제 시 외래 키 제약 조건(자식 부서 참조)을 피하기 위해 depth 역순(자식 -> 부모)으로 삭제
+        // 5. Set에 남아있는 ID는 요청에 포함되지 않은 부서이므로 삭제
         if (!existingDeptIds.isEmpty()) {
-            // 4-1. 삭제될 부서에 속한 사원들을 조회
-            List<Employee> employeesToUpdate = employeeRepository.findAllByEmployeeDepartment_DepartmentIdIn(List.copyOf(existingDeptIds));
+            List<SettingsDepartment> departmentsToDelete = departmentRepository.findAllById(existingDeptIds);
 
-            // 4-2. 해당 사원들의 부서 변경 이력을 기록
+            // 5-1. 삭제될 부서의 부서장들에게서 DEPT_MANAGER 역할 회수
+            departmentsToDelete.stream()
+                    .map(SettingsDepartment::getManagerId)
+                    .filter(Objects::nonNull)
+                    .forEach(managerId -> updateDeptManagerRole(managerId, null, deptManagerRole));
+
+            // 5-2. 삭제될 부서에 속한 직원들을 임시 부서(-1)로 이동
+            List<Employee> employeesToUpdate = employeeRepository.findAllByEmployeeDepartment_DepartmentIdIn(List.copyOf(existingDeptIds));
             for (Employee employee : employeesToUpdate) {
                 employeeCommandService.addDepartmentHistory(employee, ChangeType.UPDATE, "발령 대기 부서");
             }
-
-            // 4-3. 해당 사원들의 부서를 임시 부서(-1)로 일괄 변경
             employeeRepository.updateDepartmentByDepartmentIds(TEMP_DEPARTMENT_ID, List.copyOf(existingDeptIds));
 
-            // 4-4. 자식 부서부터 삭제하기 위해 depth 역순으로 정렬 후 삭제
-            List<SettingsDepartment> departmentsToDelete = departmentRepository.findAllById(existingDeptIds);
+            // 5-3. 자식 부서부터 삭제하기 위해 depth 역순으로 정렬 후 삭제
             departmentsToDelete.sort(Comparator.comparingInt(SettingsDepartment::getDepth).reversed());
             departmentRepository.deleteAll(departmentsToDelete);
         }
     }
 
-    private void saveOrUpdateDepartment(SettingsDepartmentRequestDTO dto, Integer parentId, int currentDepth, Set<Integer> existingDeptIds, AtomicInteger newIdCounter) {
+    private void saveOrUpdateDepartment(SettingsDepartmentRequestDTO dto, Integer parentId, int currentDepth, Set<Integer> existingDeptIds, AtomicInteger newIdCounter, Role deptManagerRole) {
         Integer departmentId = dto.getDepartmentId();
 
         // 0번, -1번 부서에 대한 수정 요청이 들어오면 무시
@@ -102,28 +111,72 @@ public class SettingsCommandService {
             return;
         }
 
+        SettingsDepartment originalDept = null;
         if (departmentId != null) {
+            originalDept = departmentRepository.findById(departmentId).orElse(null);
             existingDeptIds.remove(departmentId);
         } else {
             departmentId = newIdCounter.incrementAndGet();
+        }
+
+        Integer oldManagerId = (originalDept != null) ? originalDept.getManagerId() : null;
+        Integer newManagerId = dto.getManagerId();
+
+        // 부서장 소속 검증
+        if (newManagerId != null) {
+            Employee manager = employeeRepository.findById(newManagerId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.EMPLOYEE_NOT_FOUND, "부서장으로 지정된 사원을 찾을 수 없습니다."));
+            if (!Objects.equals(manager.getEmployeeDepartment().getDepartmentId(), departmentId)) {
+                throw new BusinessException(ErrorCode.MANAGER_NOT_IN_DEPARTMENT);
+            }
         }
 
         SettingsDepartment department = SettingsDepartment.builder()
                 .departmentId(departmentId)
                 .departmentName(dto.getDepartmentName())
                 .departmentPhone(dto.getDepartmentPhone())
-                .depth(currentDepth) // 서버에서 계산된 depth 사용
+                .depth(currentDepth)
                 .parentDepartmentId(parentId)
-                .managerId(dto.getManagerId())
+                .managerId(newManagerId)
                 .build();
-
         SettingsDepartment savedDepartment = departmentRepository.save(department);
+
+        if (!Objects.equals(oldManagerId, newManagerId)) {
+            updateDeptManagerRole(oldManagerId, newManagerId, deptManagerRole);
+        }
 
         if (dto.getChildren() != null && !dto.getChildren().isEmpty()) {
             for (SettingsDepartmentRequestDTO childDto : dto.getChildren()) {
-                // 자식 부서는 현재 depth + 1
-                saveOrUpdateDepartment(childDto, savedDepartment.getDepartmentId(), currentDepth + 1, existingDeptIds, newIdCounter);
+                saveOrUpdateDepartment(childDto, savedDepartment.getDepartmentId(), currentDepth + 1, existingDeptIds, newIdCounter, deptManagerRole);
             }
+        }
+    }
+
+    private void updateDeptManagerRole(Integer oldManagerId, Integer newManagerId, Role deptManagerRole) {
+        // 이전 부서장에게서 역할 제거
+        if (oldManagerId != null) {
+            accountRepository.findByEmployee_EmployeeId(oldManagerId).ifPresent(account -> {
+                boolean isSystemAdmin = account.getAccountRoles().stream()
+                        .anyMatch(ar -> ar.getRole().getRole() == RoleType.SYSTEM_ADMIN);
+                if (!isSystemAdmin) {
+                    account.getAccountRoles().removeIf(ar -> ar.getRole().getRoleId().equals(deptManagerRole.getRoleId()));
+                }
+            });
+        }
+
+        // 새 부서장에게 역할 추가
+        if (newManagerId != null) {
+            accountRepository.findByEmployee_EmployeeId(newManagerId).ifPresent(account -> {
+                boolean alreadyHasRole = account.getAccountRoles().stream()
+                        .anyMatch(ar -> ar.getRole().getRoleId().equals(deptManagerRole.getRoleId()));
+                if (!alreadyHasRole) {
+                    AccountRole newDeptManagerRole = AccountRole.builder()
+                            .account(account)
+                            .role(deptManagerRole)
+                            .build();
+                    account.getAccountRoles().add(newDeptManagerRole);
+                }
+            });
         }
     }
 
@@ -167,10 +220,15 @@ public class SettingsCommandService {
     }
 
     public void updateJobTitles(List<SettingsJobTitleRequestDTO> jobTitleDtos) {
+
+        log.info("updateJobTitles: {}", jobTitleDtos);
+
         Set<Integer> existingJobTitleIds = jobTitleRepository.findAll().stream()
                 .map(JobTitle::getJobTitleId)
                 .filter(id -> id != ADMIN_ID)
                 .collect(Collectors.toSet());
+
+        log.info("existingJobTitleIds: {}", existingJobTitleIds);
 
         Integer maxId = jobTitleRepository.findMaxJobTitleId();
         AtomicInteger newIdCounter = new AtomicInteger(maxId == null ? 0 : maxId);
@@ -219,19 +277,31 @@ public class SettingsCommandService {
         Account account = accountRepository.findByEmployee_EmployeeId(dto.getEmployeeId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.EMPLOYEE_NOT_FOUND));
 
-        accountRoleRepository.deleteAllByAccount(account);
+        // 기존 권한에 SYSTEM_ADMIN이 있는지 확인
+        boolean hasSystemAdmin = account.getAccountRoles().stream()
+                .anyMatch(ar -> ar.getRole().getRole() == RoleType.SYSTEM_ADMIN);
 
-        List<AccountRole> newRoles = dto.getRoleIds().stream()
-                .map(roleId -> {
-                    Role role = roleRepository.findById(roleId)
-                            .orElseThrow(() -> new BusinessException(ErrorCode.ROLE_NOT_FOUND));
-                    return AccountRole.builder()
-                            .account(account)
-                            .role(role)
-                            .build();
-                })
+        // 새로운 권한 목록에 SYSTEM_ADMIN이 있는지 확인
+        List<Role> newRoles = roleRepository.findAllById(dto.getRoleIds());
+        boolean requestedSystemAdmin = newRoles.stream()
+                .anyMatch(r -> r.getRole() == RoleType.SYSTEM_ADMIN);
+
+        // SYSTEM_ADMIN 권한 변경 시도 감지
+        if (hasSystemAdmin != requestedSystemAdmin) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "시스템 관리자 권한은 변경할 수 없습니다.");
+        }
+
+        // 기존 권한을 모두 제거
+        account.getAccountRoles().clear();
+
+        // 새로운 권한 추가
+        List<AccountRole> newAccountRoles = newRoles.stream()
+                .map(role -> AccountRole.builder()
+                        .account(account)
+                        .role(role)
+                        .build())
                 .collect(Collectors.toList());
 
-        accountRoleRepository.saveAll(newRoles);
+        account.getAccountRoles().addAll(newAccountRoles);
     }
 }
