@@ -16,7 +16,7 @@
 
 <mapper namespace="com.c4.hero.domain.evaluation.mapper.EvaluationEmployeeMapper">
 
-    <resultMap id="EvaluationEmployeeMap" type="com.c4.hero.domain.evaluation.dto.EmployeeResponseDTO">
+    <resultMap id="EvaluationEmployeeMap" type="com.c4.hero.domain.evaluation.dto.employee.EmployeeResponseDTO">
         <id property="employeeEmployeeId" column="employee_id"/>
         <result property="employeeEmployeeName" column="employee_name"/>
         <result property="employeeDepartmentId" column="department_id"/>

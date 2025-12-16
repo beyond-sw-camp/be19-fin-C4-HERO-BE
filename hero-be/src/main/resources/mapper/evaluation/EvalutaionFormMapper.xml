@@ -17,7 +17,7 @@
 <mapper namespace="com.c4.hero.domain.evaluation.mapper.EvaluationFormMapper">
 
 
-    <resultMap id="EvaluationFormMap" type="com.c4.hero.domain.evaluation.dto.EvaluationFormResponseDTO">
+    <resultMap id="EvaluationFormMap" type="com.c4.hero.domain.evaluation.dto.form.EvaluationFormResponseDTO">
         <id property="evaluationFormFormId" column="form_id"/>
         <result property="evaluationFormEvaluationId" column="evaluation_id"/>
         <result property="evaluationFormEvaluationName" column="evaluation_name"/>
@@ -39,7 +39,7 @@
         <result property="evaluationFormEvaluationPeriodEnd" column="evaluation_period_end"/>
 
 
-        <collection property="formItems" ofType="com.c4.hero.domain.evaluation.dto.FormItemResponseDTO">
+        <collection property="formItems" ofType="com.c4.hero.domain.evaluation.dto.item.FormItemResponseDTO">
             <id property="formItemFormItemId" column="form_item_id"/>
             <result property="formItemFormId" column="form_item_form_id"/>
             <result property="formItemSelectedItemId" column="selected_item_id"/>
@@ -48,7 +48,7 @@
             <result property="formItemWeight" column="form_item_weight"/>
             <result property="formItemDescription" column="form_item_description"/>
 
-            <association property="itemScore" javaType="com.c4.hero.domain.evaluation.dto.ItemScoreResponseDTO">
+            <association property="itemScore" javaType="com.c4.hero.domain.evaluation.dto.score.ItemScoreResponseDTO">
                 <id property="itemScoreItemScoreId" column="item_score_id"/>
                 <result property="itemScoreFormItemId" column="item_score_form_item_id"/>
                 <result property="itemScoreScore" column="score"/>
@@ -56,7 +56,7 @@
                 <result property="itemScoreRank" column="item_score_rank"/>
             </association>
 
-            <collection property="criterias" ofType="com.c4.hero.domain.evaluation.dto.CriteriaResponseDTO">
+            <collection property="criterias" ofType="com.c4.hero.domain.evaluation.dto.criteria.CriteriaResponseDTO">
                 <id property="criteriaCriteriaId" column="criteria_id"/>
                 <result property="criteriaItemId" column="criteria_item_id"/>
                 <result property="criteriaRank" column="rank"/>
