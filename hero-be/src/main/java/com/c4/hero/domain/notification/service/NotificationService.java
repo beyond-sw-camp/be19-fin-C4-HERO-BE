@@ -6,23 +6,27 @@ import com.c4.hero.domain.notification.mapper.NotificationMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
  * <pre>
  * Class Name: NotificationService
  * Description: 알림 비즈니스 로직 처리
- *              알림 생성, 조회, 읽음 처리 등
+ *              알림 생성, 조회, 읽음 처리
+ *              알림 삭제, 영구 삭제
  *
  * History
  * 2025/12/11 (혜원) 최초 작성
+ * 2025/12/15 (혜원) 알림 삭제 기능 추가
  * </pre>
  *
  * @author 혜원
- * @version 1.0
+ * @version 2.0
  */
 @Slf4j
 @Service
@@ -91,7 +95,7 @@ public class NotificationService {
      * @return int 미읽은 알림 개수
      */
     public int findUnreadNotification(Integer employeeId) {
-        return notificationMapper.countUnreadNotification(employeeId);
+        return notificationMapper.selectUnreadNotification(employeeId);
     }
 
     /**
@@ -114,5 +118,73 @@ public class NotificationService {
     public void ModifyAllIsRead(Integer employeeId) {
         notificationMapper.updateAllIsRead(employeeId);
         log.info("모든 알림 읽음 처리: employeeId={}", employeeId);
+    }
+
+    /**
+     * 알림 소프트 삭제
+     *
+     * @param notificationId 알림 ID
+     */
+    @Transactional
+    public void softRemoveNotification(Integer notificationId) {
+        notificationMapper.softDeleteNotification(notificationId);
+        log.info("알림 소프트 삭제 완료: notificationId={}", notificationId);
+    }
+
+    /**
+     * 소프트 삭제된 알림 복구
+     *
+     * @param notificationId 알림 ID
+     */
+    @Transactional
+    public void restoreNotification(Integer notificationId) {
+        notificationMapper.updateNotification(notificationId);
+        log.info("알림 복구 완료: notificationId={}", notificationId);
+    }
+
+    /**
+     * 알림 영구 삭제
+     *
+     * @param notificationId 알림 ID
+     */
+    @Transactional
+    public void removeNotification(Integer notificationId) {
+        notificationMapper.deleteNotification(notificationId);
+        log.info("알림 영구 삭제 완료: notificationId={}", notificationId);
+    }
+
+    /**
+     * 소프트 삭제된 알림 목록 조회
+     *
+     * @param employeeId 직원 ID
+     * @return 삭제된 알림 목록
+     */
+    public List<NotificationDTO> findDeletedNotifications(Integer employeeId) {
+        return notificationMapper.selectDeletedNotifications(employeeId);
+    }
+
+    /**
+     * 30일 지난 소프트 삭제 알림 자동 영구 삭제
+     * 매일 자정에 실행
+     */
+    @Scheduled(cron = "0 0 0 * * *")  // 매일 자정
+    @Transactional
+    public void cleanupDeletedNotifications() {
+        log.info("소프트 삭제 알림 자동 정리 시작");
+
+        LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+
+        // 30일 지난 삭제 알림 조회
+        List<NotificationDTO> oldDeleted =
+                notificationMapper.selectOldDeletedNotifications(thirtyDaysAgo);
+
+        log.info("정리 대상 알림 개수: {}", oldDeleted.size());
+
+        // 영구 삭제
+        for (NotificationDTO notification : oldDeleted) {
+            notificationMapper.deleteNotification(notification.getNotificationId());
+        }
+
+        log.info("소프트 삭제 알림 자동 정리 완료: {}개 영구 삭제", oldDeleted.size());
     }
 }

@@ -6,15 +6,16 @@
 <!--
  * 급여 리포트 조회용 MyBatis Mapper
  * <pre>
- * Class Name: EmployeePayrollReportMapper
- * Description: 내 급여 요약, 이력, 명세서 관련 조회 SQL 매퍼
+ * Class Name: PayrollReportQueryMapper
+ * Description: 내 급여 요약, 이력 관련 조회 SQL 매퍼
  *
  * History
  * 2025/12/08 동근 최초 작성
+ * 2025/12/14 동근 report에서 payslip 조회 쿼리 분리 (payslip 패키지로 이동)
  * </pre>
  *
  * @author 동근
- * @version 1.0
+ * @version 1.1
 -->
 
 <mapper namespace="com.c4.hero.domain.payroll.report.mapper.EmployeePayrollReportMapper">
@@ -96,7 +97,7 @@
     <!-- 근무 요약 -->
     <select id="selectAttendanceSummary"
             parameterType="map"
-            resultType="com.c4.hero.domain.payroll.integration.attendance.AttendanceSummaryDto">
+            resultType="com.c4.hero.domain.payroll.integration.attendance.dto.AttendanceSummaryDto">
         SELECT
             COUNT(*)                                   AS workDays,
             SUM(TIMESTAMPDIFF(HOUR, start_time, end_time)) AS workHours,
@@ -123,23 +124,5 @@
         ORDER BY p.salary_month
     </select>
 
-<!--     명세서 기본 정보 + PDF URL -->
-    <select id="selectPayslipBase"
-            resultType="com.c4.hero.domain.payroll.report.dto.PayslipBaseDTO">
-        SELECT
-            ps.salary_month                        AS salaryMonth,
-            e.employee_name                        AS employeeName,
-            d.department_name                      AS departmentName,
-            ps.base_salary                         AS baseSalary,
-            ps.gross_pay                           AS grossPay,
-            ps.total_deduction                     AS totalDeduction,
-            ps.net_pay                             AS netPay,
-            ps.pdf_url                             AS pdfUrl
-        FROM tbl_payslip ps
-                 JOIN tbl_employee e ON e.employee_id = ps.employee_id
-                 LEFT JOIN tbl_department d ON d.department_id = e.department_id
-        WHERE ps.employee_id = #{employeeId}
-          AND ps.salary_month = #{salaryMonth}
-    </select>
 
 </mapper>

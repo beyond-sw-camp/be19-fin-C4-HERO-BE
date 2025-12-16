@@ -14,10 +14,11 @@ import java.time.LocalDateTime;
  *
  * History
  * 2025/12/11 (혜원) 최초 작성
+ * 2025/12/15 (헤원) 삭제 관려 필드 추가
  * </pre>
  *
  * @author 혜원
- * @version 1.0
+ * @version 1.1
  */
 @Data
 @Builder
@@ -30,8 +31,10 @@ public class NotificationDTO {
     private String message;
     private String link;
     private Boolean isRead;
+    private Boolean isDeleted;
     private LocalDateTime createdAt;
     private LocalDateTime readAt;
+    private LocalDateTime deletedAt;
     private Integer employeeId;
     private Integer attendanceId;
     private Integer payrollId;
