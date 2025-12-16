@@ -21,6 +21,7 @@ import java.util.List;
  *
  * History
  * 2025/12/11 (혜원) 최초 작성
+ * 2025/12/15 (혜원) 알림 삭제 API 추가
  * </pre>
  *
  * @author 혜원
@@ -106,5 +107,80 @@ public class NotificationController {
             @PathVariable Integer employeeId) {
         notificationService.ModifyAllIsRead(employeeId);
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 알림 소프트 삭제
+     *
+     * @param notificationId 알림 ID
+     * @return ResponseEntity<Void>
+     */
+    @Operation(summary = "알림 소프트 삭제", description = "특정 알림을 소프트 삭제 처리합니다. 30일 후 자동으로 영구 삭제됩니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "삭제 성공"),
+            @ApiResponse(responseCode = "404", description = "알림을 찾을 수 없음", content = @Content),
+            @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content)
+    })
+    @PatchMapping("/{notificationId}/delete")
+    public ResponseEntity<Void> softRemoveNotification(
+            @PathVariable Integer notificationId) {
+        notificationService.softRemoveNotification(notificationId);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 소프트 삭제된 알림 복구
+     *
+     * @param notificationId 알림 ID
+     * @return ResponseEntity<Void>
+     */
+    @Operation(summary = "알림 복구", description = "소프트 삭제된 알림을 복구합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "복구 성공"),
+            @ApiResponse(responseCode = "404", description = "알림을 찾을 수 없음", content = @Content),
+            @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content)
+    })
+    @PatchMapping("/{notificationId}/restore")
+    public ResponseEntity<Void> restoreNotification(
+            @PathVariable Integer notificationId) {
+        notificationService.restoreNotification(notificationId);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 알림 영구 삭제
+     *
+     * @param notificationId 알림 ID
+     * @return ResponseEntity<Void>
+     */
+    @Operation(summary = "알림 영구 삭제", description = "알림을 DB에서 완전히 삭제합니다. 복구 불가능합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "삭제 성공"),
+            @ApiResponse(responseCode = "404", description = "알림을 찾을 수 없음", content = @Content),
+            @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content)
+    })
+    @DeleteMapping("/{notificationId}")
+    public ResponseEntity<Void> RemoveNotification(
+            @PathVariable Integer notificationId) {
+        notificationService.removeNotification(notificationId);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 소프트 삭제된 알림 목록 조회
+     *
+     * @param employeeId 직원 ID
+     * @return ResponseEntity<List<NotificationDTO>>
+     */
+    @Operation(summary = "삭제된 알림 목록 조회", description = "특정 직원의 소프트 삭제된 알림 목록을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content)
+    })
+    @GetMapping("/{employeeId}/deleted")
+    public ResponseEntity<List<NotificationDTO>> findDeletedNotifications(
+            @PathVariable Integer employeeId) {
+        List<NotificationDTO> deletedNotifications = notificationService.findDeletedNotifications(employeeId);
+        return ResponseEntity.ok(deletedNotifications);
     }
 }

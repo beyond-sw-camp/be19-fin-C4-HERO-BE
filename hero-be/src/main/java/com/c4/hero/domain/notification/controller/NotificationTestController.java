@@ -3,7 +3,7 @@ package com.c4.hero.domain.notification.controller;
 import com.c4.hero.common.event.NotificationEvent;
 import com.c4.hero.domain.notification.dto.NotificationDTO;
 import com.c4.hero.domain.notification.dto.NotificationRegistDTO;
-import com.c4.hero.domain.notification.service.NotificationService;
+import com.c4.hero.domain.notification.service.NotificationQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -42,8 +42,6 @@ import org.springframework.web.bind.annotation.*;
 public class NotificationTestController {
 
     private final ApplicationEventPublisher eventPublisher;
-    private final NotificationService notificationService;
-
     /**
      * 근태 승인 알림 테스트
      *
