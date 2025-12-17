@@ -34,12 +34,12 @@ public class NotificationSettingsController {
      * @return 알림 설정
      */
     @GetMapping("/{employeeId}")
-    public ResponseEntity<NotificationSettingsDTO> getSettings(@PathVariable Integer employeeId) {
+    public ResponseEntity<NotificationSettingsDTO> findSettings(Integer employeeId) {
         log.info("알림 설정 조회 API 호출: employeeId={}", employeeId);
 
-        NotificationSettingsDTO settings = settingsService.findSettingsByEmployeeId(employeeId);
+        NotificationSettingsDTO findedSettings = settingsService.findSettingsByEmployeeId(employeeId);
 
-        return ResponseEntity.ok(settings);
+        return ResponseEntity.ok(findedSettings);
     }
 
     /**
@@ -50,7 +50,7 @@ public class NotificationSettingsController {
      * @return 수정된 설정
      */
     @PutMapping("/{employeeId}")
-    public ResponseEntity<NotificationSettingsDTO> updateSettings(
+    public ResponseEntity<NotificationSettingsDTO> modifySettings(
             @PathVariable Integer employeeId,
             @RequestBody NotificationSettingsDTO settings) {
 
@@ -59,8 +59,8 @@ public class NotificationSettingsController {
         // employeeId 설정
         settings.setEmployeeId(employeeId);
 
-        NotificationSettingsDTO updatedSettings = settingsService.modifySettings(settings);
+        NotificationSettingsDTO modifiedSettings = settingsService.modifySettings(settings);
 
-        return ResponseEntity.ok(updatedSettings);
+        return ResponseEntity.ok(modifiedSettings);
     }
 }
