@@ -40,7 +40,7 @@
         JOIN tbl_grade g ON e.grade_id = g.grade_id
         WHERE e.department_id = #{departmentId}
           AND e.status = 'A'
-          AND e.employee_id != d.manager_id
+          AND (d.manager_id IS NULL OR e.employee_id != d.manager_id)
     </select>
 
 </mapper>

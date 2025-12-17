@@ -21,6 +21,17 @@ import java.util.List;
 @Mapper
 public interface EvaluationGuideMapper {
 
+    List<Integer> selectGuideIdsWithPaging(
+            @Param("offset") int offset,
+            @Param("size") int size
+    );
+
+    List<EvaluationGuideResponseDTO> selectGuidesByIds(
+            @Param("ids") List<Integer> ids
+    );
+
+    Long countAllGuides();
+
     EvaluationGuideResponseDTO selectGuide(@Param("guideId") Integer id);
 
     List<EvaluationGuideResponseDTO> selectAllGuide();

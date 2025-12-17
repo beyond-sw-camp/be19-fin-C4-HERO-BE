@@ -25,7 +25,6 @@ import java.util.List;
 @NoArgsConstructor
 public class TemplateItemRequestDTO {
 
-    @NotNull(message = "생성할 평가 템플릿 ID는 필수 입니다.")
     private Integer templateItemTemplateId;
 
     @NotBlank(message = "생성할 평가 템플릿 평가 항목명은 필수 입니다.")

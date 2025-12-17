@@ -20,6 +20,18 @@ import java.util.List;
 
 @Mapper
 public interface EvaluationMapper {
+
+    List<Integer> selectEvaluationIdsWithPaging(
+            @Param("offset") int offset,
+            @Param("size") int size
+    );
+
+    List<EvaluationResponseDTO> selectEvaluationsByIds(
+            @Param("evaluationIds") List<Integer> evaluationIds
+    );
+
+    Long countAllEvaluations();
+
     List<EvaluationResponseDTO> selectAllEvaluation();
 
     EvaluationResponseDTO selectEvaluation(@Param("evaluationId") Integer id);

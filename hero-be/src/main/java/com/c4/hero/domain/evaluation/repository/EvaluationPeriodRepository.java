@@ -18,4 +18,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface EvaluationPeriodRepository extends JpaRepository<EvaluationPeriod,Integer> {
+
+    void deleteByTemplateId(Integer templateId);
 }

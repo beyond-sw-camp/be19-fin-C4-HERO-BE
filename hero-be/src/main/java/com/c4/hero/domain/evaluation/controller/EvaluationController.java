@@ -1,5 +1,6 @@
 package com.c4.hero.domain.evaluation.controller;
 
+import com.c4.hero.common.response.PageResponse;
 import com.c4.hero.domain.evaluation.dto.*;
 import com.c4.hero.domain.evaluation.service.EvaluationService;
 import lombok.RequiredArgsConstructor;
@@ -32,15 +33,18 @@ public class EvaluationController {
     /**
      * 평가 템플릿 전체 조회
      *
-     * @return result List<EvaluationTemplateResponseDTO>
+     * @return result PageResponse<EvaluationTemplateResponseDTO>
      *     전체 평가 템플릿 데이터를 응답함
      */
     @GetMapping("/evaluation-template/selectall")
-    public ResponseEntity<List<EvaluationTemplateResponseDTO>> selectAllTemplate(){
-
-        List<EvaluationTemplateResponseDTO> result = evaluationService.selectAllTemplate();
-
-        return ResponseEntity.ok(result);
+    public ResponseEntity<PageResponse<EvaluationTemplateResponseDTO>> selectAllTemplate(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        PageResponse<EvaluationTemplateResponseDTO> result = evaluationService.selectAllTemplate(page, size);
+        return ResponseEntity.ok(
+                result
+        );
     }
 
 
@@ -114,13 +118,29 @@ public class EvaluationController {
     /**
      * 평가 가이드 전체 조회
      *
-     * @return result List<EvaluationGuideResponseDTO>
+     * @return result PageResponse<EvaluationGuideResponseDTO>
      *     전체 평가 가이드 데이터를 반환
      */
     @GetMapping("/evaluation-guide/selectall")
-    public ResponseEntity<List<EvaluationGuideResponseDTO>> selectAllGuide(){
+    public ResponseEntity<PageResponse<EvaluationGuideResponseDTO>> selectAllGuide(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        PageResponse<EvaluationGuideResponseDTO> result = evaluationService.selectAllGuide(page, size);
 
-        List<EvaluationGuideResponseDTO> result = evaluationService.selectAllGuide();
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 평가 가이드 전체 조회(평가 생성에 사용)
+     *
+     * @return result List<EvaluationGuideResponseDTO>
+     *     전체 평가 가이드 데이터를 반환
+     */
+    @GetMapping("/evaluation-guide/selectall2")
+    public ResponseEntity<List<EvaluationGuideResponseDTO>> selectAllGuide2(){
+
+        List<EvaluationGuideResponseDTO> result = evaluationService.selectAllGuide2();
 
         return ResponseEntity.ok(result);
     }
@@ -213,9 +233,12 @@ public class EvaluationController {
      *     전체 평가 데이터를 응답함
      */
     @GetMapping("/evaluation/selectall")
-    public ResponseEntity<List<EvaluationResponseDTO>> selectAllEvaluation(){
-
-        List<EvaluationResponseDTO> result = evaluationService.selectAllEvaluation();
+    public ResponseEntity<PageResponse<EvaluationResponseDTO>> selectAllEvaluation(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        PageResponse<EvaluationResponseDTO> result =
+                evaluationService.selectAllEvaluation(page, size);
 
         return ResponseEntity.ok(result);
     }
@@ -250,5 +273,99 @@ public class EvaluationController {
         Integer id = evaluationService.createEvaluation(evaluationRequestDTO);
 
         return ResponseEntity.ok(id);
+    }
+
+    /**
+     * 평가 템플릿 evaluation_id로 조회 후, 삭제
+     *
+     * @param id Integer
+     *      삭제할 평가 키(evaluation_id)를 클라이언트로 부터 요청
+     * @return Void
+     *     평가 삭제 후 반환하는 값은 없음
+     */
+    @DeleteMapping("/evaluation/delete/{id}")
+    public ResponseEntity<Void> deleteEvaluation(@PathVariable Integer id) {
+
+        evaluationService.deleteEvaluation(id);
+
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 평가서 전체 조회
+     *
+     * @return result List<EvaluationFormResponseDTO>
+     *     전체 평가서 데이터를 응답함
+     */
+    @GetMapping("/evaluation-form/selectall")
+    public ResponseEntity<List<EvaluationFormResponseDTO>> selectAllForm(){
+
+        List<EvaluationFormResponseDTO> result = evaluationService.selectAllForm();
+
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 평가서 form_id로 조회 조회
+     * @param id Integer
+     *      평가서
+     * @return result List<EvaluationFormResponseDTO>
+     *     전체 평가서 데이터를 응답함
+     */
+    @GetMapping("/evaluation-form/select/{evaluationId}/{employeeId}")
+    public ResponseEntity<EvaluationFormResponseDTO> selectForm(@PathVariable Integer evaluationId, @PathVariable Integer employeeId){
+
+        EvaluationFormResponseDTO result = evaluationService.selectForm(evaluationId, employeeId);
+
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 평가서 생성
+     *
+     * @param evaluationFormRequestDTO EvaluationFormRequestDTO
+     *      평가서 생성 데이터를 파라미터로 받음.
+     * @return id Integer
+     *     생성된 평가서 테이블의 pk를 응답함
+     */
+    @PostMapping("/evaluation-form/create")
+    public ResponseEntity<Integer> createForm(@RequestBody EvaluationFormRequestDTO evaluationFormRequestDTO){
+
+         Integer id = evaluationService.createForm(evaluationFormRequestDTO);
+
+         return ResponseEntity.ok(id);
+    }
+
+    /**
+     * 평가서 수정
+     *
+     * @param updateDTO EvaluationFormUpdateDTO
+     *      평가서 수정 데이터를 파라미터로 받음.
+     * @return updatedId Integer
+     *     수정된 평가서 테이블의 pk를 응답함.
+     */
+    @PutMapping("/evaluation-form/update")
+    public ResponseEntity<Integer> updateForm(@RequestBody EvaluationFormUpdateDTO updateDTO) {
+
+        Integer updatedId = evaluationService.updateForm(updateDTO);
+
+        return ResponseEntity.ok(updatedId);
+    }
+
+
+    /**
+     * 평가서 채점
+     *
+     * @param updateDTO EvaluationFormUpdateDTO
+     *      평가서 채점 데이터를 파라미터로 받음.
+     * @return updatedId Integer
+     *     채점된 평가서 테이블의 pk를 응답함.
+     */
+    @PutMapping("/evaluation-form/grading")
+    public ResponseEntity<Integer> gradingForm(@RequestBody EvaluationFormUpdateDTO updateDTO) {
+
+        Integer updatedId = evaluationService.gradingForm(updateDTO);
+
+        return ResponseEntity.ok(updatedId);
     }
 }
