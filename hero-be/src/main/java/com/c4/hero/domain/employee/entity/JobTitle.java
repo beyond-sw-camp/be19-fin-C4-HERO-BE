@@ -5,8 +5,10 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * <pre>
@@ -23,7 +25,8 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "tbl_job_title")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Setter
+@NoArgsConstructor
 public class JobTitle {
 
     /**
@@ -38,4 +41,9 @@ public class JobTitle {
      */
     @Column(name = "job_title", nullable = false, length = 50)
     private String jobTitle;
+
+    @Builder
+    public JobTitle(String jobTitle) {
+        this.jobTitle = jobTitle;
+    }
 }

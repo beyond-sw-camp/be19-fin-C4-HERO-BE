@@ -2,6 +2,7 @@ package com.c4.hero.domain.employee.repository;
 
 import com.c4.hero.domain.employee.entity.Grade;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.Optional;
 
@@ -26,4 +27,7 @@ public interface EmployeeGradeRepository extends JpaRepository<Grade, Integer> {
      * @return Optional<Grade>
      */
     Optional<Grade> findByGrade(String grade);
+
+    @Query("SELECT MAX(g.gradeId) FROM Grade g")
+    Integer findMaxGradeId();
 }

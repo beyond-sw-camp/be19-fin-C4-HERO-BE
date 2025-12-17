@@ -1,9 +1,8 @@
 package com.c4.hero.domain.employee.service;
 
-import com.c4.hero.common.response.PageResponse;
-import com.c4.hero.domain.employee.dto.response.EmployeeDetailResponseDTO;
-import com.c4.hero.domain.employee.dto.request.EmployeeSearchDTO;
 import com.c4.hero.domain.employee.dto.request.SignupRequestDTO;
+import com.c4.hero.domain.employee.entity.Employee;
+import com.c4.hero.domain.employee.type.ChangeType;
 
 
 /**
@@ -13,10 +12,11 @@ import com.c4.hero.domain.employee.dto.request.SignupRequestDTO;
  *
  * History
  * 2025/12/09 이승건 최초 작성
+ * 2025/12/15 승건 변경 이력 메소드 추가 및 적용
  * </pre>
  *
  * @author 이승건
- * @version 1.0
+ * @version 1.1
  */
 
 public interface EmployeeCommandService {
@@ -27,4 +27,22 @@ public interface EmployeeCommandService {
      * @throws com.c4.hero.common.exception.BusinessException 중복된 사번, 이메일, 전화번호가 존재할 경우
      */
     void signup(SignupRequestDTO request);
+
+    /**
+     * 직원의 부서에 대한 이력을 추가합니다.
+     *
+     * @param employee
+     * @param changeType
+     * @param departmentName
+     */
+    void addDepartmentHistory(Employee employee, ChangeType changeType, String departmentName);
+
+    /**
+     * 직원의 직급에 대한 이력을 추가합니다.
+     *
+     * @param employee
+     * @param changeType
+     * @param gradeName
+     */
+    void addGradeHistory(Employee employee, ChangeType changeType, String gradeName);
 }

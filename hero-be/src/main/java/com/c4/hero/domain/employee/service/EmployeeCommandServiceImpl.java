@@ -42,7 +42,8 @@ import java.util.stream.IntStream;
  * Description: 직원 관련 API를 처리하는 서비스 계층
  *
  * History
- * 2025/12/09 이승건 최초 작성 (사원 추가 로직 처리)
+ * 2025/12/09 승건 최초 작성 (사원 추가 로직 처리)
+ * 2025/12/15 승건 변경 이력 메소드 추가 및 적용
  * </pre>
  *
  * @author 이승건
@@ -153,27 +154,48 @@ public class EmployeeCommandServiceImpl implements EmployeeCommandService {
         accountRoleRepository.save(accountRole);
 
         // 6. 부서 이력 저장
-        EmployeeDepartmentHistory departmentHistory = EmployeeDepartmentHistory.builder()
-                .employee(savedEmployee)
-                .changedBy(null) // TODO: 변경자 정보 -> 나중에 토큰을 통해서 읽을수 있게 변경 필요
-                .changeType(ChangeType.CREATE)
-                .departmentName(employeeDepartment.getDepartmentName())
-                .build();
-        employeeDepartmentHistoryRepository.save(departmentHistory);
+        addDepartmentHistory(savedEmployee, ChangeType.CREATE, employeeDepartment.getDepartmentName());
 
         // 7. 직급 이력 저장
-        EmployeeGradeHistory gradeHistory = EmployeeGradeHistory.builder()
-                .employee(savedEmployee)
-                .changedBy(null) // TODO: 변경자 정보 -> 나중에 토큰을 통해서 읽을수 있게 변경 필요
-                .changeType(ChangeType.CREATE)
-                .gradeName(grade.getGrade())
-                .build();
-        employeeGradeHistoryRepository.save(gradeHistory);
+        addGradeHistory(savedEmployee, ChangeType.CREATE, employeeDepartment.getDepartmentName());
 
         // 8. 이메일 발송 로직 (tempPassword 발송)
         sendTemporaryPasswordEmail(request.getEmail(), accountId, tempPassword);
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * TODO: changeBy 추가 하기 -> 토큰을 통해 사용자 인식하기
+     */
+    @Override
+    public void addDepartmentHistory(Employee employee, ChangeType changeType, String departmentName) {
+
+        EmployeeDepartmentHistory newHistory =
+                EmployeeDepartmentHistory.builder()
+                        .employee(employee)
+                        .changedBy(null)
+                        .changeType(changeType)
+                        .departmentName(departmentName)
+                        .build();
+
+        employeeDepartmentHistoryRepository.save(newHistory);
+    }
+    /**
+     * 직급 변경 이력 추가
+     */
+    @Override
+    public void addGradeHistory(Employee employee, ChangeType changeType, String gradeName) {
+        EmployeeGradeHistory newHistory =
+                EmployeeGradeHistory.builder()
+                        .employee(employee)
+                        .changedBy(null)
+                        .changeType(changeType)
+                        .gradeName(gradeName)
+                        .build();
+
+        employeeGradeHistoryRepository.save(newHistory);
+    }
     /* =================== private =================== */
 
     /**

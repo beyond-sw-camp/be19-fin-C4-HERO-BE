@@ -5,8 +5,10 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * <pre>
@@ -23,7 +25,8 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "tbl_grade")
 @Getter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Setter
+@NoArgsConstructor
 public class Grade {
 
     /**
@@ -38,4 +41,14 @@ public class Grade {
      */
     @Column(name = "grade", nullable = false, length = 10)
     private String grade;
+
+    @Column(name = "required_point")
+    private Integer requiredPoint;
+
+    @Builder
+    public Grade(String grade, Integer requiredPoint) {
+        this.grade = grade;
+        this.requiredPoint = requiredPoint;
+    }
+
 }

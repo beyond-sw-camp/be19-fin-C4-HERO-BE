@@ -29,11 +29,12 @@ import java.time.LocalDateTime;
  * Description: 직원 정보를 담는 엔티티 클래스
  *
  * History
- * 2025/12/09 이승건 최초 작성
- * </pre>
+ * 2025/12/09 승건 최초 작성
+ * 2025/12/15 승건 부서, 직급, 직책 변경 메소드 추가
+ *  </pre>
  *
  * @author 이승건
- * @version 1.0
+ * @version 1.1
  */
 @Entity
 @Table(name = "tbl_employee")
@@ -174,6 +175,19 @@ public class Employee {
 
     @Transient // DB 컬럼과 매핑되지 않음
     private String departmentPath;
+
+    public void changeDepartment(EmployeeDepartment newDepartment) {
+        this.employeeDepartment = newDepartment;
+    }
+
+    public void changeGrade(Grade newGrade) {
+        this.grade = newGrade;
+    }
+    public void changeJobTitle(JobTitle newJobTitle) {
+        this.jobTitle = newJobTitle;
+    }
+
+
 
     @Builder
     public Employee(EmployeeDepartment employeeDepartment, String employeeNumber, String employeeName,
