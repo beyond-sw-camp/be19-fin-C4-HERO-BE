@@ -1,6 +1,7 @@
 package com.c4.hero.domain.vacation.entity;
 
 import com.c4.hero.domain.employee.entity.Employee;
+import com.c4.hero.domain.vacation.type.VacationStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -13,8 +14,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * <pre>
@@ -44,25 +44,26 @@ public class VacationLog {
     private int vacationLogId;
 
     /** 휴가 시작일 (yyyy-MM-dd) */
-    private LocalDate startDate;
+    private LocalDateTime startDate;
 
     /** 휴가 종료일 (yyyy-MM-dd) */
-    private LocalDate endDate;
+    private LocalDateTime endDate;
+
+    /** 휴가 유형 정보 (예: 연차, 반차, 병가 등) */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vacation_type_id")
+    private VacationType vacationType;
 
     /** 휴가 사유 */
     private String reason;
 
     /** 휴가 결재 상태 (예: PENDING, APPROVED, REJECTED 등) */
     @Column(name = "status")
-    private String approvalStatus;
+    private VacationStatus approvalStatus;
 
     /** 휴가를 신청/사용한 직원 정보 */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id")
     private Employee employee;
 
-    /** 휴가 유형 정보 (예: 연차, 반차, 병가 등) */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "vacation_type_id")
-    private VacationType vacationType;
 }
