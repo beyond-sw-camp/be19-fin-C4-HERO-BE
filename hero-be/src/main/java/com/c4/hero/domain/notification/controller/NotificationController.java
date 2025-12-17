@@ -1,7 +1,8 @@
 package com.c4.hero.domain.notification.controller;
 
 import com.c4.hero.domain.notification.dto.NotificationDTO;
-import com.c4.hero.domain.notification.service.NotificationService;
+import com.c4.hero.domain.notification.service.NotificationCommandService;
+import com.c4.hero.domain.notification.service.NotificationQueryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -22,6 +23,7 @@ import java.util.List;
  * History
  * 2025/12/11 (혜원) 최초 작성
  * 2025/12/15 (혜원) 알림 삭제 API 추가
+ * 2025/12/16 (혜원) CQRS 패턴 적용 - CommandService, QueryService 분리 주입
  * </pre>
  *
  * @author 혜원
@@ -33,7 +35,8 @@ import java.util.List;
 @Tag(name = "알림 API", description = "알림 관련 API")
 public class NotificationController {
 
-    private final NotificationService notificationService;
+    private final NotificationCommandService notificationCommandService;
+    private final NotificationQueryService notificationQueryService;
 
     /**
      * 알림 목록 조회
@@ -48,9 +51,9 @@ public class NotificationController {
             @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content)
     })
     @GetMapping("/{employeeId}")
-    public ResponseEntity<List<NotificationDTO>> registNotifications(
+    public ResponseEntity<List<NotificationDTO>> findAllNotification(
             @PathVariable Integer employeeId) {
-        List<NotificationDTO> notifications = notificationService.registAllNotification(employeeId);
+        List<NotificationDTO> notifications = notificationQueryService.findAllNotification(employeeId);
         return ResponseEntity.ok(notifications);
     }
 
@@ -68,7 +71,7 @@ public class NotificationController {
     @GetMapping("/{employeeId}/unread-count")
     public ResponseEntity<Integer> findUnreadCount(
             @PathVariable Integer employeeId) {
-        int count = notificationService.findUnreadNotification(employeeId);
+        int count = notificationQueryService.findUnreadNotification(employeeId);
         return ResponseEntity.ok(count);
     }
 
@@ -85,9 +88,9 @@ public class NotificationController {
             @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content)
     })
     @PatchMapping("/{notificationId}/read")
-    public ResponseEntity<Void> ModifyIsRead(
+    public ResponseEntity<Void> modifyIsRead(
             @PathVariable Integer notificationId) {
-        notificationService.ModifyIsRead(notificationId);
+        notificationCommandService.modifyIsRead(notificationId);
         return ResponseEntity.ok().build();
     }
 
@@ -103,9 +106,9 @@ public class NotificationController {
             @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content)
     })
     @PatchMapping("/{employeeId}/read-all")
-    public ResponseEntity<Void> ModifyAllIsRead(
+    public ResponseEntity<Void> modifyAllIsRead(
             @PathVariable Integer employeeId) {
-        notificationService.ModifyAllIsRead(employeeId);
+        notificationCommandService.modifyAllIsRead(employeeId);
         return ResponseEntity.ok().build();
     }
 
@@ -124,7 +127,7 @@ public class NotificationController {
     @PatchMapping("/{notificationId}/delete")
     public ResponseEntity<Void> softRemoveNotification(
             @PathVariable Integer notificationId) {
-        notificationService.softRemoveNotification(notificationId);
+        notificationCommandService.softRemoveNotification(notificationId);
         return ResponseEntity.ok().build();
     }
 
@@ -141,9 +144,9 @@ public class NotificationController {
             @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content)
     })
     @PatchMapping("/{notificationId}/restore")
-    public ResponseEntity<Void> restoreNotification(
+    public ResponseEntity<Void> modifyNotification(
             @PathVariable Integer notificationId) {
-        notificationService.restoreNotification(notificationId);
+        notificationCommandService.modifyNotification(notificationId);
         return ResponseEntity.ok().build();
     }
 
@@ -158,11 +161,11 @@ public class NotificationController {
             @ApiResponse(responseCode = "200", description = "삭제 성공"),
             @ApiResponse(responseCode = "404", description = "알림을 찾을 수 없음", content = @Content),
             @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content)
-    })
+    })  // ← 닫는 괄호 추가!
     @DeleteMapping("/{notificationId}")
-    public ResponseEntity<Void> RemoveNotification(
+    public ResponseEntity<Void> removeNotification(
             @PathVariable Integer notificationId) {
-        notificationService.removeNotification(notificationId);
+        notificationCommandService.removeNotification(notificationId);
         return ResponseEntity.ok().build();
     }
 
@@ -180,7 +183,7 @@ public class NotificationController {
     @GetMapping("/{employeeId}/deleted")
     public ResponseEntity<List<NotificationDTO>> findDeletedNotifications(
             @PathVariable Integer employeeId) {
-        List<NotificationDTO> deletedNotifications = notificationService.findDeletedNotifications(employeeId);
+        List<NotificationDTO> deletedNotifications = notificationQueryService.findDeletedNotifications(employeeId);
         return ResponseEntity.ok(deletedNotifications);
     }
 }
