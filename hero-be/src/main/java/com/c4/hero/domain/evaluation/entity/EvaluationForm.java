@@ -3,6 +3,8 @@ package com.c4.hero.domain.evaluation.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 /**
  * <pre>
  * Class Name: EvaluationFormEntity
@@ -37,6 +39,9 @@ public class EvaluationForm {
 
     @Column(name = "department_id")
     private Integer departmentId;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 
     @Column(name = "total")
     private String total;

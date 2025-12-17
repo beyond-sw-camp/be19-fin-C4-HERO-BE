@@ -29,6 +29,43 @@
         <result property="evaluationGuideGrade" column="grade"/>
     </resultMap>
 
+    <select id="selectGuideIdsWithPaging" resultType="int">
+        <![CDATA[
+                SELECT evaluation_guide_id
+                FROM tbl_evaluation_guide
+                ORDER BY evaluation_guide_id DESC
+                    LIMIT #{size} OFFSET #{offset}
+        ]]>
+    </select>
+
+    <select id="selectGuidesByIds" resultMap="EvaluationGuideMap">
+        <![CDATA[
+            SELECT
+                g.evaluation_guide_id AS evaluation_guide_id,
+                g.name AS name,
+                g.content AS content,
+                g.created_at AS created_at,
+                e.employee_id AS employee_id,
+                e.employee_name AS employee_name,
+                d.department_id AS department_id,
+                d.department_name AS department_name,
+                t.grade_id AS grade_id,
+                t.grade AS grade
+            FROM tbl_evaluation_guide g
+            JOIN tbl_employee e ON g.employee_id = e.employee_id
+            JOIN tbl_department d ON d.department_id = e.department_id
+            JOIN tbl_grade t ON t.grade_id = e.grade_id
+            WHERE g.evaluation_guide_id IN
+        ]]>
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <select id="countAllGuides" resultType="long">
+        SELECT COUNT(*) FROM tbl_evaluation_guide
+    </select>
+
     <select id="selectAllGuide" resultMap="EvaluationGuideMap">
         SELECT
             g.evaluation_guide_id AS evaluation_guide_id,

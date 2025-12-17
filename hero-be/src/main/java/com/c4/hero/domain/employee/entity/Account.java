@@ -112,7 +112,7 @@ public class Account {
     /**
      * 계정이 가진 권한 목록
      */
-    @OneToMany(mappedBy = "account", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "account", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AccountRole> accountRoles = new ArrayList<>();
 
     @Builder

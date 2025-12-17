@@ -4,6 +4,8 @@ import com.c4.hero.domain.evaluation.entity.TemplateItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 /**
  * <pre>
  * Class Name: TemplateItemRepository
@@ -18,4 +20,8 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface TemplateItemRepository extends JpaRepository<TemplateItem,Integer> {
+
+    List<TemplateItem> findByTemplateId(Integer templateId);
+
+    void deleteByTemplateId(Integer templateId);
 }

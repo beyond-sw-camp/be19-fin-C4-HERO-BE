@@ -14,6 +14,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.Objects;
+
 /**
  * <pre>
  * Class Name: AccountRole
@@ -58,5 +60,18 @@ public class AccountRole {
     public AccountRole(Account account, Role role) {
         this.account = account;
         this.role = role;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        AccountRole that = (AccountRole) o;
+        return Objects.equals(accountRoleId, that.accountRoleId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(accountRoleId);
     }
 }

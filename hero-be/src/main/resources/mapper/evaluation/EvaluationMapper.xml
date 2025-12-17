@@ -66,6 +66,80 @@
 
     </resultMap>
 
+    <select id="selectEvaluationIdsWithPaging" resultType="int">
+        SELECT evaluation_id
+        FROM tbl_evaluation
+        ORDER BY evaluation_id DESC
+            LIMIT #{size} OFFSET #{offset}
+    </select>
+
+
+    <select id="selectEvaluationsByIds" resultMap="EvaluationMap">
+        SELECT
+        e.evaluation_id AS evaluation_id,
+        ee.employee_id AS employee_id,
+        ee.employee_name AS employee_name,
+        d.department_id AS department_id,
+        d.department_name AS department_name,
+        g.grade_id AS grade_id,
+        g.grade AS grade,
+        t.template_id AS template_id,
+        e.name AS name,
+        e.status AS status,
+        e.created_at AS created_at,
+        e.ended_at AS ended_at,
+        e.total_rank AS total_rank,
+        e.total_score AS total_score,
+        gg.evaluation_guide_id AS evaluation_guide_id,
+        gg.name AS evaluation_guide_name,
+        p.evaluation_period_id AS evaluation_period_id,
+        p.start AS start,
+        p.end AS end,
+
+        s.selected_item_id AS selected_item_id,
+        e.evaluation_id AS selected_item_evaluation_id,
+        tt.item_id AS item_id,
+        tt.item AS item_name,
+        tt.description AS item_description,
+
+        c.criteria_id AS criteria_id,
+        c.item_id AS criteria_item_id,
+        c.rank AS rank,
+        c.description AS criteria_description,
+        c.min_score AS min_score,
+        c.max_score AS max_score,
+
+        eee.evaluatee_id AS evaluatee_id,
+        e.evaluation_id AS evaluatee_evaluation_id,
+        ee2.employee_id AS evaluatee_employee_id,
+        ee2.employee_name AS evaluatee_employee_name,
+        g2.grade_id AS evaluatee_grade_id,
+        g2.grade AS evaluatee_grade,
+        eee.status AS evaluatee_status
+        FROM tbl_evaluation e
+        JOIN tbl_employee ee ON e.employee_id = ee.employee_id
+        JOIN tbl_department d ON e.department_id = d.department_id
+        JOIN tbl_grade g ON ee.grade_id = g.grade_id
+        JOIN tbl_evaluation_template t ON e.template_id = t.template_id
+        JOIN tbl_evaluation_guide gg ON e.evaluation_guide_id = gg.evaluation_guide_id
+        JOIN tbl_evaluation_period p ON e.evaluation_period_id = p.evaluation_period_id
+        JOIN tbl_selected_item s ON e.evaluation_id = s.evaluation_id
+        JOIN tbl_template_item tt ON s.item_id = tt.item_id
+        JOIN tbl_criteria c ON tt.item_id = c.item_id
+        JOIN tbl_evaluatee eee ON e.evaluation_id = eee.evaluation_id
+        JOIN tbl_employee ee2 ON eee.employee_id = ee2.employee_id
+        JOIN tbl_grade g2 ON ee2.grade_id = g2.grade_id
+        WHERE e.evaluation_id IN
+        <foreach collection="evaluationIds" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+    </select>
+
+    <select id="countAllEvaluations" resultType="long">
+        SELECT COUNT(*)
+        FROM tbl_evaluation
+    </select>
+
 
     <select id="selectAllEvaluation" resultMap="EvaluationMap">
         SELECT
