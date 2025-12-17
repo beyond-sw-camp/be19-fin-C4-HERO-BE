@@ -1,9 +1,10 @@
 package com.c4.hero.domain.attendance.controller;
 
 import com.c4.hero.common.response.PageResponse;
+import com.c4.hero.domain.attendance.dto.AttendanceDashboardDTO;
 import com.c4.hero.domain.attendance.dto.ChangeLogDTO;
 import com.c4.hero.domain.attendance.dto.CorrectionDTO;
-import com.c4.hero.domain.attendance.dto.DeptWorkSystemRowDTO;
+import com.c4.hero.domain.attendance.dto.DeptWorkSystemDTO;
 import com.c4.hero.domain.attendance.dto.OvertimeDTO;
 import com.c4.hero.domain.attendance.dto.PersonalDTO;
 import com.c4.hero.domain.attendance.service.AttendanceService;
@@ -15,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
-import java.util.List;
 
 /**
  * <pre>
@@ -97,7 +97,7 @@ public class AttendanceController {
      */
 
     @GetMapping("/DeptWorkSystem")
-    public PageResponse<DeptWorkSystemRowDTO> getDeptWorkSystemList(
+    public PageResponse<DeptWorkSystemDTO> getDeptWorkSystemList(
             @RequestParam Integer departmentId,
             @RequestParam
             @DateTimeFormat(iso= DateTimeFormat.ISO.DATE)
@@ -107,6 +107,25 @@ public class AttendanceController {
     ){
         return attendanceService.getDeptWorkSystemList(
                 departmentId, workDate, page, size
+        );
+    }
+
+    @GetMapping("/dashboard")
+    public PageResponse<AttendanceDashboardDTO> getAttendanceDashboardList(
+            @RequestParam(name = "departmentId", required = false) Integer departmentId,
+            @RequestParam(name = "startDate", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(name = "endDate", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(name = "page", defaultValue = "1") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size
+    ) {
+        return attendanceService.getAttendanceDashboardList(
+                departmentId,
+                startDate,
+                endDate,
+                page,
+                size
         );
     }
 }

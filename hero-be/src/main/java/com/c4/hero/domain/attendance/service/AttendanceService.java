@@ -5,7 +5,8 @@ import com.c4.hero.common.pagination.PageInfo;
 import com.c4.hero.common.response.PageResponse;
 import com.c4.hero.domain.attendance.dto.*;
 import com.c4.hero.domain.attendance.mapper.AttendanceMapper;
-import com.c4.hero.domain.attendance.repository.AttendanceRepository;
+import com.c4.hero.domain.attendance.repository.AttendanceDashboardRepository;
+import com.c4.hero.domain.attendance.repository.DeptWorkSystemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -33,7 +34,8 @@ public class AttendanceService {
 
     /** 근태 정보 조회를 위한 Mapper */
     private final AttendanceMapper attendanceMapper;
-    private final AttendanceRepository attendanceRepository;
+    private final DeptWorkSystemRepository attendanceRepository;
+    private final AttendanceDashboardRepository attendanceDashboardRepository;
 
     /**
      * 개인 근태 기록 페이지를 조회합니다.
@@ -196,7 +198,7 @@ public class AttendanceService {
      * @param size         페이지 크기
      * @return PageResponse<DeptWorkSystemRowDTO>
      */
-    public PageResponse<DeptWorkSystemRowDTO> getDeptWorkSystemList(
+    public PageResponse<DeptWorkSystemDTO> getDeptWorkSystemList(
         Integer departmentId,
         LocalDate workDate,
         int page,
@@ -216,7 +218,7 @@ public class AttendanceService {
         PageRequest pageable = PageRequest.of(pageInfo.getPage() - 1, pageInfo.getSize());
 
         // 4. Repository 조회
-        Page<DeptWorkSystemRowDTO> pageResult = attendanceRepository.findDeptWorkSystemRows(
+        Page<DeptWorkSystemDTO> pageResult = attendanceRepository.findDeptWorkSystemRows(
                 departmentId,
                 workDate,
                 pageable
@@ -226,6 +228,70 @@ public class AttendanceService {
         return PageResponse.of(
                 pageResult.getContent(),
                 pageResult.getNumber() + 1,
+                pageResult.getSize(),
+                pageResult.getTotalElements()
+        );
+    }
+
+    /**
+     * 근태 점수 대시보드 페이지 조회
+     *
+     * - 직원별 지각/결근 횟수와 점수를 조회
+     * - departmentId가 null이면 전체 부서 대상
+     * - startDate / endDate가 null이면 오늘 날짜로 보정
+     *
+     * @param departmentId 부서 ID (null이면 전체)
+     * @param startDate    조회 시작일
+     * @param endDate      조회 종료일
+     * @param page         요청 페이지 번호 (1부터 시작)
+     * @param size         페이지 크기
+     * @return 근태 점수 대시보드 페이지 응답
+     */
+    public PageResponse<AttendanceDashboardDTO>  getAttendanceDashboardList(
+            Integer departmentId,
+            LocalDate startDate,
+            LocalDate endDate,
+            int page,
+            int size
+    ){
+        // 1. 날짜 보정 (null 이면 오늘 날짜 사용, start > end 이면 스왑)
+        LocalDate today = LocalDate.now();
+
+        LocalDate finalStart = (startDate != null) ? startDate : today;
+        LocalDate finalEnd = (endDate != null) ? endDate : today;
+
+        if (finalStart.isAfter(finalEnd)) {
+            LocalDate tmp = finalStart;
+            finalStart = finalEnd;
+            finalEnd = tmp;
+        }
+
+        // 2. 페이지 계산 (우리 공통 유틸 사용)
+        PageInfo pageInfo = PageCalculator.calculate(
+                page,
+                size,
+                Integer.MAX_VALUE    // 실제 totalCount는 JPA Page에서 계산
+        );
+
+        // 3. Pageable 생성 (0-based 변환)
+        PageRequest pageable = PageRequest.of(
+                pageInfo.getPage() - 1,
+                pageInfo.getSize()
+        );
+
+        // 4. Repository 호출
+        Page<AttendanceDashboardDTO> pageResult =
+                attendanceDashboardRepository.findAttendanceDashboard(
+                        departmentId,
+                        finalStart,
+                        finalEnd,
+                        pageable
+                );
+
+        // 5. 공통 PageResponse로 변환
+        return PageResponse.of(
+                pageResult.getContent(),
+                pageResult.getNumber() + 1,      // 0-based → 1-based
                 pageResult.getSize(),
                 pageResult.getTotalElements()
         );

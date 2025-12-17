@@ -1,6 +1,6 @@
 package com.c4.hero.domain.attendance.repository;
 
-import com.c4.hero.domain.attendance.dto.DeptWorkSystemRowDTO;
+import com.c4.hero.domain.attendance.dto.DeptWorkSystemDTO;
 import com.c4.hero.domain.attendance.entity.Attendance;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,7 +25,7 @@ import java.time.LocalDate;
  * @author 이지윤
  * @version 1.0
  */
-public interface AttendanceRepository extends JpaRepository<Attendance, Integer> {
+public interface DeptWorkSystemRepository extends JpaRepository<Attendance, Integer> {
 
     /**
      * 부서 근태 현황을 페이지 단위로 조회합니다.
@@ -44,7 +44,7 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Integer>
      */
     @Query(
             value = """
-                select new com.c4.hero.domain.attendance.dto.DeptWorkSystemRowDTO(
+                select new com.c4.hero.domain.attendance.dto.DeptWorkSystemDTO(
                     e.employeeId,
                     d.departmentId,
                     e.employeeName,
@@ -74,9 +74,20 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Integer>
                   and d.departmentId = :departmentId
                 """
     )
-    Page<DeptWorkSystemRowDTO> findDeptWorkSystemRows(
+    Page<DeptWorkSystemDTO> findDeptWorkSystemRows(
             @Param("departmentId") Integer departmentId,
             @Param("workDate") LocalDate workDate,
             Pageable pageable
     );
+
+    /**
+     * 근태 점수 대시보드 조회
+     *
+     * - 기간(startDate ~ endDate) 동안의 근태 이력을 기준으로
+     *   직원별 지각/결근 횟수 및 점수를 집계
+     * - departmentId가 null이면 전체 부서 대상으로 조회
+     *
+     * 점수 계산:
+     *   100 - (지각 × 1) - (결근 × 2)
+     */
 }
