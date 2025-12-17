@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
  * 2025-12-09 (이승건) 토큰 재발급 관련 에러 추가
  * 2025-12-09 (이승건) Access Token 만료 에러 추가
  * 2025-12-16 (동근) 급여 관련 에러 코드 추가
+ * 2025-12-16 (승건) 부서장 관련 에러 코드 추가
  * </pre>
  *
  * @author 혜원
@@ -64,6 +65,11 @@ public enum ErrorCode {
      */
     ACCESS_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "C007", "Access Token이 만료되었습니다."),
 
+    /**
+     * 관리자 데이터 수정/삭제 불가
+     */
+    CANNOT_MODIFY_ADMIN_DATA(HttpStatus.FORBIDDEN, "C008", "관리자 데이터는 수정/삭제할 수 없습니다."),
+
     // ===== 사원(Employee) 관련 에러 =====
     /**
      * 부서를 찾을 수 없음
@@ -104,6 +110,11 @@ public enum ErrorCode {
      * 직원을 찾을 수 없음
      */
     EMPLOYEE_NOT_FOUND(HttpStatus.NOT_FOUND, "E008", "해당 직원을 찾을 수 없습니다."),
+
+    /**
+     * 부서장은 해당 부서 소속이어야 함
+     */
+    MANAGER_NOT_IN_DEPARTMENT(HttpStatus.BAD_REQUEST, "E009", "부서장은 해당 부서의 소속이어야 합니다."),
     
     
     // ===== 메일 관련 에러 =====

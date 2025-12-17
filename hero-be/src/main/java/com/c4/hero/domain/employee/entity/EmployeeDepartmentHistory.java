@@ -79,6 +79,7 @@ public class EmployeeDepartmentHistory {
     @Column(name = "department_name", nullable = false, length = 20)
     private String departmentName;
 
+
     @Builder
     public EmployeeDepartmentHistory(Employee employee, Integer changedBy, ChangeType changeType, String departmentName) {
         this.employee = employee;

@@ -50,6 +50,7 @@ public class RoleTypeConverter implements AttributeConverter<RoleType, String> {
         return Stream.of(RoleType.values())
                 .filter(c -> c.getCode().equals(code))
                 .findFirst()
-                .orElseThrow(IllegalArgumentException::new);
+//                .orElseThrow(IllegalArgumentException::new);
+                .orElse(null);
     }
 }
