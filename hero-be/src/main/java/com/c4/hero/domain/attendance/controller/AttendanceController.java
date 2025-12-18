@@ -7,7 +7,10 @@ import com.c4.hero.domain.attendance.dto.CorrectionDTO;
 import com.c4.hero.domain.attendance.dto.DeptWorkSystemDTO;
 import com.c4.hero.domain.attendance.dto.OvertimeDTO;
 import com.c4.hero.domain.attendance.dto.PersonalDTO;
+import com.c4.hero.domain.attendance.dto.PersonalSummaryDTO;
 import com.c4.hero.domain.attendance.service.AttendanceService;
+import com.c4.hero.domain.auth.security.JwtUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,7 +30,7 @@ import java.time.LocalDate;
  * </pre>
  *
  * @author 이지윤
- * @version 1.0
+ * @version 1.1
  */
 @RestController
 @RequiredArgsConstructor
@@ -36,10 +39,17 @@ public class AttendanceController {
 
     /** 근태 관련 비즈니스 로직 처리 서비스 */
     private final AttendanceService attendanceService;
+    private final JwtUtil jwtUtil;
+
+    private Integer getEmployeeIdFromToken(HttpServletRequest request){
+        String token = jwtUtil.resolveToken(request);
+        return jwtUtil.getEmployeeId(token);
+    }
 
     /**
      * 개인 근태 기록 목록(페이지)을 조회합니다.
      *
+     * @param request 로그인한 정보를 받아오는 부분
      * @param page      조회할 페이지 번호 (1부터 시작)
      * @param size      한 페이지당 조회할 데이터 개수
      * @param startDate 조회 시작일(yyyy-MM-dd), null인 경우 기간 필터 미적용
@@ -48,12 +58,26 @@ public class AttendanceController {
      */
     @GetMapping("/personal")
     public PageResponse<PersonalDTO> getPersonalList(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size,
+            HttpServletRequest request,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate
     ) {
-        return attendanceService.getPersonalList(page, size, startDate, endDate);
+        Integer employeeId = getEmployeeIdFromToken(request);
+
+        return attendanceService.getPersonalList(employeeId, page, size, startDate, endDate);
+    }
+
+    @GetMapping("/personal/summary")
+    public PersonalSummaryDTO getPersonalSummary(
+            HttpServletRequest request,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
+    ){
+        Integer employeeId = getEmployeeIdFromToken(request);
+
+        return attendanceService.getPersonalSummary(employeeId, startDate, endDate);
     }
 
     @GetMapping("/overtime")

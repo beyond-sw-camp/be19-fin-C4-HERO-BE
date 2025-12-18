@@ -74,7 +74,7 @@
     </resultMap>
 
     <!-- ============================================================
-         2) 개인 근태 기록 SELECT (페이지 조회)
+         2-1) 개인 근태 기록 SELECT (페이지 조회)
             AttendanceMapper.selectPersonalPage(...)
          ============================================================ -->
     <select id="selectPersonalPage" resultMap="PersonalMap" parameterType="map">
@@ -93,6 +93,7 @@
         JOIN tbl_work_system_type wst
         ON att.work_system_type_id = wst.work_system_type_id
         <where>
+            AND att.employee_id = #{employeeId}
             <if test="startDate != null and startDate != ''">
                 AND att.work_date &gt;= #{startDate}
             </if>
@@ -105,7 +106,7 @@
     </select>
 
     <!-- ============================================================
-         3) 개인 근태 기록 총 개수 조회
+         2-2) 개인 근태 기록 총 개수 조회
             AttendanceMapper.selectPersonalCount(...)
          ============================================================ -->
     <select id="selectPersonalCount" resultType="int" parameterType="map">
@@ -114,6 +115,7 @@
         JOIN tbl_work_system_type wst
         ON att.work_system_type_id = wst.work_system_type_id
         <where>
+            AND att.employee_id = #{employeeId}
             <if test="startDate != null and startDate != ''">
                 AND att.work_date &gt;= #{startDate}
             </if>
@@ -121,6 +123,32 @@
                 AND att.work_date &lt;= #{endDate}
             </if>
         </where>
+    </select>
+
+    <!-- ============================================================
+     2-3) 개인 근태 기록 상당 요약
+        AttendanceMapper.selectPersonalSummary(...)
+     ============================================================ -->
+    <select id="selectPersonalSummary"
+            resultType="com.c4.hero.domain.attendance.dto.PersonalSummaryDTO"
+            parameterType="map" >
+        SELECT
+        SUM(CASE WHEN att.state = '정상' THEN 1 ELSE 0 END) AS workDays,
+        SUM(CASE WHEN att.state = '지각' THEN 1 ELSE 0 END) AS lateCount,
+        SUM(CASE WHEN att.state = '결근' THEN 1 ELSE 0 END) AS absentCount,
+        (
+            SELECT wst.name
+            FROM tbl_attendance att2
+                     JOIN tbl_work_system_type wst
+                          ON wst.work_system_type_id = att2.work_system_type_id
+            WHERE att2.employee_id = #{employeeId}
+              AND att2.work_date = CURDATE()
+            LIMIT 1
+            ) AS todayWorkSystemName
+        FROM tbl_attendance att
+        WHERE att.employee_id = #{employeeId}
+          AND att.work_date BETWEEN #{startDate} AND #{endDate}
+
     </select>
 
     <!-- ============================================================

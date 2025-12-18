@@ -26,20 +26,71 @@ import java.util.List;
  * </pre>
  *
  * @author 이지윤
- * @version 1.0
+ * @version 1.1
  */
 @Service
 @RequiredArgsConstructor
 public class AttendanceService {
 
-    /** 근태 정보 조회를 위한 Mapper */
+    /** 근태 정보(개인/초과 근무/정정 등) 조회를 위한 MyBatis Mapper */
     private final AttendanceMapper attendanceMapper;
+
+    /** 부서 근무제/근태 현황 조회용 JPA 레포지토리 */
     private final DeptWorkSystemRepository attendanceRepository;
+
+    /** 근태 점수 대시보드 조회용 JPA 레포지토리 */
     private final AttendanceDashboardRepository attendanceDashboardRepository;
+
+    /**
+     * 개인 근태 조회 시 사용할 날짜 범위를 표현하는 내부 레코드입니다.
+     *
+     * <p>
+     * 컨트롤러에서 전달받은 문자열(yyyy-MM-dd) 기준의 시작일/종료일을
+     * 최종적으로 확정한 형태로 보관합니다.
+     * </p>
+     *
+     * @param startDate 조회 시작일(yyyy-MM-dd)
+     * @param endDate   조회 종료일(yyyy-MM-dd)
+     */
+    private record DateRange(String startDate, String endDate) {}
+
+    /**
+     * 개인 근태 조회용 기간(startDate, endDate)을 확정합니다.
+     *
+     * <p>규칙</p>
+     * <ul>
+     *     <li>startDate가 null 또는 공백이면: 이번 달 1일을 시작일로 사용</li>
+     *     <li>endDate가 null 또는 공백이면: 오늘(LocalDate.now())을 종료일로 사용</li>
+     *     <li>그 외에는 전달받은 문자열(yyyy-MM-dd)을 그대로 사용</li>
+     * </ul>
+     *
+     * @param startDate 요청으로 전달된 시작일(yyyy-MM-dd), null 또는 공백 가능
+     * @param endDate   요청으로 전달된 종료일(yyyy-MM-dd), null 또는 공백 가능
+     * @return 최종 확정된 시작일/종료일을 담은 DateRange
+     */
+    private DateRange resolvePersonalPeriod(String startDate, String endDate) {
+        LocalDate defaultEnd = LocalDate.now();
+        LocalDate defaultStart = defaultEnd.withDayOfMonth(1);
+
+        String finalStartDate =
+                (startDate != null && !startDate.isBlank())
+                        ? startDate
+                        : defaultStart.toString();   // yyyy-MM-dd
+
+        String finalEndDate =
+                (endDate != null && !endDate.isBlank())
+                        ? endDate
+                        : defaultEnd.toString();     // yyyy-MM-dd
+
+        return new DateRange(finalStartDate, finalEndDate);
+    }
+
+
 
     /**
      * 개인 근태 기록 페이지를 조회합니다.
      *
+     * @param employeeId 로그인한 사람의 정보 확인
      * @param page      요청 페이지 번호 (1부터 시작)
      * @param size      페이지당 데이터 개수
      * @param startDate 조회 시작일(yyyy-MM-dd), null인 경우 기간 필터 미적용
@@ -47,23 +98,34 @@ public class AttendanceService {
      * @return 개인 근태 기록 페이지 응답 DTO
      */
     public PageResponse<PersonalDTO> getPersonalList(
-            int page,
-            int size,
+            Integer employeeId,
+            Integer page,
+            Integer size,
             String startDate,
             String endDate
     ) {
-        //1. 전체 개수 조회 (날짜 필터 반영)
-        int totalCount = attendanceMapper.selectPersonalCount(startDate, endDate);
+        // 0. 기간 보정 공통 메서드 사용
+        DateRange range = resolvePersonalPeriod(startDate, endDate);
+        String finalStartDate = range.startDate();
+        String finalEndDate = range.endDate();
+
+        // 1. 전체 개수 조회 (기간 보정 반영)
+        int totalCount = attendanceMapper.selectPersonalCount(
+                employeeId,
+                finalStartDate,
+                finalEndDate
+        );
 
         // 2. 페이지네이션 계산
         PageInfo pageInfo = PageCalculator.calculate(page, size, totalCount);
 
-        // 3. 현재 페이지 데이터 조회
+        // 3. 현재 페이지 데이터 조회 (★ 여기도 finalStartDate / finalEndDate 사용)
         List<PersonalDTO> items = attendanceMapper.selectPersonalPage(
+                employeeId,
                 pageInfo.getOffset(),
                 pageInfo.getSize(),
-                startDate,
-                endDate
+                finalStartDate,
+                finalEndDate
         );
 
         // 4. 공통 PageResponse으로 응답
@@ -72,6 +134,34 @@ public class AttendanceService {
                 pageInfo.getPage() - 1,
                 pageInfo.getSize(),
                 totalCount
+        );
+    }
+
+    /**
+     * 개인 근태 상단 요약 카드 조회
+     * - 기본: 오늘이 포함된 이번 달(1일 ~ 오늘) 기준
+     * - startDate/endDate가 넘어오면 그 기간 기준으로 재계산
+     *
+     * @param employeeId 직원 ID (토큰에서 꺼낸 값)
+     * @param startDate  조회 시작일(yyyy-MM-dd) - 옵션
+     * @param endDate    조회 종료일(yyyy-MM-dd) - 옵션
+     * @return PersonalSummaryDTO (근무일/오늘 근무제/지각/결근)
+     */
+    public PersonalSummaryDTO getPersonalSummary(
+            Integer employeeId,
+            String startDate,
+            String endDate
+    ) {
+        // 0. 기간 보정 공통 메서드 사용
+        DateRange range = resolvePersonalPeriod(startDate, endDate);
+        String finalStartDate = range.startDate();
+        String finalEndDate = range.endDate();
+
+        // 1. Mapper 호출
+        return attendanceMapper.selectPersonalSummary(
+                employeeId,
+                finalStartDate,
+                finalEndDate
         );
     }
 
@@ -296,4 +386,5 @@ public class AttendanceService {
                 pageResult.getTotalElements()
         );
     }
+
 }
