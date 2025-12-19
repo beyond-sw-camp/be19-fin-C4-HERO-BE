@@ -24,7 +24,7 @@ import lombok.Setter;
 public class OvertimeDTO {
 
     /** 초과 근무 PK (식별자) */
-    private int overtimeId;
+    private Integer overtimeId;
 
     /** 초과 근무 일자 (yyyy-MM-dd) */
     private String date;

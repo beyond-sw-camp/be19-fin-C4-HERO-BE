@@ -7,7 +7,7 @@ import com.c4.hero.domain.attendance.dto.CorrectionDTO;
 import com.c4.hero.domain.attendance.dto.DeptWorkSystemDTO;
 import com.c4.hero.domain.attendance.dto.OvertimeDTO;
 import com.c4.hero.domain.attendance.dto.PersonalDTO;
-import com.c4.hero.domain.attendance.dto.PersonalSummaryDTO;
+import com.c4.hero.domain.attendance.dto.AttSummaryDTO;
 import com.c4.hero.domain.attendance.service.AttendanceService;
 import com.c4.hero.domain.auth.security.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -46,6 +46,18 @@ public class AttendanceController {
         return jwtUtil.getEmployeeId(token);
     }
 
+
+    @GetMapping("/personal/summary")
+    public AttSummaryDTO getPersonalSummary(
+            HttpServletRequest request,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate
+    ){
+        Integer employeeId = getEmployeeIdFromToken(request);
+
+        return attendanceService.getPersonalSummary(employeeId, startDate, endDate);
+    }
+
     /**
      * 개인 근태 기록 목록(페이지)을 조회합니다.
      *
@@ -69,25 +81,18 @@ public class AttendanceController {
         return attendanceService.getPersonalList(employeeId, page, size, startDate, endDate);
     }
 
-    @GetMapping("/personal/summary")
-    public PersonalSummaryDTO getPersonalSummary(
+
+    @GetMapping("/overtime")
+    public PageResponse<OvertimeDTO> getOvertimeList(
             HttpServletRequest request,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate
     ){
         Integer employeeId = getEmployeeIdFromToken(request);
 
-        return attendanceService.getPersonalSummary(employeeId, startDate, endDate);
-    }
-
-    @GetMapping("/overtime")
-    public PageResponse<OvertimeDTO> getOvertimeList(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate
-    ){
-        return attendanceService.getOvertimeList(page, size, startDate, endDate);
+        return attendanceService.getOvertimeList(employeeId, page, size, startDate, endDate);
     }
 
     @GetMapping("/correction")

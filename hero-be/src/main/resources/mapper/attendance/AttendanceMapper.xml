@@ -74,6 +74,33 @@
     </resultMap>
 
     <!-- ============================================================
+ 2-0)  근태 기록 상단 요약
+    AttendanceMapper.selectPersonalSummary(...)
+ ============================================================ -->
+    <select id="selectPersonalSummary"
+            resultType="com.c4.hero.domain.attendance.dto.AttSummaryDTO"
+            parameterType="map" >
+        SELECT
+            SUM(CASE WHEN att.state = '정상' THEN 1 ELSE 0 END) AS workDays,
+            SUM(CASE WHEN att.state = '지각' THEN 1 ELSE 0 END) AS lateCount,
+            SUM(CASE WHEN att.state = '결근' THEN 1 ELSE 0 END) AS absentCount,
+            SUM(CASE WHEN att.state = '조퇴' THEN 1 ELSE 0 END) AS earlyCount,
+            (
+                SELECT wst.name
+                FROM tbl_attendance att2
+                         JOIN tbl_work_system_type wst
+                              ON wst.work_system_type_id = att2.work_system_type_id
+                WHERE att2.employee_id = #{employeeId}
+                  AND att2.work_date = CURDATE()
+                                                                 LIMIT 1
+            ) AS todayWorkSystemName
+        FROM tbl_attendance att
+        WHERE att.employee_id = #{employeeId}
+          AND att.work_date BETWEEN #{startDate} AND #{endDate}
+
+    </select>
+
+    <!-- ============================================================
          2-1) 개인 근태 기록 SELECT (페이지 조회)
             AttendanceMapper.selectPersonalPage(...)
          ============================================================ -->
@@ -125,35 +152,9 @@
         </where>
     </select>
 
-    <!-- ============================================================
-     2-3) 개인 근태 기록 상당 요약
-        AttendanceMapper.selectPersonalSummary(...)
-     ============================================================ -->
-    <select id="selectPersonalSummary"
-            resultType="com.c4.hero.domain.attendance.dto.PersonalSummaryDTO"
-            parameterType="map" >
-        SELECT
-        SUM(CASE WHEN att.state = '정상' THEN 1 ELSE 0 END) AS workDays,
-        SUM(CASE WHEN att.state = '지각' THEN 1 ELSE 0 END) AS lateCount,
-        SUM(CASE WHEN att.state = '결근' THEN 1 ELSE 0 END) AS absentCount,
-        SUM(CASE WHEN att.state = '조퇴' THEN 1 ELSE 0 END) AS earlyCount,
-        (
-            SELECT wst.name
-            FROM tbl_attendance att2
-                     JOIN tbl_work_system_type wst
-                          ON wst.work_system_type_id = att2.work_system_type_id
-            WHERE att2.employee_id = #{employeeId}
-              AND att2.work_date = CURDATE()
-            LIMIT 1
-            ) AS todayWorkSystemName
-        FROM tbl_attendance att
-        WHERE att.employee_id = #{employeeId}
-          AND att.work_date BETWEEN #{startDate} AND #{endDate}
-
-    </select>
 
     <!-- ============================================================
-         4) 초과 근무(Overtime) 기록 SELECT (페이지 조회)
+         3-1) 초과 근무(Overtime) 기록 SELECT (페이지 조회)
             AttendanceMapper.selectOvertimePage(...)
          ============================================================ -->
     <select id="selectOvertimePage" resultMap="OvertimeMap" parameterType="map">
@@ -166,6 +167,7 @@
         ove.reason
         FROM tbl_overtime ove
         <where>
+            AND ove.employee_id = #{employeeId}
             <if test="startDate != null and startDate != ''">
                 AND ove.date &gt;= #{startDate}
             </if>
@@ -178,13 +180,14 @@
     </select>
 
     <!-- ============================================================
-         5) 초과 근무(Overtime) 기록 총 개수 조회
+         3-2) 초과 근무(Overtime) 기록 총 개수 조회
             AttendanceMapper.selectOvertimeCount(...)
          ============================================================ -->
     <select id="selectOvertimeCount" resultType="int" parameterType="map">
         SELECT COUNT(*)
         FROM tbl_overtime ove
         <where>
+            AND ove.employee_id = #{employeeId}
             <if test="startDate != null and startDate != ''">
                 AND ove.date &gt;= #{startDate}
             </if>

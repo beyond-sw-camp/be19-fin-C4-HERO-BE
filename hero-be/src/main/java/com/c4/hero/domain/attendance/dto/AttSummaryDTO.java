@@ -24,7 +24,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @Getter
 @Setter
-public class PersonalSummaryDTO {
+public class AttSummaryDTO {
 
     /** 이번 달 근무일(정상 출근일 수) */
     private Integer workDays;

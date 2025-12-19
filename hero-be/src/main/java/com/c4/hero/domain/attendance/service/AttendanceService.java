@@ -85,7 +85,33 @@ public class AttendanceService {
         return new DateRange(finalStartDate, finalEndDate);
     }
 
+    /**
+     * 개인 근태 상단 요약 카드 조회
+     * - 기본: 오늘이 포함된 이번 달(1일 ~ 오늘) 기준
+     * - startDate/endDate가 넘어오면 그 기간 기준으로 재계산
+     *
+     * @param employeeId 직원 ID (토큰에서 꺼낸 값)
+     * @param startDate  조회 시작일(yyyy-MM-dd) - 옵션
+     * @param endDate    조회 종료일(yyyy-MM-dd) - 옵션
+     * @return PersonalSummaryDTO (근무일/오늘 근무제/지각/결근)
+     */
+    public AttSummaryDTO getPersonalSummary(
+            Integer employeeId,
+            String startDate,
+            String endDate
+    ) {
+        // 0. 기간 보정 공통 메서드 사용
+        DateRange range = resolvePersonalPeriod(startDate, endDate);
+        String finalStartDate = range.startDate();
+        String finalEndDate = range.endDate();
 
+        // 1. Mapper 호출
+        return attendanceMapper.selectPersonalSummary(
+                employeeId,
+                finalStartDate,
+                finalEndDate
+        );
+    }
 
     /**
      * 개인 근태 기록 페이지를 조회합니다.
@@ -138,34 +164,6 @@ public class AttendanceService {
     }
 
     /**
-     * 개인 근태 상단 요약 카드 조회
-     * - 기본: 오늘이 포함된 이번 달(1일 ~ 오늘) 기준
-     * - startDate/endDate가 넘어오면 그 기간 기준으로 재계산
-     *
-     * @param employeeId 직원 ID (토큰에서 꺼낸 값)
-     * @param startDate  조회 시작일(yyyy-MM-dd) - 옵션
-     * @param endDate    조회 종료일(yyyy-MM-dd) - 옵션
-     * @return PersonalSummaryDTO (근무일/오늘 근무제/지각/결근)
-     */
-    public PersonalSummaryDTO getPersonalSummary(
-            Integer employeeId,
-            String startDate,
-            String endDate
-    ) {
-        // 0. 기간 보정 공통 메서드 사용
-        DateRange range = resolvePersonalPeriod(startDate, endDate);
-        String finalStartDate = range.startDate();
-        String finalEndDate = range.endDate();
-
-        // 1. Mapper 호출
-        return attendanceMapper.selectPersonalSummary(
-                employeeId,
-                finalStartDate,
-                finalEndDate
-        );
-    }
-
-    /**
      * 초과 근무(연장 근무) 기록 페이지를 조회합니다.
      *
      * @param page      요청 페이지 번호 (1부터 시작)
@@ -175,23 +173,34 @@ public class AttendanceService {
      * @return 초과 근무 기록 페이지 응답 DTO
      */
     public PageResponse<OvertimeDTO> getOvertimeList(
-            int page,
-            int size,
+            Integer employeeId,
+            Integer page,
+            Integer size,
             String startDate,
             String endDate
     ) {
-        //1. 전체 개수 조회 (날짜 필터 반영)
-        int totalCount = attendanceMapper.selectOvertimeCount(startDate, endDate);
+        // 0. 기간 보정 공통 메서드 사용
+        DateRange range = resolvePersonalPeriod(startDate, endDate);
+        String finalStartDate = range.startDate();
+        String finalEndDate = range.endDate();
+
+        // 1. 전체 개수 조회 (기간 보정 반영)
+        int totalCount = attendanceMapper.selectOvertimeCount(
+                employeeId,
+                finalStartDate,
+                finalEndDate
+        );
 
         // 2. 페이지네이션 계산
         PageInfo pageInfo = PageCalculator.calculate(page, size, totalCount);
 
-        // 3. 현재 페이지 데이터 조회
+        // 3. 현재 페이지 데이터 조회 (★ 여기도 finalStartDate / finalEndDate 사용)
         List<OvertimeDTO> items = attendanceMapper.selectOvertimePage(
+                employeeId,
                 pageInfo.getOffset(),
                 pageInfo.getSize(),
-                startDate,
-                endDate
+                finalStartDate,
+                finalEndDate
         );
 
         // 4. 공통 PageResponse으로 응답
