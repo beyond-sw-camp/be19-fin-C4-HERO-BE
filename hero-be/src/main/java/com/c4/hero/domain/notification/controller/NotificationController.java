@@ -179,7 +179,7 @@ public class NotificationController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공"),
             @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content)
-    })
+    }) 
     @GetMapping("/{employeeId}/deleted")
     public ResponseEntity<List<NotificationDTO>> findDeletedNotifications(
             @PathVariable Integer employeeId) {

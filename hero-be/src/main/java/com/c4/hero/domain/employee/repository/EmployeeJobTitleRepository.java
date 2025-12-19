@@ -2,6 +2,7 @@ package com.c4.hero.domain.employee.repository;
 
 import com.c4.hero.domain.employee.entity.JobTitle;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.util.Optional;
 
@@ -26,4 +27,7 @@ public interface EmployeeJobTitleRepository extends JpaRepository<JobTitle, Inte
      * @return Optional<JobTitle>
      */
     Optional<JobTitle> findByJobTitle(String jobTitle);
+
+    @Query("SELECT MAX(jt.jobTitleId) FROM JobTitle jt")
+    Integer findMaxJobTitleId();
 }

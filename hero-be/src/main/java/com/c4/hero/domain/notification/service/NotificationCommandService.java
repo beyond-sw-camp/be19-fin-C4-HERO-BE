@@ -2,7 +2,9 @@ package com.c4.hero.domain.notification.service;
 
 import com.c4.hero.domain.notification.dto.NotificationDTO;
 import com.c4.hero.domain.notification.dto.NotificationRegistDTO;
+import com.c4.hero.domain.notification.dto.NotificationSettingsDTO;
 import com.c4.hero.domain.notification.mapper.NotificationMapper;
+import com.c4.hero.domain.notification.util.NotificationSettingsValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -33,6 +35,7 @@ import java.util.List;
 public class NotificationCommandService {
 
     private final NotificationMapper notificationMapper;
+    private final NotificationSettingsService settingsService;
     private final SimpMessagingTemplate messagingTemplate;
 
     /**
@@ -43,6 +46,20 @@ public class NotificationCommandService {
      */
     @Transactional
     public NotificationDTO registAndSendNotification(NotificationRegistDTO notificationRegistDTO) {
+        log.info("[알림 저장 시작]");
+
+        // 먼저 알림 설정 확인
+        NotificationSettingsDTO settings = settingsService.findSettingsByEmployeeId(
+                notificationRegistDTO.getEmployeeId()
+        );
+
+        // 해당 타입의 알림이 비활성화되어 있으면 전송하지 않음
+        if (!NotificationSettingsValidator.isNotificationEnabled(settings, notificationRegistDTO.getType())) {
+            log.info("알림 타입이 비활성화됨: type={}, employeeId={}",
+                    notificationRegistDTO.getType(),
+                    notificationRegistDTO.getEmployeeId());
+            return null; // 알림 발송하지 않음
+        }
 
         // 파라미터로 받은 RegistDTO 값을 주입
         NotificationDTO notificationDTO = NotificationDTO.builder()

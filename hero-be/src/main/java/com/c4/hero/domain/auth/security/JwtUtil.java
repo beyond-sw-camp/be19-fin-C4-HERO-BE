@@ -28,9 +28,10 @@ import java.util.stream.Collectors;
  * Description: JWT 토큰의 생성, 검증, 정보 추출을 담당하는 유틸리티 클래스
  *
  * History
- * 2025-12-09 (이승건) 최초 작성
- * 2025-12-09 (이승건) 토큰 만료 예외 처리 추가
- * 2025-12-10 (이승건) 권한 정보에 'ROLE_' 접두사 추가
+ * 2025/12/09 (승건) 최초 작성
+ * 2025/12/09 (승건) 토큰 만료 예외 처리 추가
+ * 2025/12/10 (승건) 권한 정보에 'ROLE_' 접두사 추가
+ * 2025/12/17 (승건) 토큰 정보 추출 메소드 추가 및 employeeNumber 추가
  * </pre>
  *
  * @author 이승건
@@ -76,6 +77,7 @@ public class JwtUtil {
         Claims claims = Jwts.claims().setSubject(userDetails.getUsername());
         claims.put("auth", authorities);
         claims.put("employeeId", userDetails.getEmployeeId());
+        claims.put("employeeNumber", userDetails.getEmployeeNumber());
         claims.put("employeeName", userDetails.getEmployeeName());
         claims.put("departmentId", userDetails.getDepartmentId());
         claims.put("departmentName", userDetails.getDepartmentName());
@@ -182,6 +184,79 @@ public class JwtUtil {
     public Integer getEmployeeId(String token) {
         return parseClaims(token).get("employeeId", Integer.class);
     }
+
+    /**
+     * 토큰에서 사번 추출
+     * @param token JWT 토큰
+     * @return 사번
+     */
+    public String getEmployeeNumber(String token) {
+        return parseClaims(token).get("employeeNumber", String.class);
+    }
+
+    /**
+     * 토큰에서 사원 이름 추출
+     * @param token
+     * @return 사원 이름
+     */
+    public String getEmployeeName(String token) {
+        return parseClaims(token).get("employeeName", String.class);
+    }
+
+    /**
+     * 토큰에서 부서 ID 추출
+     * @param token
+     * @return 부서 ID
+     */
+    public Integer getDepartmentId(String token) {
+        return parseClaims(token).get("departmentId", Integer.class);
+    }
+
+    /**
+     * 토큰에서 부서 이름 추출
+     * @param token
+     * @return 부서 이름
+     */
+    public String getDepartmentName(String token) {
+        return parseClaims(token).get("departmentName", String.class);
+    }
+
+    /**
+     * 직급 ID 추출
+     * @param token
+     * @return 직급 ID
+     */
+    public Integer getGradeId(String token) {
+        return parseClaims(token).get("gradeId", Integer.class);
+    }
+
+    /**
+     * 직급 이름 추출
+     * @param token
+     * @return 직급 이름
+     */
+    public String getGradeName(String token) {
+        return parseClaims(token).get("gradeName", String.class);
+    }
+
+    /**
+     * 직책 ID 추출
+     * @param token
+     * @return 직책 ID
+     */
+    public Integer getJobTitleId(String token) {
+        return parseClaims(token).get("jobTitleId", Integer.class);
+    }
+
+    /**
+     * 직책 이름 추출
+     * @param token
+     * @return 직책 이름
+     */
+    public String getJobTitleName(String token) {
+        return parseClaims(token).get("jobTitleName", String.class);
+    }
+
 
     /**
      * 토큰에서 클레임 추출

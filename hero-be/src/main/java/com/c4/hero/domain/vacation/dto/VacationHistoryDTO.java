@@ -1,10 +1,11 @@
 package com.c4.hero.domain.vacation.dto;
 
+import com.c4.hero.domain.vacation.type.VacationStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
+import java.time.LocalDateTime;
 import java.time.LocalDate;
 
 /**
@@ -25,17 +26,16 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
-@Setter
 public class VacationHistoryDTO {
 
     /** 휴가 이력 PK (식별자) */
     private int vacationLogId;
 
     /** 휴가 시작일 (yyyy-MM-dd) */
-    private LocalDate startDate;
+    private LocalDateTime startDate;
 
     /** 휴가 종료일 (yyyy-MM-dd) */
-    private LocalDate endDate;
+    private LocalDateTime endDate;
 
     /** 휴가 유형 이름 (예: 연차, 반차, 병가 등) */
     private String vacationTypeName;
@@ -44,7 +44,8 @@ public class VacationHistoryDTO {
     private String reason;
 
     /** 결재 상태 (예: PENDING, APPROVED, REJECTED 등) */
-    private String approvalStatus;
+
+    private VacationStatus approvalStatus;
 
     /**
      * 휴가 이력 ID를 제외한 필드만 초기화하는 생성자입니다.
@@ -56,14 +57,14 @@ public class VacationHistoryDTO {
      * @param endDate          휴가 종료일
      * @param vacationTypeName 휴가 유형 이름
      * @param reason           휴가 사유
-     * @param approvalStatus   결재 상태
+     * @param approvalStatus   승인 현황
      */
     public VacationHistoryDTO(
-            LocalDate startDate,
-            LocalDate endDate,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
             String vacationTypeName,
             String reason,
-            String approvalStatus
+            VacationStatus approvalStatus
     ) {
         this.startDate = startDate;
         this.endDate = endDate;

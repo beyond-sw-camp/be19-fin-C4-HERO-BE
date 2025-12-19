@@ -29,6 +29,7 @@ public class CustomUserDetails implements UserDetails {
 
     private final Account account;
     private final Integer employeeId;
+    private final String employeeNumber;
     private final String employeeName;
     private final Integer departmentId;
     private final String departmentName;
@@ -41,6 +42,7 @@ public class CustomUserDetails implements UserDetails {
         this.account = account;
         Employee employee = account.getEmployee();
         this.employeeId = employee.getEmployeeId();
+        this.employeeNumber = employee.getEmployeeNumber();
         this.employeeName = employee.getEmployeeName();
         this.departmentId = employee.getEmployeeDepartment() != null ? employee.getEmployeeDepartment().getDepartmentId() : null;
         this.departmentName = employee.getEmployeeDepartment() != null ? employee.getEmployeeDepartment().getDepartmentName() : null;

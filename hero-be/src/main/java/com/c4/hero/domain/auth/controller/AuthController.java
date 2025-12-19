@@ -4,8 +4,10 @@ import com.c4.hero.common.response.ApiResponse;
 import com.c4.hero.domain.auth.service.AuthService;
 import com.c4.hero.domain.auth.security.JwtUtil;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,17 +34,34 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
+@Slf4j
 public class AuthController {
 
     private final AuthService authService;
-
+    private final JwtUtil jwtUtil;
     /**
      * 토큰 검증을 위한 테스트 메소드
      *
      * @return "test success" 문자열
      */
     @GetMapping("/test")
-    public String test() {
+    public String test(HttpServletRequest request) {
+
+        String token = jwtUtil.resolveToken(request);
+
+        log.info("토큰 정보 확인");
+
+        log.info(jwtUtil.getUsername(token));
+        log.info(jwtUtil.getEmployeeId(token).toString());
+        log.info(jwtUtil.getEmployeeNumber(token));
+        log.info(jwtUtil.getEmployeeName(token));
+        log.info(jwtUtil.getDepartmentId(token).toString());
+        log.info(jwtUtil.getDepartmentName(token));
+        log.info(jwtUtil.getGradeId(token).toString());
+        log.info(jwtUtil.getGradeName(token));
+        log.info(jwtUtil.getJobTitleId(token).toString());
+        log.info(jwtUtil.getJobTitleName(token));
+
         return "test success";
     }
 

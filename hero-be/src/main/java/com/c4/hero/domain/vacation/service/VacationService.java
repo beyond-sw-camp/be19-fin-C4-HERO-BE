@@ -3,14 +3,18 @@ package com.c4.hero.domain.vacation.service;
 import com.c4.hero.common.pagination.PageCalculator;
 import com.c4.hero.common.pagination.PageInfo;
 import com.c4.hero.common.response.PageResponse;
+import com.c4.hero.domain.vacation.dto.DepartmentVacationDTO;
 import com.c4.hero.domain.vacation.dto.VacationHistoryDTO;
+import com.c4.hero.domain.vacation.repository.DepartmentVacationRepository;
 import com.c4.hero.domain.vacation.repository.VacationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.List;
 
 /**
  * <pre>
@@ -34,6 +38,8 @@ public class VacationService {
 
     /** 휴가 이력 조회를 위한 레포지토리 */
     private final VacationRepository vacationRepository;
+    private final DepartmentVacationRepository departmentVacationRepository;
+
 
     /**
      * 직원 휴가 이력을 페이지 단위로 조회합니다.
@@ -47,8 +53,9 @@ public class VacationService {
      */
     public PageResponse<VacationHistoryDTO> findVacationHistory(
             Integer employeeId,
-            LocalDate startDate,
-            LocalDate endDate,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+
             int page,
             int size
     ) {
@@ -79,4 +86,43 @@ public class VacationService {
                 pageResult.getTotalElements()
         );
     }
+
+    /**
+     * 부서 휴가 캘린더(월 단위) 조회
+     *
+     * - year/month가 null이면 서버 기준 현재 월로 조회합니다.
+     * - departmentId가 null이면 전체 부서 휴가(필터 미적용)로 조회합니다.
+     *
+     * @param departmentId 부서 ID (null 가능)
+     * @param year         연도 (예: 2025, null 가능)
+     * @param month        월 (1~12, null 가능)
+     * @return 해당 월 범위에 "겹치는" 휴가 이벤트 목록
+     */
+
+    public List<DepartmentVacationDTO> findDepartmentVacationCalendar(
+            Integer departmentId,
+            Integer year,
+            Integer month
+    ){
+        LocalDate now = LocalDate.now(ZoneId.of("Asia/Shanghai"));
+
+
+        int targetYear = (year != null) ? year : now.getYear();
+        int targetMonth = (month != null) ? month : now.getMonthValue();
+
+        if (targetMonth < 1 || targetMonth > 12) {
+            throw new IllegalArgumentException("month는 1~12 범위여야 합니다. month=" + targetMonth);
+        }
+
+        LocalDate firstDay = LocalDate.of(targetYear, targetMonth, 1);
+        LocalDateTime monthStart = firstDay.atStartOfDay();
+        LocalDateTime monthEnd = firstDay.plusMonths(1).atStartOfDay().minusNanos(1);
+
+        return departmentVacationRepository.findApprovedDepartmentVacationByMonth(
+                departmentId,
+                monthStart,
+                monthEnd
+        );
+    }
+
 }
