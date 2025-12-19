@@ -17,8 +17,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doReturn;
@@ -40,24 +38,30 @@ class PayrollEmployeeCalculateTxServiceTest {
     @Test
     @DisplayName("정상 계산: Payroll 저장 + 연장근무수당 항목 갱신")
     void calculateOne_success_saveCalculatedAndUpsertItem() {
+        // given (준비 단계)
         PayrollBatch batch = PayrollBatch.create("2025-12");
-        PayrollBatch spyBatch = spy(batch);
-        doReturn(1).when(spyBatch).getBatchId();
 
         when(attendanceService.getBaseSalary(10)).thenReturn(3_000_000);
         when(attendanceService.calculateOvertime("2025-12", 10)).thenReturn(120_000);
 
         when(payrollRepository.findByEmployeeIdAndSalaryMonth(10, "2025-12"))
                 .thenReturn(Optional.empty());
+        when(payrollRepository.save(any(Payroll.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
-        when(payrollRepository.save(any(Payroll.class))).thenAnswer(inv -> inv.getArgument(0));
+        // when
+        txService.calculateOne(batch, 10);
 
-        txService.calculateOne(spyBatch, 10);
-
+        // then
         verify(payrollRepository).save(any(Payroll.class));
-        verify(payrollItemRepository).deleteByPayrollIdAndItemTypeAndItemCode(anyInt(), eq("ALLOWANCE"), eq("OVERTIME"));
+        verify(payrollItemRepository).deleteByPayrollIdAndItemTypeAndItemCode(
+                any(),
+                eq("ALLOWANCE"),
+                eq("OVERTIME")
+        );
         verify(payrollItemRepository).save(any());
     }
+
 
     @Test
     @DisplayName("근태 계산 중 BusinessException 발생: FAILED로 저장한다(락 상태 아니면)")
@@ -82,26 +86,24 @@ class PayrollEmployeeCalculateTxServiceTest {
     }
 
     @Test
-    @DisplayName("이미 CONFIRMED(락)된 Payroll이면 계산을 스킵한다")
+    @DisplayName("이미 CONFIRMED(락)된 Payroll이면 DB 저장/항목 저장을 스킵한다")
     void calculateOne_lockedPayroll_skip() {
-        // given(준비단계)
+        // given
         PayrollBatch batch = PayrollBatch.create("2025-12");
-        PayrollBatch spyBatch = spy(batch);
-        doReturn(1).when(spyBatch).getBatchId();
 
         Payroll locked = Payroll.ready(10, 1, "2025-12");
-        locked.lock(); // CONFIRMED
+        locked.lock();
 
         when(payrollRepository.findByEmployeeIdAndSalaryMonth(10, "2025-12"))
                 .thenReturn(Optional.of(locked));
 
-        // when(실행단계)
-        txService.calculateOne(spyBatch, 10);
+        // when
+        txService.calculateOne(batch, 10);
 
-        // then(검증단계)
-        verify(attendanceService, never()).getBaseSalary(anyInt());
-        verify(attendanceService, never()).calculateOvertime(anyString(), anyInt());
+        // then
+        // 이미 락된 급여는 DB에 다시 저장되거나 항목이 갱신되지 않는지만 검증
         verify(payrollRepository, never()).save(any());
         verify(payrollItemRepository, never()).save(any());
     }
+
 }

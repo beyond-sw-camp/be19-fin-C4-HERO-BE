@@ -25,9 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -65,37 +63,34 @@ class PayrollBatchServiceTest {
     @Test
     @DisplayName("배치 계산: employeeIds가 null이면 targets 조회 후 계산 실행 + READY면 CALCULATED로 전이")
     void calculate_whenEmployeeIdsNull_thenUseTargetsAndMarkCalculated() {
-        // given(준비단계)
+        // given
         PayrollBatch batch = PayrollBatch.create("2025-12"); // READY
-        PayrollBatch spyBatch = spy(batch);
-        doReturn(1).when(spyBatch).getBatchId();
 
-        when(batchRepository.findById(1)).thenReturn(Optional.of(spyBatch));
+        when(batchRepository.findById(1)).thenReturn(Optional.of(batch));
         when(batchQueryMapper.selectBatchTargetEmployees()).thenReturn(List.of(
                 new PayrollBatchTargetEmployeeResponse(10, "DEV", "사원A"),
                 new PayrollBatchTargetEmployeeResponse(11, "DEV", "사원B")
         ));
 
-        // when(실행단계)
+        // when
         payrollBatchService.calculate(1, null);
 
-        // then(검증 단계)
-        verify(calculationService).calculateEmployees(eq(spyBatch), eq(List.of(10, 11)));
+        // then
+        verify(calculationService).calculateEmployees(eq(batch), eq(List.of(10, 11)));
         verify(batchStatusTxService).markCalculatedInNewTx(1);
     }
 
     @Test
     @DisplayName("배치 계산: employeeIds가 비어있으면 targets 조회 후, targets도 비어있으면 예외")
     void calculate_targetsEmpty_throw() {
-        // given(준비 단계)
+        // given
         PayrollBatch batch = PayrollBatch.create("2025-12");
-        PayrollBatch spyBatch = spy(batch);
-        doReturn(1).when(spyBatch).getBatchId();
 
-        when(batchRepository.findById(1)).thenReturn(Optional.of(spyBatch));
-        when(batchQueryMapper.selectBatchTargetEmployees()).thenReturn(List.of());
+        when(batchRepository.findById(1)).thenReturn(Optional.of(batch));
+        when(batchQueryMapper.selectBatchTargetEmployees())
+                .thenReturn(List.of());
 
-        // when & then (실행&검증단계)
+        // when & then
         assertThatThrownBy(() -> payrollBatchService.calculate(1, List.of()))
                 .isInstanceOf(BusinessException.class);
 
@@ -104,17 +99,16 @@ class PayrollBatchServiceTest {
     }
 
     @Test
-    @DisplayName("배치 계산: CONFIRMED/PAID 상태면 계산 요청 거부")
+    @DisplayName("배치 계산: CONFIRMED 상태면 계산 요청 거부")
     void calculate_lockedBatch_throw() {
-        // given(준비단계)
+        // given
         PayrollBatch batch = PayrollBatch.create("2025-12");
-        PayrollBatch spyBatch = spy(batch);
-        doReturn(1).when(spyBatch).getBatchId();
-        doReturn(PayrollBatchStatus.CONFIRMED).when(spyBatch).getStatus();
+        batch.markCalculated();
+        batch.confirm();
 
-        when(batchRepository.findById(1)).thenReturn(Optional.of(spyBatch));
+        when(batchRepository.findById(1)).thenReturn(Optional.of(batch));
 
-        // when & then(실행 & 검증단계)
+        // when & then
         assertThatThrownBy(() -> payrollBatchService.calculate(1, List.of(10)))
                 .isInstanceOf(BusinessException.class);
 
@@ -124,51 +118,51 @@ class PayrollBatchServiceTest {
     @Test
     @DisplayName("배치 확정: FAILED 급여가 존재하면 예외")
     void confirm_hasFailed_throw() {
-        // given(준비단계)
+        // given
         PayrollBatch batch = PayrollBatch.create("2025-12");
-        PayrollBatch spyBatch = spy(batch);
-        doReturn(1).when(spyBatch).getBatchId();
 
-        when(batchRepository.findById(1)).thenReturn(Optional.of(spyBatch));
-        when(payrollRepository.existsByBatchIdAndStatus(1, PayrollStatus.FAILED)).thenReturn(true);
+        when(batchRepository.findById(1)).thenReturn(Optional.of(batch));
+        when(payrollRepository.existsByBatchIdAndStatus(1, PayrollStatus.FAILED))
+                .thenReturn(true);
 
-        // when & then (실행&검증 단계)
+        // when & then
         assertThatThrownBy(() -> payrollBatchService.confirm(1))
                 .isInstanceOf(BusinessException.class);
 
+        // FAILED 있으면 lock 걸면 안됨
         verify(payrollRepository, never()).lockAllByBatchId(anyInt());
     }
 
     @Test
     @DisplayName("지급 처리: CONFIRMED 상태가 아니면 예외")
     void pay_notConfirmed_throw() {
-        // given(준비단계)
-        PayrollBatch batch = PayrollBatch.create("2025-12"); // READY
-        PayrollBatch spyBatch = spy(batch);
-        doReturn(1).when(spyBatch).getBatchId();
-        doReturn(PayrollBatchStatus.CALCULATED).when(spyBatch).getStatus();
+        // given
+        PayrollBatch batch = PayrollBatch.create("2025-12"); // READY 상태
 
-        when(batchRepository.findById(1)).thenReturn(Optional.of(spyBatch));
+        when(batchRepository.findById(1)).thenReturn(Optional.of(batch));
 
-        // when & then(실행 & 검증 단계)
+        // when & then
         assertThatThrownBy(() -> payrollBatchService.pay(1))
                 .isInstanceOf(BusinessException.class);
+
+        verify(paymentHistoryRepository, never()).save(any());
     }
 
     @Test
     @DisplayName("지급 처리: payroll이 비어있으면 예외")
     void pay_emptyPayrolls_throw() {
-        // given (준비 단계)
+        // given
         PayrollBatch batch = PayrollBatch.create("2025-12");
-        PayrollBatch spyBatch = spy(batch);
-        doReturn(1).when(spyBatch).getBatchId();
-        doReturn(PayrollBatchStatus.CONFIRMED).when(spyBatch).getStatus();
+        batch.markCalculated();
+        batch.confirm();
 
-        when(batchRepository.findById(1)).thenReturn(Optional.of(spyBatch));
-        when(payrollRepository.existsByBatchIdAndStatus(1, PayrollStatus.FAILED)).thenReturn(false);
-        when(payrollRepository.findAllByBatchId(1)).thenReturn(List.of());
+        when(batchRepository.findById(1)).thenReturn(Optional.of(batch));
+        when(payrollRepository.existsByBatchIdAndStatus(1, PayrollStatus.FAILED))
+                .thenReturn(false);
+        when(payrollRepository.findAllByBatchId(1))
+                .thenReturn(List.of());
 
-        // when & then (실행 & 검증 단계)
+        // when & then
         assertThatThrownBy(() -> payrollBatchService.pay(1))
                 .isInstanceOf(BusinessException.class);
 
