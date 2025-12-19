@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+<pre>
+ Class Name: DashBoardMapper.xml
+ Description: 대시보드 데이터 관련 Mybatis Mapper
+
+ History
+ 2025/12/17 (김승민) 최초 작성
+</pre>
+
+@author 김승민
+-->
+
+<mapper namespace="com.c4.hero.domain.evaluation.mapper.DashBoardMapper">
+
+    <resultMap id="DashBoardMap" type="com.c4.hero.domain.evaluation.dto.dashboard.DashBoardResponseDTO">
+        <id property="evaluationTemplateId" column="evaluation_template_id"/>
+        <result property="evaluationTemplateName" column="evaluation_template_name"/>
+        <result property="evaluationTemplateType" column="evaluation_template_type"/>
+        <result property="evaluationPeriodId" column="evaluation_period_id"/>
+        <result property="evaluationPeriodName" column="evaluation_period_name"/>
+        <result property="evaluationPeriodStart" column="evaluation_period_end"/>
+        <result property="evaluationPeriodEnd" column="evaluation_period_end"/>
+
+        <collection property="evaluations" ofType="com.c4.hero.domain.evaluation.dto.dashboard.DashBoardEvaluationResponseDTO">
+            <id property="evaluationId" column="evaluation_id"/>
+            <result property="evaluationName" column="evaluation_name"/>
+            <result property="evaluationManagerId" column="evaluation_manager_id"/>
+            <result property="evaluationManagerName" column="evaluation_manager_name"/>
+            <result property="evaluationDepartmentId" column="evaluation_department_id"/>
+            <result property="evaluationDepartmentName" column="evaluation_department_name"/>
+            <result property="evaluationMangerGardeId" column="evaluation_manager_grade_id"/>
+            <result property="evaluationMangerGarde" column="evaluation_manager_grade"/>
+            <result property="evaluationCreatedAt" column="evaluation_created_at"/>
+            <result property="evaluationEndedAt" column="evaluation_ended_at"/>
+            <result property="evaluationTotalScore" column="evaluation_total_score"/>
+            <result property="evaluationTotalRank" column="evaluation_total_rank"/>
+
+            <association property="evaluationGuide" javaType="com.c4.hero.domain.evaluation.dto.dashboard.DashBoardGuideResponseDTO">
+                <id property="evaluationGuideId" column="evaluation_guide_id"/>
+                <result property="evaluationGuideName" column="evaluation_guide_name"/>
+                <result property="evaluationGuideContent" column="evaluation_guide_content"/>
+            </association>
+
+            <collection property="evaluationItems" ofType="com.c4.hero.domain.evaluation.dto.dashboard.DashBoardItemResponseDTO">
+                <id property="evaluationItemId" column="evaluation_item_id"/>
+                <result property="evaluationItemName" column="evaluation_item_name"/>
+                <result property="evaluationItemDescription" column="evaluation_item_description"/>
+
+                <collection property="criterias" ofType="com.c4.hero.domain.evaluation.dto.dashboard.DashBoardCriteriaResponseDTO">
+                    <id property="criteriaId" column="criteria_id"/>
+                    <result property="criteriaRank" column="criteria_rank"/>
+                    <result property="criteriaDescription" column="criteria_description"/>
+                    <result property="criteriaMinScore" column="criteria_min_score"/>
+                    <result property="criteriaMaxScore" column="criteria_max_score"/>
+                </collection>
+            </collection>
+
+            <collection property="evaluatees" ofType="com.c4.hero.domain.evaluation.dto.dashboard.DashBoardEvaluateeResponseDTO">
+                <id property="evaluationFormId" column="evaluation_form_id"/>
+                <result property="evaluationEvaluateeId" column="evaluation_evaluatee_id"/>
+                <result property="evaluationEvaluateeName" column="evaluation_evaluatee_name"/>
+                <result property="evaluationEvaluateeDepartmentId" column="evaluation_evaluatee_department_id"/>
+                <result property="evaluationEvaluateeDepartmentName" column="evaluation_evaluatee_department_name"/>
+                <result property="evaluationEvaluateeGradeId" column="evaluation_evaluatee_grade_id"/>
+                <result property="evaluationEvaluateeGrade" column="evaluation_evaluatee_grade"/>
+                <result property="evaluationFormCreatedAt" column="evaluation_form_created_at"/>
+                <result property="evaluationEvaluateeSummary" column="evaluation_evaluatee_summary"/>
+                <result property="evaluationEvaluateeTotalRank" column="evaluation_evaluatee_total_rank"/>
+                <result property="evaluationEvaluateeTotalScore" column="evaluation_evaluatee_total_score"/>
+
+                <collection property="formItems" ofType="com.c4.hero.domain.evaluation.dto.dashboard.DashBoardFormItemResponseDTO">
+                    <id property="formItemId" column="form_item_id"/>
+                    <result property="formItemName" column="form_item_name"/>
+                    <result property="formItemEvaluateePerformance" column="form_item_evaluatee_performance"/>
+                    <result property="formItemWeight" column="form_item_weight"/>
+                    <result property="formItemScore" column="form_item_score"/>
+                    <result property="formItemRank" column="form_item_rank"/>
+                    <result property="formItemComment" column="form_item_comment"/>
+                </collection>
+            </collection>
+        </collection>
+    </resultMap>
+
+    <select id="selectAllDashBoard" resultMap="DashBoardMap">
+
+        SELECT
+            t.template_id AS evaluation_template_id,
+            t.name AS evaluation_template_name,
+            t.type AS evaluation_template_type,
+            p.evaluation_period_id AS evaluation_period_id,
+            p.name AS evaluation_period_name,
+            p.start AS evaluation_period_start,
+            p.end AS evaluation_period_end,
+
+            e.evaluation_id AS evaluation_id,
+            e.name AS evaluation_name,
+            em.employee_id AS evaluation_manager_id,
+            em.employee_name AS evaluation_manager_name,
+            d.department_id AS evaluation_department_id,
+            d.department_name AS evaluation_department_name,
+            g.grade_id AS evaluation_manager_grade_id,
+            g.grade AS evaluation_manager_grade,
+            e.created_at AS evaluation_created_at,
+            e.ended_at AS evaluation_ended_at,
+            e.total_score AS evaluation_total_score,
+            e.total_rank AS evaluation_total_rank,
+
+            gu.evaluation_guide_id AS evaluation_guide_id,
+            gu.name AS evaluation_guide_name,
+            gu.content AS evaluation_guide_content,
+
+            s.selected_item_id AS evaluation_item_id,
+            ti.item AS evaluation_item_name,
+            ti.description AS evaluation_item_description,
+
+            c.criteria_id AS criteria_id,
+            c.rank AS criteria_rank,
+            c.description AS criteria_description,
+            c.min_score AS criteria_min_score,
+            c.max_score AS criteria_max_score,
+
+            f.form_id AS evaluation_form_id,
+            em2.employee_id AS evaluation_evaluatee_id,
+            em2.employee_name AS evaluation_evaluatee_name,
+            d2.department_id AS evaluation_evaluatee_department_id,
+            d2.department_name AS evaluation_evaluatee_department_name,
+            g2.grade_id AS evaluation_evaluatee_grade_id,
+            g2.grade AS evaluation_evaluatee_grade,
+            f.created_at AS evaluation_form_created_at,
+            f.total AS evaluation_evaluatee_summary,
+            f.total_rank AS evaluation_evaluatee_total_rank,
+            f.total_score AS evaluation_evaluatee_total_score,
+
+            fi.form_item_id AS form_item_id,
+            ti2.item AS form_item_name,
+            fi.description AS form_item_evaluatee_performance,
+            fi.weight AS form_item_weight,
+            si.score AS form_item_score,
+            si.rank AS form_item_rank,
+            si.description AS form_item_comment
+
+        FROM tbl_evaluation_template t
+        JOIN tbl_evaluation_period p ON p.template_id = t.template_id
+        JOIN tbl_evaluation e ON e.template_id = t.template_id
+        JOIN tbl_employee em ON em.employee_id = e.employee_id
+        JOIN tbl_department d ON d.department_id = em.department_id
+        JOIN tbl_grade g ON g.grade_id = em.grade_id
+        JOIN tbl_evaluation_guide gu ON gu.evaluation_guide_id = e.evaluation_guide_id
+        JOIN tbl_selected_item s ON s.evaluation_id = e.evaluation_id
+        JOIN tbl_template_item ti ON ti.item_id = s.item_id
+        JOIN tbl_criteria c ON c.item_id = ti.item_id
+        JOIN tbl_evaluation_form f ON f.evaluation_id = e.evaluation_id
+        JOIN tbl_employee em2 ON em2.employee_id = f.employee_id
+        JOIN tbl_department d2 ON d2.department_id = em2.department_id
+        JOIN tbl_grade g2 ON g2.grade_id = em2.grade_id
+        JOIN tbl_form_item fi ON fi.form_id = f.form_id
+        JOIN tbl_selected_item s2 ON s2.selected_item_id = fi.selected_item_id
+        JOIN tbl_template_item ti2 ON ti2.item_id = s2.item_id
+        JOIN tbl_item_score si ON si.form_item_id = fi.form_item_id
+       WHERE t.type = 1
+    </select>
+
+    <select id="selectDashBoard" parameterType="int" resultMap="DashBoardMap">
+
+        SELECT
+            t.template_id AS evaluation_template_id,
+            t.name AS evaluation_template_name,
+            t.type AS evaluation_template_type,
+            p.evaluation_period_id AS evaluation_period_id,
+            p.name AS evaluation_period_name,
+            p.start AS evaluation_period_start,
+            p.end AS evaluation_period_end,
+
+            e.evaluation_id AS evaluation_id,
+            e.name AS evaluation_name,
+            em.employee_id AS evaluation_manager_id,
+            em.employee_name AS evaluation_manager_name,
+            d.department_id AS evaluation_department_id,
+            d.department_name AS evaluation_department_name,
+            g.grade_id AS evaluation_manager_grade_id,
+            g.grade AS evaluation_manager_grade,
+            e.created_at AS evaluation_created_at,
+            e.ended_at AS evaluation_ended_at,
+            e.total_score AS evaluation_total_score,
+            e.total_rank AS evaluation_total_rank,
+
+            gu.evaluation_guide_id AS evaluation_guide_id,
+            gu.name AS evaluation_guide_name,
+            gu.content AS evaluation_guide_content,
+
+            s.selected_item_id AS evaluation_item_id,
+            ti.item AS evaluation_item_name,
+            ti.description AS evaluation_item_description,
+
+            c.criteria_id AS criteria_id,
+            c.rank AS criteria_rank,
+            c.description AS criteria_description,
+            c.min_score AS criteria_min_score,
+            c.max_score AS criteria_max_score,
+
+            f.form_id AS evaluation_form_id,
+            em2.employee_id AS evaluation_evaluatee_id,
+            em2.employee_name AS evaluation_evaluatee_name,
+            d2.department_id AS evaluation_evaluatee_department_id,
+            d2.department_name AS evaluation_evaluatee_department_name,
+            g2.grade_id AS evaluation_evaluatee_grade_id,
+            g2.grade AS evaluation_evaluatee_grade,
+            f.created_at AS evaluation_form_created_at,
+            f.total AS evaluation_evaluatee_summary,
+            f.total_rank AS evaluation_evaluatee_total_rank,
+            f.total_score AS evaluation_evaluatee_total_score,
+
+            fi.form_item_id AS form_item_id,
+            ti2.item AS form_item_name,
+            fi.description AS form_item_evaluatee_performance,
+            fi.weight AS form_item_weight,
+            si.score AS form_item_score,
+            si.rank AS form_item_rank,
+            si.description AS form_item_comment
+
+        FROM tbl_evaluation_template t
+                 JOIN tbl_evaluation_period p ON p.template_id = t.template_id
+                 JOIN tbl_evaluation e ON e.template_id = t.template_id
+                 JOIN tbl_employee em ON em.employee_id = e.employee_id
+                 JOIN tbl_department d ON d.department_id = em.department_id
+                 JOIN tbl_grade g ON g.grade_id = em.grade_id
+                 JOIN tbl_evaluation_guide gu ON gu.evaluation_guide_id = e.evaluation_guide_id
+                 JOIN tbl_selected_item s ON s.evaluation_id = e.evaluation_id
+                 JOIN tbl_template_item ti ON ti.item_id = s.item_id
+                 JOIN tbl_criteria c ON c.item_id = ti.item_id
+                 JOIN tbl_evaluation_form f ON f.evaluation_id = e.evaluation_id
+                 JOIN tbl_employee em2 ON em2.employee_id = f.employee_id
+                 JOIN tbl_department d2 ON d2.department_id = em2.department_id
+                 JOIN tbl_grade g2 ON g2.grade_id = em2.grade_id
+                 JOIN tbl_form_item fi ON fi.form_id = f.form_id
+                 JOIN tbl_selected_item s2 ON s2.selected_item_id = fi.selected_item_id
+                 JOIN tbl_template_item ti2 ON ti2.item_id = s2.item_id
+                 JOIN tbl_item_score si ON si.form_item_id = fi.form_item_id
+        WHERE t.type = 1
+          AND d.department_id = #{departmentId}
+    </select>
+</mapper>
