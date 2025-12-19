@@ -2,6 +2,8 @@ package com.c4.hero.domain.settings.service;
 
 import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
+import com.c4.hero.domain.approval.entity.ApprovalFormTemplate;
+import com.c4.hero.domain.approval.repository.ApprovalTemplateRepository;
 import com.c4.hero.domain.employee.entity.Account;
 import com.c4.hero.domain.employee.entity.AccountRole;
 import com.c4.hero.domain.employee.entity.Employee;
@@ -17,13 +19,15 @@ import com.c4.hero.domain.employee.repository.EmployeeRoleRepository;
 import com.c4.hero.domain.employee.service.EmployeeCommandService;
 import com.c4.hero.domain.employee.type.ChangeType;
 import com.c4.hero.domain.employee.type.RoleType;
-import com.c4.hero.domain.settings.dto.request.SettingsDepartmentRequestDTO;
-import com.c4.hero.domain.settings.dto.request.SettingsGradeRequestDTO;
-import com.c4.hero.domain.settings.dto.request.SettingsJobTitleRequestDTO;
-import com.c4.hero.domain.settings.dto.request.SettingsLoginPolicyRequestDTO;
-import com.c4.hero.domain.settings.dto.request.SettingsPermissionsRequestDTO;
+import com.c4.hero.domain.settings.dto.SettingsDefaultLineDTO;
+import com.c4.hero.domain.settings.dto.SettingsDefaultRefDTO;
+import com.c4.hero.domain.settings.dto.request.*;
+import com.c4.hero.domain.settings.entity.SettingsApprovalLine;
+import com.c4.hero.domain.settings.entity.SettingsApprovalRef;
 import com.c4.hero.domain.settings.entity.SettingsDepartment;
 import com.c4.hero.domain.settings.entity.SettingsLoginPolicy;
+import com.c4.hero.domain.settings.repository.SettingsApprovalLineRepository;
+import com.c4.hero.domain.settings.repository.SettingsApprovalRefRepository;
 import com.c4.hero.domain.settings.repository.SettingsDepartmentRepository;
 import com.c4.hero.domain.settings.repository.SettingsLoginPolicyRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,12 +35,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+
+import static com.c4.hero.domain.settings.enums.TargetType.*;
 
 /**
  * <pre>
@@ -45,10 +52,11 @@ import java.util.stream.Collectors;
  *
  * History
  * 2025/12/16 (승건) 최초 작성
+ * 2025/12/19 (민철) 기본 결재선 / 참조 목록 설정적용
  * </pre>
  *
  * @author 승건
- * @version 1.0
+ * @version 1.1
  */
 @Service
 @Transactional
@@ -65,6 +73,9 @@ public class SettingsCommandService {
 	private final EmployeeAccountRepository accountRepository;
 	private final EmployeeAccountRoleRepository accountRoleRepository;
 	private final EmployeeRoleRepository roleRepository;
+    private final ApprovalTemplateRepository templateRepository;
+    private final SettingsApprovalLineRepository settingsApprovalLineRepository;
+    private final SettingsApprovalRefRepository settingsApprovalRefRepository;
 
 	private final EmployeeCommandService employeeCommandService;
 
@@ -72,7 +83,7 @@ public class SettingsCommandService {
 	private static final int TEMP_DEPARTMENT_ID = -1;
 	private static final int ADMIN_ID = 0;
 
-	/**
+    /**
 	 * 부서 정보 트리 저장 및 수정
 	 *
 	 * @param departmentDtos 부서 정보 목록
@@ -364,4 +375,76 @@ public class SettingsCommandService {
 
 		account.getAccountRoles().addAll(newAccountRoles);
 	}
+
+    /**
+     * 서식별 기본 결재선 / 참조목록 설정
+     *
+     * @param settings 결재선/참조목록
+     * @return String 설정 저장 성공 / 실패 메시지
+     */
+    @Transactional
+    public String applySettings(Integer templateId, SettingsApprovalRequestDTO settings) {
+
+        ApprovalFormTemplate template = templateRepository.findById(templateId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
+
+        List<SettingsApprovalLine> lines = new ArrayList<>();
+
+        for (SettingsDefaultLineDTO line : settings.getLines()) {
+
+            if (SPECIFIC_DEPT.name().equals(line.getTargetType())) {
+                SettingsApprovalLine lineEntity = SettingsApprovalLine.builder()
+                        .seq(line.getSeq())
+                        .template(template)
+                        .departmentId(line.getDepartmentId())
+                        .build();
+
+                lines.add(lineEntity);
+
+            } else if (DRAFTER_DEPT.name().equals(line.getTargetType())) {
+                SettingsApprovalLine lineEntity = SettingsApprovalLine.builder()
+                        .seq(line.getSeq())
+                        .template(template)
+                        .departmentId(line.getDepartmentId())
+                        .build();
+                lines.add(lineEntity);
+            }
+        }
+
+        try {
+            settingsApprovalLineRepository.saveAll(lines);
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "기본결재선 적용 실패");
+        }
+
+        List<SettingsApprovalRef> refs = new ArrayList<>();
+
+        for (SettingsDefaultRefDTO ref : settings.getReferences()) {
+            if (SPECIFIC_DEPT.name().equals(ref.getTargetType())) {
+                SettingsApprovalRef refEntity = SettingsApprovalRef.builder()
+                        .template(template)
+                        .departmentId(ref.getDepartmentId())
+                        .build();
+
+                refs.add(refEntity);
+
+            } else if (DRAFTER_DEPT.name().equals(ref.getTargetType())) {
+                SettingsApprovalRef refEntity = SettingsApprovalRef.builder()
+                        .template(template)
+                        .departmentId(ref.getDepartmentId())
+                        .build();
+                refs.add(refEntity);
+            }
+        }
+
+        try {
+            settingsApprovalRefRepository.saveAll(refs);
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "기본참조선 적용 실패");
+        }
+
+        return "결재 설정 적용 성공";
+    }
+
+
 }

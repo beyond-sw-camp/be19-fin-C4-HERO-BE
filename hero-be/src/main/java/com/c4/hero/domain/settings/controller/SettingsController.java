@@ -5,12 +5,10 @@ import com.c4.hero.common.response.PageResponse;
 import com.c4.hero.domain.employee.entity.Grade;
 import com.c4.hero.domain.employee.entity.JobTitle;
 import com.c4.hero.domain.employee.entity.Role;
-import com.c4.hero.domain.settings.dto.request.SettingsDepartmentRequestDTO;
-import com.c4.hero.domain.settings.dto.request.SettingsGradeRequestDTO;
-import com.c4.hero.domain.settings.dto.request.SettingsJobTitleRequestDTO;
-import com.c4.hero.domain.settings.dto.request.SettingsLoginPolicyRequestDTO;
-import com.c4.hero.domain.settings.dto.request.SettingsPermissionsRequestDTO;
+import com.c4.hero.domain.settings.dto.request.*;
+import com.c4.hero.domain.settings.dto.request.SettingsApprovalRequestDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsDepartmentResponseDTO;
+import com.c4.hero.domain.settings.dto.response.SettingsDocumentTemplateResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsPermissionsResponseDTO;
 import com.c4.hero.domain.settings.service.SettingsCommandService;
 import com.c4.hero.domain.settings.service.SettingsQueryService;
@@ -19,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,10 +34,11 @@ import java.util.List;
  *
  * History
  * 2025/12/16 승건 최초 작성
+ * 2025/12/18 민철 - 결재선 설정을 위한 컨트롤러 메서드 작성
  * </pre>
  *
  * @author 승건
- * @version 1.0
+ * @version 1.1
  */
 @RestController
 @RequestMapping("/api/settings")
@@ -184,4 +184,32 @@ public class SettingsController {
 		settingsCommandService.updatePermissions(dto);
 		return ResponseEntity.ok(ApiResponse.success("Permissions updated successfully"));
 	}
+
+    /**
+     * 서식별 기본 결재선 설정
+     *
+     * @param   settings 설정값들
+     * @return ResponseEntity<>
+     */
+    @PostMapping("/approvals/{templateId}")
+    public ResponseEntity<String> registDefaultLine(
+            @PathVariable Integer templateId,
+            @RequestBody SettingsApprovalRequestDTO settings){
+
+        String response = settingsCommandService.applySettings(templateId, settings);
+        return ResponseEntity.ok().body(response);
+    }
+
+    /**
+     * 서식목록 조회
+     *
+     * @param
+     * @return List<SettingsDocumentTemplateResponseDTO> 서식 목록 조회
+     */
+    @GetMapping("/approvals/templates")
+    public ResponseEntity<List<SettingsDocumentTemplateResponseDTO>> getTemplates() {
+
+        List<SettingsDocumentTemplateResponseDTO> lists = settingsQueryService.getTemplates();
+        return ResponseEntity.ok().body(lists);
+    }
 }
