@@ -16,7 +16,7 @@
 
 <mapper namespace="com.c4.hero.domain.evaluation.mapper.EvaluationTemplateMapper">
 
-    <resultMap id="AllEvaluationTemplateMap" type="com.c4.hero.domain.evaluation.dto.EvaluationTemplateResponseDTO">
+    <resultMap id="AllEvaluationTemplateMap" type="com.c4.hero.domain.evaluation.dto.template.EvaluationTemplateResponseDTO">
         <id property="evaluationTemplateTemplateId" column="template_id"/>
         <result property="evaluationTemplateName" column="template_name"/>
         <result property="evaluationTemplateCreatedAt" column="created_at"/>
@@ -33,12 +33,12 @@
         <result property="evaluationPeriodEnd" column="end"/>
 
         <!-- Item and Criteria Mapping -->
-        <collection property="templateItems" ofType="com.c4.hero.domain.evaluation.dto.TemplateItemResponseDTO">
+        <collection property="templateItems" ofType="com.c4.hero.domain.evaluation.dto.item.TemplateItemResponseDTO">
             <id property="templateItemItemId" column="item_id"/>
             <result property="templateItemItem" column="item"/>
             <result property="templateItemDescription" column="item_description"/>
 
-            <collection property="criterias" ofType="com.c4.hero.domain.evaluation.dto.CriteriaResponseDTO">
+            <collection property="criterias" ofType="com.c4.hero.domain.evaluation.dto.criteria.CriteriaResponseDTO">
                 <id property="criteriaCriteriaId" column="criteria_id"/>
                 <result property="criteriaRank" column="rank"/>
                 <result property="criteriaDescription" column="criteria_description"/>

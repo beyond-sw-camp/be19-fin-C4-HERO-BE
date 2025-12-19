@@ -16,7 +16,7 @@
 
 <mapper namespace="com.c4.hero.domain.evaluation.mapper.EvaluationMapper">
 
-    <resultMap id="EvaluationMap" type="com.c4.hero.domain.evaluation.dto.EvaluationResponseDTO">
+    <resultMap id="EvaluationMap" type="com.c4.hero.domain.evaluation.dto.evaluation.EvaluationResponseDTO">
         <id property="evaluationEvaluationId" column="evaluation_id"/>
         <result property="evaluationEmployeeId" column="employee_id"/>
         <result property="evaluationEmployeeName" column="employee_name"/>
@@ -37,14 +37,14 @@
         <result property="evaluationEvaluationPeriodStart" column="start"/>
         <result property="evaluationEvaluationPeriodEnd" column="end"/>
 
-        <collection property="selectedItems" ofType="com.c4.hero.domain.evaluation.dto.SelectedItemResponseDTO">
+        <collection property="selectedItems" ofType="com.c4.hero.domain.evaluation.dto.item.SelectedItemResponseDTO">
             <id property="selectedItemSelectedItemId" column="selected_item_id"/>
             <result property="selectedItemEvaluationId" column="selected_item_evaluation_id"/>
             <result property="selectedItemItemId" column="item_id"/>
             <result property="selectedItemItemName" column="item_name"/>
             <result property="selectedItemItemDescription" column="item_description"/>
 
-            <collection property="criterias" ofType="com.c4.hero.domain.evaluation.dto.CriteriaResponseDTO">
+            <collection property="criterias" ofType="com.c4.hero.domain.evaluation.dto.criteria.CriteriaResponseDTO">
                 <id property="criteriaCriteriaId" column="criteria_id"/>
                 <result property="criteriaItemId" column="criteria_item_id"/>
                 <result property="criteriaRank" column="rank"/>
@@ -54,7 +54,7 @@
             </collection>
         </collection>
 
-        <collection property="evaluatees" ofType="com.c4.hero.domain.evaluation.dto.EvaluateeResponseDTO">
+        <collection property="evaluatees" ofType="com.c4.hero.domain.evaluation.dto.evaluatee.EvaluateeResponseDTO">
             <id property="evaluateeEvaluateeId" column="evaluatee_id"/>
             <result property="evaluateeEvaluationId" column="evaluatee_evaluation_id"/>
             <result property="evaluateeEmployeeId" column="evaluatee_employee_id"/>

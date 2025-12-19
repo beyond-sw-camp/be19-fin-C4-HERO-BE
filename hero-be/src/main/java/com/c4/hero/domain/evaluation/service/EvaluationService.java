@@ -3,7 +3,26 @@ package com.c4.hero.domain.evaluation.service;
 import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
 import com.c4.hero.common.response.PageResponse;
-import com.c4.hero.domain.evaluation.dto.*;
+import com.c4.hero.domain.evaluation.dto.criteria.CriteriaRequestDTO;
+import com.c4.hero.domain.evaluation.dto.criteria.CriteriaUpdateDTO;
+import com.c4.hero.domain.evaluation.dto.dashboard.DashBoardResponseDTO;
+import com.c4.hero.domain.evaluation.dto.employee.EmployeeResponseDTO;
+import com.c4.hero.domain.evaluation.dto.evaluatee.EvaluateeRequestDTO;
+import com.c4.hero.domain.evaluation.dto.evaluation.EvaluationRequestDTO;
+import com.c4.hero.domain.evaluation.dto.evaluation.EvaluationResponseDTO;
+import com.c4.hero.domain.evaluation.dto.form.EvaluationFormRequestDTO;
+import com.c4.hero.domain.evaluation.dto.form.EvaluationFormResponseDTO;
+import com.c4.hero.domain.evaluation.dto.form.EvaluationFormUpdateDTO;
+import com.c4.hero.domain.evaluation.dto.guide.EvaluationGuideRequestDTO;
+import com.c4.hero.domain.evaluation.dto.guide.EvaluationGuideResponseDTO;
+import com.c4.hero.domain.evaluation.dto.guide.EvaluationGuideUpdateDTO;
+import com.c4.hero.domain.evaluation.dto.item.*;
+import com.c4.hero.domain.evaluation.dto.period.EvaluationPeriodRequestDTO;
+import com.c4.hero.domain.evaluation.dto.score.ItemScoreRequestDTO;
+import com.c4.hero.domain.evaluation.dto.score.ItemScoreUpdateDTO;
+import com.c4.hero.domain.evaluation.dto.template.EvaluationTemplateRequestDTO;
+import com.c4.hero.domain.evaluation.dto.template.EvaluationTemplateResponseDTO;
+import com.c4.hero.domain.evaluation.dto.template.EvaluationTemplateUpdateDTO;
 import com.c4.hero.domain.evaluation.entity.*;
 import com.c4.hero.domain.evaluation.mapper.*;
 import com.c4.hero.domain.evaluation.repository.*;
@@ -76,6 +95,9 @@ public class EvaluationService {
 
     /** 평가서 mapper 의존성 주입 */
     private final EvaluationFormMapper evaluationFormMapper;
+
+    /** 대시보드 데이터 mapper 의존성 주입 */
+    private final DashBoardMapper dashBoardMapper;
 
     /**
      * 평가 템플릿 생성 로직
@@ -971,10 +993,41 @@ public class EvaluationService {
                 evaluation.setTotalScore(evaluationAvgScore);
                 evaluation.setTotalRank(evaluationRank);
                 evaluation.setStatus(2);
+                evaluation.setEndedAt(LocalDateTime.now());
+
                 evaluationRepository.save(evaluation);
             }
         }
 
         return form.getFormId();
+    }
+
+    /**
+     * 전체 대시보드 데이터 조회 서비스 로직
+     *
+     * @return result List<DashBoardResponseDTO>
+     *     전체 대시보드 데이터를 응답함.
+     */
+    public List<DashBoardResponseDTO> selectAllDashBoard() {
+
+        List<DashBoardResponseDTO> result = dashBoardMapper.selectAllDashBoard();
+
+        return result;
+    }
+
+    /**
+     * 대시보드 데이터 department_id로 조회하는 서비스 로직
+     *
+     * @param id Integer
+     *     부서 ID를 요청함
+     *
+     * @return result List<DashBoardResponseDTO>
+     *     부서 ID로 조회된 대시보드 데이터를 응답함.
+     */
+    public List<DashBoardResponseDTO> selectDashBoard(Integer id) {
+
+        List<DashBoardResponseDTO> result = dashBoardMapper.selectDashBoard(id);
+
+        return result;
     }
 }

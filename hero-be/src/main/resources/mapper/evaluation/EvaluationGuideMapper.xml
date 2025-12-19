@@ -16,7 +16,7 @@
 
 <mapper namespace="com.c4.hero.domain.evaluation.mapper.EvaluationGuideMapper">
 
-    <resultMap id="EvaluationGuideMap" type="com.c4.hero.domain.evaluation.dto.EvaluationGuideResponseDTO">
+    <resultMap id="EvaluationGuideMap" type="com.c4.hero.domain.evaluation.dto.guide.EvaluationGuideResponseDTO">
         <id property="evaluationGuideEvaluationGuideId" column="evaluation_guide_id"/>
         <result property="evaluationGuideName" column="name"/>
         <result property="evaluationGuideContent" column="content"/>

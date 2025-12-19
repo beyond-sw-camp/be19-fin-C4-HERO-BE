@@ -1,6 +1,6 @@
 package com.c4.hero.domain.evaluation.mapper;
 
-import com.c4.hero.domain.evaluation.dto.EmployeeResponseDTO;
+import com.c4.hero.domain.evaluation.dto.employee.EmployeeResponseDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

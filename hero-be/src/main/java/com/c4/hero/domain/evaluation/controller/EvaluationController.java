@@ -1,7 +1,19 @@
 package com.c4.hero.domain.evaluation.controller;
 
 import com.c4.hero.common.response.PageResponse;
-import com.c4.hero.domain.evaluation.dto.*;
+import com.c4.hero.domain.evaluation.dto.dashboard.DashBoardResponseDTO;
+import com.c4.hero.domain.evaluation.dto.employee.EmployeeResponseDTO;
+import com.c4.hero.domain.evaluation.dto.evaluation.EvaluationRequestDTO;
+import com.c4.hero.domain.evaluation.dto.evaluation.EvaluationResponseDTO;
+import com.c4.hero.domain.evaluation.dto.form.EvaluationFormRequestDTO;
+import com.c4.hero.domain.evaluation.dto.form.EvaluationFormResponseDTO;
+import com.c4.hero.domain.evaluation.dto.form.EvaluationFormUpdateDTO;
+import com.c4.hero.domain.evaluation.dto.guide.EvaluationGuideRequestDTO;
+import com.c4.hero.domain.evaluation.dto.guide.EvaluationGuideResponseDTO;
+import com.c4.hero.domain.evaluation.dto.guide.EvaluationGuideUpdateDTO;
+import com.c4.hero.domain.evaluation.dto.template.EvaluationTemplateRequestDTO;
+import com.c4.hero.domain.evaluation.dto.template.EvaluationTemplateResponseDTO;
+import com.c4.hero.domain.evaluation.dto.template.EvaluationTemplateUpdateDTO;
 import com.c4.hero.domain.evaluation.service.EvaluationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -367,5 +379,36 @@ public class EvaluationController {
         Integer updatedId = evaluationService.gradingForm(updateDTO);
 
         return ResponseEntity.ok(updatedId);
+    }
+
+    /**
+     * 전체 대시보드 데이터 조회
+     *
+     * @return result List<DashBoardResponseDTO>
+     *     전체 대시보드 데이터를 응답함.
+     */
+    @GetMapping("/dashboard/selectall")
+    public ResponseEntity<List<DashBoardResponseDTO>> selectAllDashBoard(){
+
+        List<DashBoardResponseDTO> result = evaluationService.selectAllDashBoard();
+
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 대시보드 데이터 department_id로 조회
+     *
+     * @param id Integer
+     *     부서 ID를 요청함
+     *
+     * @return result List<DashBoardResponseDTO>
+     *     부서 ID로 조회된 대시보드 데이터를 응답함.
+     */
+    @GetMapping("/dashboard/select/{id}")
+    public ResponseEntity<List<DashBoardResponseDTO>> selectDashBoard(@PathVariable Integer id){
+
+        List<DashBoardResponseDTO> result = evaluationService.selectDashBoard(id);
+
+        return ResponseEntity.ok(result);
     }
 }
