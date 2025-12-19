@@ -48,7 +48,7 @@ public class EvaluationController {
      * @return result PageResponse<EvaluationTemplateResponseDTO>
      *     전체 평가 템플릿 데이터를 응답함
      */
-    @GetMapping("/evaluation-template/selectall")
+    @GetMapping("/evaluation-template/all")
     public ResponseEntity<PageResponse<EvaluationTemplateResponseDTO>> selectAllTemplate(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
@@ -68,7 +68,7 @@ public class EvaluationController {
      * @return result EvaluationTemplateResponseDTO
      *     평가 템플릿 테이블의 pk로 특정 평가 템플릿 데이터를 응답함
      */
-    @GetMapping("/evaluation-template/select/{id}")
+    @GetMapping("/evaluation-template/{id}")
     public ResponseEntity<EvaluationTemplateResponseDTO> selectTemplate(@PathVariable Integer id){
 
         EvaluationTemplateResponseDTO result = evaluationService.selectTemplate(id);
@@ -85,7 +85,7 @@ public class EvaluationController {
      * @return id Integer
      *     생성된 평가 템플릿 테이블의 pk를 응답함
      */
-    @PostMapping("/evaluation-template/create")
+    @PostMapping("/evaluation-template")
     public ResponseEntity<Integer> createTemplate(@RequestBody EvaluationTemplateRequestDTO evaluationTemplateDTO){
 
         Integer id = evaluationService.createTemplate(evaluationTemplateDTO);
@@ -103,7 +103,7 @@ public class EvaluationController {
      * @return updatedId Integer
      *     수정된 평가 템플릿 테이블의 pk를 응답함.
      */
-    @PutMapping("/evaluation-template/update")
+    @PutMapping("/evaluation-template")
     public ResponseEntity<Integer> updateTemplate(@RequestBody EvaluationTemplateUpdateDTO evaluationTemplateDTO){
 
         Integer updatedId = evaluationService.updateTemplate(evaluationTemplateDTO);
@@ -120,7 +120,7 @@ public class EvaluationController {
      * @return Void
      *     평가 템플릿 삭제 후 반환하는 값은 없음
      */
-    @DeleteMapping("/evaluation-template/delete/{id}")
+    @DeleteMapping("/evaluation-template/{id}")
     public ResponseEntity<Void> deleteTemplate(@PathVariable Integer id){
         evaluationService.deleteTemplate(id);
 
@@ -133,7 +133,7 @@ public class EvaluationController {
      * @return result PageResponse<EvaluationGuideResponseDTO>
      *     전체 평가 가이드 데이터를 반환
      */
-    @GetMapping("/evaluation-guide/selectall")
+    @GetMapping("/evaluation-guide/all")
     public ResponseEntity<PageResponse<EvaluationGuideResponseDTO>> selectAllGuide(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
@@ -149,7 +149,7 @@ public class EvaluationController {
      * @return result List<EvaluationGuideResponseDTO>
      *     전체 평가 가이드 데이터를 반환
      */
-    @GetMapping("/evaluation-guide/selectall2")
+    @GetMapping("/evaluation-guide/all2")
     public ResponseEntity<List<EvaluationGuideResponseDTO>> selectAllGuide2(){
 
         List<EvaluationGuideResponseDTO> result = evaluationService.selectAllGuide2();
@@ -165,7 +165,7 @@ public class EvaluationController {
      * @return result EvaluationGuideResponseDTO
      *     조회된 평가 가이드 데이터를 반환
      */
-    @GetMapping("/evaluation-guide/select/{id}")
+    @GetMapping("/evaluation-guide/{id}")
     public ResponseEntity<EvaluationGuideResponseDTO> selectGuide(@PathVariable Integer id){
 
         EvaluationGuideResponseDTO result = evaluationService.selectGuide(id);
@@ -182,7 +182,7 @@ public class EvaluationController {
      * @return id Integer
      *     생성된 평가 가이드 테이블 pk 값 반환
      */
-    @PostMapping("/evaluation-guide/create")
+    @PostMapping("/evaluation-guide")
     public ResponseEntity<Integer> createGuide(@RequestBody EvaluationGuideRequestDTO evaluationGuideRequestDTO){
 
         Integer id = evaluationService.createGuide(evaluationGuideRequestDTO);
@@ -198,7 +198,7 @@ public class EvaluationController {
      * @return updatedId Integer
      *     수정된 평가 가이드 테이블의 pk를 응답함.
      */
-    @PutMapping("/evaluation-guide/update")
+    @PutMapping("/evaluation-guide")
     public ResponseEntity<Integer> updateGuide(@RequestBody EvaluationGuideUpdateDTO evaluationGuideUpdateDTO){
 
         Integer updateId = evaluationService.updateGuide(evaluationGuideUpdateDTO);
@@ -214,7 +214,7 @@ public class EvaluationController {
      * @return Void
      *     평가 가이드 삭제 후 반환하는 값은 없음
      */
-    @DeleteMapping("/evaluation-guide/delete/{id}")
+    @DeleteMapping("/evaluation-guide/{id}")
     public ResponseEntity<Void> deleteGuide(@PathVariable Integer id){
         evaluationService.deleteGuide(id);
 
@@ -229,7 +229,7 @@ public class EvaluationController {
      * @return result List<EmployeeResponseDTO>
      *     평가 가이드 삭제 후 반환하는 값은 없음
      */
-    @GetMapping("/evaluation/select/employee/{id}")
+    @GetMapping("/evaluation/employee/{id}")
     public ResponseEntity<List<EmployeeResponseDTO>> selectEmployeeByDepartmentId(@PathVariable Integer id){
 
         List<EmployeeResponseDTO> result = evaluationService.selectEmployeeByDepartmentId(id);
@@ -244,7 +244,7 @@ public class EvaluationController {
      * @return result List<EvaluationResponseDTO>
      *     전체 평가 데이터를 응답함
      */
-    @GetMapping("/evaluation/selectall")
+    @GetMapping("/evaluation/all")
     public ResponseEntity<PageResponse<EvaluationResponseDTO>> selectAllEvaluation(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
@@ -261,7 +261,7 @@ public class EvaluationController {
      * @return result EvaluationResponseDTO
      *     evaluation_id로 조회한 평가 데이터를 응답함
      */
-    @GetMapping("/evaluation/select/{id}")
+    @GetMapping("/evaluation/{id}")
     public ResponseEntity<EvaluationResponseDTO> selectEvaluation(@PathVariable Integer id){
 
         EvaluationResponseDTO result = evaluationService.selectEvaluation(id);
@@ -279,7 +279,7 @@ public class EvaluationController {
      * @return id Integer
      *     생성된 평가 pk 값 반환
      */
-    @PostMapping("/evaluation/create")
+    @PostMapping("/evaluation")
     public ResponseEntity<Integer> createEvaluation(@RequestBody EvaluationRequestDTO evaluationRequestDTO){
 
         Integer id = evaluationService.createEvaluation(evaluationRequestDTO);
@@ -295,7 +295,7 @@ public class EvaluationController {
      * @return Void
      *     평가 삭제 후 반환하는 값은 없음
      */
-    @DeleteMapping("/evaluation/delete/{id}")
+    @DeleteMapping("/evaluation/{id}")
     public ResponseEntity<Void> deleteEvaluation(@PathVariable Integer id) {
 
         evaluationService.deleteEvaluation(id);
@@ -309,7 +309,7 @@ public class EvaluationController {
      * @return result List<EvaluationFormResponseDTO>
      *     전체 평가서 데이터를 응답함
      */
-    @GetMapping("/evaluation-form/selectall")
+    @GetMapping("/evaluation-form/all")
     public ResponseEntity<List<EvaluationFormResponseDTO>> selectAllForm(){
 
         List<EvaluationFormResponseDTO> result = evaluationService.selectAllForm();
@@ -324,7 +324,7 @@ public class EvaluationController {
      * @return result List<EvaluationFormResponseDTO>
      *     전체 평가서 데이터를 응답함
      */
-    @GetMapping("/evaluation-form/select/{evaluationId}/{employeeId}")
+    @GetMapping("/evaluation-form/{evaluationId}/{employeeId}")
     public ResponseEntity<EvaluationFormResponseDTO> selectForm(@PathVariable Integer evaluationId, @PathVariable Integer employeeId){
 
         EvaluationFormResponseDTO result = evaluationService.selectForm(evaluationId, employeeId);
@@ -340,7 +340,7 @@ public class EvaluationController {
      * @return id Integer
      *     생성된 평가서 테이블의 pk를 응답함
      */
-    @PostMapping("/evaluation-form/create")
+    @PostMapping("/evaluation-form")
     public ResponseEntity<Integer> createForm(@RequestBody EvaluationFormRequestDTO evaluationFormRequestDTO){
 
          Integer id = evaluationService.createForm(evaluationFormRequestDTO);
@@ -356,7 +356,7 @@ public class EvaluationController {
      * @return updatedId Integer
      *     수정된 평가서 테이블의 pk를 응답함.
      */
-    @PutMapping("/evaluation-form/update")
+    @PutMapping("/evaluation-form")
     public ResponseEntity<Integer> updateForm(@RequestBody EvaluationFormUpdateDTO updateDTO) {
 
         Integer updatedId = evaluationService.updateForm(updateDTO);
@@ -387,7 +387,7 @@ public class EvaluationController {
      * @return result List<DashBoardResponseDTO>
      *     전체 대시보드 데이터를 응답함.
      */
-    @GetMapping("/dashboard/selectall")
+    @GetMapping("/dashboard/all")
     public ResponseEntity<List<DashBoardResponseDTO>> selectAllDashBoard(){
 
         List<DashBoardResponseDTO> result = evaluationService.selectAllDashBoard();
@@ -404,7 +404,7 @@ public class EvaluationController {
      * @return result List<DashBoardResponseDTO>
      *     부서 ID로 조회된 대시보드 데이터를 응답함.
      */
-    @GetMapping("/dashboard/select/{id}")
+    @GetMapping("/dashboard/{id}")
     public ResponseEntity<List<DashBoardResponseDTO>> selectDashBoard(@PathVariable Integer id){
 
         List<DashBoardResponseDTO> result = evaluationService.selectDashBoard(id);
