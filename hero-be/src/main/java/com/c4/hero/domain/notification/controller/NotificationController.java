@@ -45,34 +45,35 @@ public class NotificationController {
     private final NotificationQueryService notificationQueryService;
 
     /**
-     * 알림 목록 조회 (내 알림 조회)
+     * 일반 알림 조회 (삭제되지 않은 알림)
      *
-     * GET /api/notifications?isDeleted=false
+     * GET /api/notifications
      *
      * @param userDetails 인증된 사용자 정보 (Spring Security Context)
-     * @param isDeleted 삭제 여부 (기본값: false)
      * @return ResponseEntity<List<NotificationDTO>> 알림 목록
      */
-    @Operation(summary = "내 알림 목록 조회",
-            description = "로그인한 사용자의 알림 목록을 조회합니다. isDeleted 파라미터로 삭제된 알림도 조회 가능합니다.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "조회 성공",
-                    content = @Content(schema = @Schema(implementation = NotificationDTO.class))),
-            @ApiResponse(responseCode = "401", description = "인증 실패", content = @Content)
-    })
     @GetMapping
     public ResponseEntity<List<NotificationDTO>> findAllNotification(
-            @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestParam(defaultValue = "false") boolean isDeleted) {
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null) return ResponseEntity.status(401).build();
 
-        Integer employeeId = userDetails.getEmployeeId();
-        log.info("알림 목록 조회 - 사원ID: {}, isDeleted: {}", employeeId, isDeleted);
+        return ResponseEntity.ok(notificationQueryService.findAllNotification(userDetails.getEmployeeId()));
+    }
 
-        List<NotificationDTO> notifications = isDeleted
-                ? notificationQueryService.findDeletedNotifications(employeeId)
-                : notificationQueryService.findAllNotification(employeeId);
+    /**
+     * 삭제된 알림 조회
+     *
+     * GET /api/notifications/deleted
+     *
+     * @param userDetails 인증된 사용자 정보 (Spring Security Context)
+     * @return ResponseEntity<List<NotificationDTO>> 삭제된 알림 목록
+     */
+    @GetMapping("/deleted")
+    public ResponseEntity<List<NotificationDTO>> findDeletedNotifications(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        if (userDetails == null) return ResponseEntity.status(401).build();
 
-        return ResponseEntity.ok(notifications);
+        return ResponseEntity.ok(notificationQueryService.findDeletedNotifications(userDetails.getEmployeeId()));
     }
 
     /**
