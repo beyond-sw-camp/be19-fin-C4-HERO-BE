@@ -25,12 +25,12 @@ import lombok.Setter;
 public class PersonalDTO {
 
     /** 근태 기록 고유 ID(PK) */
-    private int attendanceId;
+    private Integer attendanceId;
 
     /** 근무 날짜 (yyyy-MM-dd) */
     private String workDate;
 
-    /** 근무 상태 (정상, 지각, 조퇴, 결근 등) */
+    /** 근무 상태 (정상, 지각, 결근 등) */
     private String state;
 
     /** 근무 시작 시간 (HH:mm) */

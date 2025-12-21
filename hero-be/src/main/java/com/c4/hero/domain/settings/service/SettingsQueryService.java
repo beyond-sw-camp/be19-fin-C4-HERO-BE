@@ -1,6 +1,8 @@
 package com.c4.hero.domain.settings.service;
 
 import com.c4.hero.common.response.PageResponse;
+import com.c4.hero.domain.approval.entity.ApprovalFormTemplate;
+import com.c4.hero.domain.approval.repository.ApprovalTemplateRepository;
 import com.c4.hero.domain.employee.entity.Employee;
 import com.c4.hero.domain.employee.entity.Grade;
 import com.c4.hero.domain.employee.entity.JobTitle;
@@ -11,6 +13,7 @@ import com.c4.hero.domain.employee.repository.EmployeeRepository;
 import com.c4.hero.domain.employee.repository.EmployeeRoleRepository;
 import com.c4.hero.domain.settings.dto.response.SettingsDepartmentManagerDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsDepartmentResponseDTO;
+import com.c4.hero.domain.settings.dto.response.SettingsDocumentTemplateResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsPermissionsResponseDTO;
 import com.c4.hero.domain.settings.entity.SettingsDepartment;
 import com.c4.hero.domain.settings.mapper.SettingsMapper;
@@ -45,6 +48,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SettingsQueryService {
 
+    private final ApprovalTemplateRepository approvalTemplateRepository;
 	private final SettingsDepartmentRepository departmentRepository;
 	private final EmployeeRepository employeeRepository;
 	private final EmployeeGradeRepository gradeRepository;
@@ -195,4 +199,29 @@ public class SettingsQueryService {
 
 		return PageResponse.of(content, pageable.getPageNumber(), pageable.getPageSize(), total);
 	}
+
+    /**
+     * 문서 서식 목록
+     *
+     * @param
+     * @return List<SettingsDocumentTemplateResponseDTO>
+     */
+    public List<SettingsDocumentTemplateResponseDTO> getTemplates() {
+
+        List<SettingsDocumentTemplateResponseDTO> list = new ArrayList<>();
+        List<ApprovalFormTemplate> templates = approvalTemplateRepository.findAll();
+
+        templates.forEach(template -> {
+            SettingsDocumentTemplateResponseDTO response =  SettingsDocumentTemplateResponseDTO.builder()
+                    .templateId(template.getTemplateId())
+                    .templateName(template.getTemplateName())
+                    .category(template.getCategory())
+                    .description(template.getDescription())
+                    .build();
+            list.add(response);
+                }
+        );
+
+       return list;
+    }
 }

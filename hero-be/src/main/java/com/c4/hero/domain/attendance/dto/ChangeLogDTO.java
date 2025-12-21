@@ -15,7 +15,7 @@ import lombok.Setter;
  * </pre>
  *
  * @author 이지윤
- * @version 1.0
+ * @version 1.1
  */
 @AllArgsConstructor
 @NoArgsConstructor
@@ -24,7 +24,7 @@ import lombok.Setter;
 public class ChangeLogDTO {
 
     /** 근무제 변경 이력 PK (식별자) */
-    private int workSystemChangeLogId;
+    private Integer workSystemChangeLogId;
 
     /** 근무제 적용 시작일(또는 변경일) (yyyy-MM-dd) */
     private String date;

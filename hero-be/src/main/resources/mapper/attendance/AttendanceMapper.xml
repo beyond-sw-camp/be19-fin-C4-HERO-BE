@@ -74,7 +74,34 @@
     </resultMap>
 
     <!-- ============================================================
-         2) 개인 근태 기록 SELECT (페이지 조회)
+ 2-0)  근태 기록 상단 요약
+    AttendanceMapper.selectPersonalSummary(...)
+ ============================================================ -->
+    <select id="selectPersonalSummary"
+            resultType="com.c4.hero.domain.attendance.dto.AttSummaryDTO"
+            parameterType="map" >
+        SELECT
+            SUM(CASE WHEN att.state = '정상' THEN 1 ELSE 0 END) AS workDays,
+            SUM(CASE WHEN att.state = '지각' THEN 1 ELSE 0 END) AS lateCount,
+            SUM(CASE WHEN att.state = '결근' THEN 1 ELSE 0 END) AS absentCount,
+            SUM(CASE WHEN att.state = '조퇴' THEN 1 ELSE 0 END) AS earlyCount,
+            (
+                SELECT wst.name
+                FROM tbl_attendance att2
+                         JOIN tbl_work_system_type wst
+                              ON wst.work_system_type_id = att2.work_system_type_id
+                WHERE att2.employee_id = #{employeeId}
+                  AND att2.work_date = CURDATE()
+                                                                 LIMIT 1
+            ) AS todayWorkSystemName
+        FROM tbl_attendance att
+        WHERE att.employee_id = #{employeeId}
+          AND att.work_date BETWEEN #{startDate} AND #{endDate}
+
+    </select>
+
+    <!-- ============================================================
+         2-1) 개인 근태 기록 SELECT (페이지 조회)
             AttendanceMapper.selectPersonalPage(...)
          ============================================================ -->
     <select id="selectPersonalPage" resultMap="PersonalMap" parameterType="map">
@@ -93,6 +120,7 @@
         JOIN tbl_work_system_type wst
         ON att.work_system_type_id = wst.work_system_type_id
         <where>
+            AND att.employee_id = #{employeeId}
             <if test="startDate != null and startDate != ''">
                 AND att.work_date &gt;= #{startDate}
             </if>
@@ -105,7 +133,7 @@
     </select>
 
     <!-- ============================================================
-         3) 개인 근태 기록 총 개수 조회
+         2-2) 개인 근태 기록 총 개수 조회
             AttendanceMapper.selectPersonalCount(...)
          ============================================================ -->
     <select id="selectPersonalCount" resultType="int" parameterType="map">
@@ -114,6 +142,7 @@
         JOIN tbl_work_system_type wst
         ON att.work_system_type_id = wst.work_system_type_id
         <where>
+            AND att.employee_id = #{employeeId}
             <if test="startDate != null and startDate != ''">
                 AND att.work_date &gt;= #{startDate}
             </if>
@@ -123,8 +152,9 @@
         </where>
     </select>
 
+
     <!-- ============================================================
-         4) 초과 근무(Overtime) 기록 SELECT (페이지 조회)
+         3-1) 초과 근무(Overtime) 기록 SELECT (페이지 조회)
             AttendanceMapper.selectOvertimePage(...)
          ============================================================ -->
     <select id="selectOvertimePage" resultMap="OvertimeMap" parameterType="map">
@@ -137,6 +167,7 @@
         ove.reason
         FROM tbl_overtime ove
         <where>
+            AND ove.employee_id = #{employeeId}
             <if test="startDate != null and startDate != ''">
                 AND ove.date &gt;= #{startDate}
             </if>
@@ -149,13 +180,14 @@
     </select>
 
     <!-- ============================================================
-         5) 초과 근무(Overtime) 기록 총 개수 조회
+         3-2) 초과 근무(Overtime) 기록 총 개수 조회
             AttendanceMapper.selectOvertimeCount(...)
          ============================================================ -->
     <select id="selectOvertimeCount" resultType="int" parameterType="map">
         SELECT COUNT(*)
         FROM tbl_overtime ove
         <where>
+            AND ove.employee_id = #{employeeId}
             <if test="startDate != null and startDate != ''">
                 AND ove.date &gt;= #{startDate}
             </if>
@@ -166,7 +198,7 @@
     </select>
 
     <!-- ============================================================
-         6) 근태 정정(Correction) 기록 SELECT (페이지 조회)
+         4-1) 근태 정정(Correction) 기록 SELECT (페이지 조회)
             AttendanceMapper.selectCorrectionPage(...)
          ============================================================ -->
     <select id="selectCorrectionPage" resultMap="CorrectionMap" parameterType="map">
@@ -182,6 +214,7 @@
         JOIN tbl_attendance att
         ON cor.attendance_id = att.attendance_id
         <where>
+            AND cor.employee_id = #{employeeId}
             <if test="startDate != null and startDate != ''">
                 AND cor.target_date &gt;= #{startDate}
             </if>
@@ -194,7 +227,7 @@
     </select>
 
     <!-- ============================================================
-         7) 근태 정정(Correction) 기록 총 개수 조회
+         4-2) 근태 정정(Correction) 기록 총 개수 조회
             AttendanceMapper.selectCorrectionCount(...)
          ============================================================ -->
     <select id="selectCorrectionCount" resultType="int" parameterType="map">
@@ -203,6 +236,7 @@
         JOIN tbl_attendance att
         ON cor.attendance_id = att.attendance_id
         <where>
+            AND cor.employee_id = #{employeeId}
             <if test="startDate != null and startDate != ''">
                 AND cor.target_date &gt;= #{startDate}
             </if>
@@ -213,7 +247,7 @@
     </select>
 
     <!-- ============================================================
-         8) 근무제 변경 이력(Change Log) SELECT (페이지 조회)
+         5-1) 근무제 변경 이력(Change Log) SELECT (페이지 조회)
             AttendanceMapper.selectChangeLogPage(...)
          ============================================================ -->
     <select id="selectChangeLogPage" resultMap="ChangeLogMap" parameterType="map">
@@ -226,6 +260,7 @@
         cha.template_name
         FROM tbl_work_system_change_log cha
         <where>
+            AND cha.employee_id = #{employeeId}
             <if test="startDate != null and startDate != ''">
                 AND cha.date &gt;= #{startDate}
             </if>
@@ -238,13 +273,14 @@
     </select>
 
     <!-- ============================================================
-         9) 근무제 변경 이력(Change Log) 총 개수 조회
+         5-2) 근무제 변경 이력(Change Log) 총 개수 조회
             AttendanceMapper.selectChangeLogCount(...)
          ============================================================ -->
     <select id="selectChangeLogCount" resultType="int" parameterType="map">
         SELECT COUNT(*)
         FROM tbl_work_system_change_log cha
         <where>
+            AND cha.employee_id = #{employeeId}
             <if test="startDate != null and startDate != ''">
                 AND cha.date &gt;= #{startDate}
             </if>

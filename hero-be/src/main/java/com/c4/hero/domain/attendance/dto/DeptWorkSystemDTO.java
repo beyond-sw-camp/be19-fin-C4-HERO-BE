@@ -23,7 +23,7 @@ import java.time.LocalTime;
 @NoArgsConstructor
 @Getter
 @Setter
-public class DeptWorkSystemRowDTO {
+public class DeptWorkSystemDTO {
 
     /** 직원 PK (식별자) */
     private int employeeId;

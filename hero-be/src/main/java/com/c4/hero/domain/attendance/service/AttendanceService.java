@@ -5,7 +5,8 @@ import com.c4.hero.common.pagination.PageInfo;
 import com.c4.hero.common.response.PageResponse;
 import com.c4.hero.domain.attendance.dto.*;
 import com.c4.hero.domain.attendance.mapper.AttendanceMapper;
-import com.c4.hero.domain.attendance.repository.AttendanceRepository;
+import com.c4.hero.domain.attendance.repository.AttendanceDashboardRepository;
+import com.c4.hero.domain.attendance.repository.DeptWorkSystemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,19 +26,97 @@ import java.util.List;
  * </pre>
  *
  * @author 이지윤
- * @version 1.0
+ * @version 1.1
  */
 @Service
 @RequiredArgsConstructor
 public class AttendanceService {
 
-    /** 근태 정보 조회를 위한 Mapper */
+    /** 근태 정보(개인/초과 근무/정정 등) 조회를 위한 MyBatis Mapper */
     private final AttendanceMapper attendanceMapper;
-    private final AttendanceRepository attendanceRepository;
+
+    /** 부서 근무제/근태 현황 조회용 JPA 레포지토리 */
+    private final DeptWorkSystemRepository attendanceRepository;
+
+    /** 근태 점수 대시보드 조회용 JPA 레포지토리 */
+    private final AttendanceDashboardRepository attendanceDashboardRepository;
+
+    /**
+     * 요약 카드용 기본 기간(이번 달 1일~오늘)을 계산한다
+     *
+     * <p>
+     * 컨트롤러에서 전달받은 문자열(yyyy-MM-dd) 기준의 시작일/종료일을
+     * 최종적으로 확정한 형태로 보관합니다.
+     * </p>
+     *
+     * @param startDate 조회 시작일(yyyy-MM-dd)
+     * @param endDate   조회 종료일(yyyy-MM-dd)
+     */
+    private record DateRange(String startDate, String endDate) {}
+
+    /**
+     * 개인 근태 조회용 기간(startDate, endDate)을 확정합니다.
+     *
+     * <p>규칙</p>
+     * <ul>
+     *     <li>startDate가 null 또는 공백이면: 이번 달 1일을 시작일로 사용</li>
+     *     <li>endDate가 null 또는 공백이면: 오늘(LocalDate.now())을 종료일로 사용</li>
+     *     <li>그 외에는 전달받은 문자열(yyyy-MM-dd)을 그대로 사용</li>
+     * </ul>
+     *
+     * @param startDate 요청으로 전달된 시작일(yyyy-MM-dd), null 또는 공백 가능
+     * @param endDate   요청으로 전달된 종료일(yyyy-MM-dd), null 또는 공백 가능
+     * @return 최종 확정된 시작일/종료일을 담은 DateRange
+     */
+    private DateRange resolvePersonalPeriod(String startDate, String endDate) {
+        LocalDate defaultEnd = LocalDate.now();
+        LocalDate defaultStart = defaultEnd.withDayOfMonth(1);
+
+        String finalStartDate =
+                (startDate != null && !startDate.isBlank())
+                        ? startDate
+                        : defaultStart.toString();   // yyyy-MM-dd
+
+        String finalEndDate =
+                (endDate != null && !endDate.isBlank())
+                        ? endDate
+                        : defaultEnd.toString();     // yyyy-MM-dd
+
+        return new DateRange(finalStartDate, finalEndDate);
+    }
+
+    /**
+     * 개인 근태 상단 요약 카드 조회
+     * - 기본: 오늘이 포함된 이번 달(1일 ~ 오늘) 기준
+     * - startDate/endDate가 넘어오면 그 기간 기준으로 재계산
+     *
+     * @param employeeId 직원 ID (토큰에서 꺼낸 값)
+     * @param startDate  조회 시작일(yyyy-MM-dd) - 옵션
+     * @param endDate    조회 종료일(yyyy-MM-dd) - 옵션
+     * @return PersonalSummaryDTO (근무일/오늘 근무제/지각/결근)
+     */
+    public AttSummaryDTO getPersonalSummary(
+            Integer employeeId,
+            String startDate,
+            String endDate
+    ) {
+        // 0. 기간 보정 공통 메서드 사용
+        DateRange range = resolvePersonalPeriod(startDate, endDate);
+        String finalStartDate = range.startDate();
+        String finalEndDate = range.endDate();
+
+        // 1. Mapper 호출
+        return attendanceMapper.selectPersonalSummary(
+                employeeId,
+                finalStartDate,
+                finalEndDate
+        );
+    }
 
     /**
      * 개인 근태 기록 페이지를 조회합니다.
      *
+     * @param employeeId 로그인한 사람의 정보 확인
      * @param page      요청 페이지 번호 (1부터 시작)
      * @param size      페이지당 데이터 개수
      * @param startDate 조회 시작일(yyyy-MM-dd), null인 경우 기간 필터 미적용
@@ -45,26 +124,45 @@ public class AttendanceService {
      * @return 개인 근태 기록 페이지 응답 DTO
      */
     public PageResponse<PersonalDTO> getPersonalList(
-            int page,
-            int size,
+            Integer employeeId,
+            Integer page,
+            Integer size,
             String startDate,
             String endDate
     ) {
-        //1. 전체 개수 조회 (날짜 필터 반영)
-        int totalCount = attendanceMapper.selectPersonalCount(startDate, endDate);
+        // 1. 최종 사용할 기간 결정
+        //    - 값이 있으면 그대로 사용
+        //    - 값이 없으면 null 로 넘겨서 쿼리에서 기간 조건을 아예 빼도록 처리
+        String finalStartDate =
+                (startDate != null && !startDate.isBlank())
+                        ? startDate
+                        : null;
 
-        // 2. 페이지네이션 계산
-        PageInfo pageInfo = PageCalculator.calculate(page, size, totalCount);
+        String finalEndDate =
+                (endDate != null && !endDate.isBlank())
+                        ? endDate
+                        : null;
 
-        // 3. 현재 페이지 데이터 조회
-        List<PersonalDTO> items = attendanceMapper.selectPersonalPage(
-                pageInfo.getOffset(),
-                pageInfo.getSize(),
-                startDate,
-                endDate
+        // 2. 전체 개수 조회 (기간 보정 반영)
+        int totalCount = attendanceMapper.selectPersonalCount(
+                employeeId,
+                finalStartDate,
+                finalEndDate
         );
 
-        // 4. 공통 PageResponse으로 응답
+        // 3. 페이지네이션 계산
+        PageInfo pageInfo = PageCalculator.calculate(page, size, totalCount);
+
+        // 4. 현재 페이지 데이터 조회 (★ 여기도 finalStartDate / finalEndDate 사용)
+        List<PersonalDTO> items = attendanceMapper.selectPersonalPage(
+                employeeId,
+                pageInfo.getOffset(),
+                pageInfo.getSize(),
+                finalStartDate,
+                finalEndDate
+        );
+
+        // 5. 공통 PageResponse으로 응답
         return PageResponse.of(
                 items,
                 pageInfo.getPage() - 1,
@@ -76,6 +174,7 @@ public class AttendanceService {
     /**
      * 초과 근무(연장 근무) 기록 페이지를 조회합니다.
      *
+     * @param employeeId 로그인한 사람의 정보 확인
      * @param page      요청 페이지 번호 (1부터 시작)
      * @param size      페이지당 데이터 개수
      * @param startDate 조회 시작일(yyyy-MM-dd), null인 경우 기간 필터 미적용
@@ -83,26 +182,45 @@ public class AttendanceService {
      * @return 초과 근무 기록 페이지 응답 DTO
      */
     public PageResponse<OvertimeDTO> getOvertimeList(
-            int page,
-            int size,
+            Integer employeeId,
+            Integer page,
+            Integer size,
             String startDate,
             String endDate
     ) {
-        //1. 전체 개수 조회 (날짜 필터 반영)
-        int totalCount = attendanceMapper.selectOvertimeCount(startDate, endDate);
+        // 1. 최종 사용할 기간 결정
+        //    - 값이 있으면 그대로 사용
+        //    - 값이 없으면 null 로 넘겨서 쿼리에서 기간 조건을 아예 빼도록 처리
+        String finalStartDate =
+                (startDate != null && !startDate.isBlank())
+                        ? startDate
+                        : null;
 
-        // 2. 페이지네이션 계산
-        PageInfo pageInfo = PageCalculator.calculate(page, size, totalCount);
+        String finalEndDate =
+                (endDate != null && !endDate.isBlank())
+                        ? endDate
+                        : null;
 
-        // 3. 현재 페이지 데이터 조회
-        List<OvertimeDTO> items = attendanceMapper.selectOvertimePage(
-                pageInfo.getOffset(),
-                pageInfo.getSize(),
-                startDate,
-                endDate
+        // 2. 전체 개수 조회 (기간 보정 반영)
+        int totalCount = attendanceMapper.selectOvertimeCount(
+                employeeId,
+                finalStartDate,
+                finalEndDate
         );
 
-        // 4. 공통 PageResponse으로 응답
+        // 3. 페이지네이션 계산
+        PageInfo pageInfo = PageCalculator.calculate(page, size, totalCount);
+
+        // 4. 현재 페이지 데이터 조회 (★ 여기도 finalStartDate / finalEndDate 사용)
+        List<OvertimeDTO> items = attendanceMapper.selectOvertimePage(
+                employeeId,
+                pageInfo.getOffset(),
+                pageInfo.getSize(),
+                finalStartDate,
+                finalEndDate
+        );
+
+        // 5. 공통 PageResponse으로 응답
         return PageResponse.of(
                 items,
                 pageInfo.getPage() - 1,
@@ -112,32 +230,44 @@ public class AttendanceService {
     }
 
     /**
-     * 근태 기록 수정 페이지를 조회합니다.
+     * 초과 근무(연장 근무) 기록 페이지를 조회합니다.
      *
+     * @param employeeId 로그인한 사람의 정보 확인
      * @param page      요청 페이지 번호 (1부터 시작)
      * @param size      페이지당 데이터 개수
      * @param startDate 조회 시작일(yyyy-MM-dd), null인 경우 기간 필터 미적용
      * @param endDate   조회 종료일(yyyy-MM-dd), null인 경우 기간 필터 미적용
-     * @return 근태 기록 수정 페이지 응답 DTO
+     * @return 초과 근무 기록 페이지 응답 DTO
      */
     public PageResponse<CorrectionDTO> getCorrectionList(
-            int page,
-            int size,
+            Integer employeeId,
+            Integer page,
+            Integer size,
             String startDate,
             String endDate
-    ){
-        //1. 전체 개수 조회 (날짜 필터 반영)
-        int totalCount = attendanceMapper.selectCorrectionCount(startDate, endDate);
+    ) {
+        // 0. 기간 보정 공통 메서드 사용
+        DateRange range = resolvePersonalPeriod(startDate, endDate);
+        String finalStartDate = range.startDate();
+        String finalEndDate = range.endDate();
+
+        // 1. 전체 개수 조회 (기간 보정 반영)
+        int totalCount = attendanceMapper.selectCorrectionCount(
+                employeeId,
+                finalStartDate,
+                finalEndDate
+        );
 
         // 2. 페이지네이션 계산
         PageInfo pageInfo = PageCalculator.calculate(page, size, totalCount);
 
-        // 3. 현재 페이지 데이터 조회
+        // 3. 현재 페이지 데이터 조회 (★ 여기도 finalStartDate / finalEndDate 사용)
         List<CorrectionDTO> items = attendanceMapper.selectCorrectionPage(
+                employeeId,
                 pageInfo.getOffset(),
                 pageInfo.getSize(),
-                startDate,
-                endDate
+                finalStartDate,
+                finalEndDate
         );
 
         // 4. 공통 PageResponse으로 응답
@@ -152,6 +282,7 @@ public class AttendanceService {
     /**
      * 근무제 정정 페이지를 조회합니다.
      *
+     * @param employeeId 로그인한 사람의 정보 확인
      * @param page      요청 페이지 번호 (1부터 시작)
      * @param size      페이지당 데이터 개수
      * @param startDate 조회 시작일(yyyy-MM-dd), null인 경우 기간 필터 미적용
@@ -159,26 +290,45 @@ public class AttendanceService {
      * @return 근무제 정정 기록 페이지 응답 DTO
      */
     public PageResponse<ChangeLogDTO> getChangeLogList(
-            int page,
-            int size,
+            Integer employeeId,
+            Integer page,
+            Integer size,
             String startDate,
             String endDate
     ) {
-        //1. 전체 개수 조회 (날짜 필터 반영)
-        int totalCount = attendanceMapper.selectChangeLogCount(startDate, endDate);
+        // 1. 최종 사용할 기간 결정
+        //    - 값이 있으면 그대로 사용
+        //    - 값이 없으면 null 로 넘겨서 쿼리에서 기간 조건을 아예 빼도록 처리
+        String finalStartDate =
+                (startDate != null && !startDate.isBlank())
+                        ? startDate
+                        : null;
 
-        // 2. 페이지네이션 계산
-        PageInfo pageInfo = PageCalculator.calculate(page, size, totalCount);
+        String finalEndDate =
+                (endDate != null && !endDate.isBlank())
+                        ? endDate
+                        : null;
 
-        // 3. 현재 페이지 데이터 조회
-        List<ChangeLogDTO> items = attendanceMapper.selectChangeLogPage(
-                pageInfo.getOffset(),
-                pageInfo.getSize(),
-                startDate,
-                endDate
+        // 2. 전체 개수 조회 (기간 보정 반영)
+        int totalCount = attendanceMapper.selectChangeLogCount(
+                employeeId,
+                finalStartDate,
+                finalEndDate
         );
 
-        // 4. 공통 PageResponse으로 응답
+        // 3. 페이지네이션 계산
+        PageInfo pageInfo = PageCalculator.calculate(page, size, totalCount);
+
+        // 4. 현재 페이지 데이터 조회 (★ 여기도 finalStartDate / finalEndDate 사용)
+        List<ChangeLogDTO> items = attendanceMapper.selectChangeLogPage(
+                employeeId,
+                pageInfo.getOffset(),
+                pageInfo.getSize(),
+                finalStartDate,
+                finalEndDate
+        );
+
+        // 5. 공통 PageResponse으로 응답
         return PageResponse.of(
                 items,
                 pageInfo.getPage() - 1,
@@ -196,7 +346,7 @@ public class AttendanceService {
      * @param size         페이지 크기
      * @return PageResponse<DeptWorkSystemRowDTO>
      */
-    public PageResponse<DeptWorkSystemRowDTO> getDeptWorkSystemList(
+    public PageResponse<DeptWorkSystemDTO> getDeptWorkSystemList(
         Integer departmentId,
         LocalDate workDate,
         int page,
@@ -216,7 +366,7 @@ public class AttendanceService {
         PageRequest pageable = PageRequest.of(pageInfo.getPage() - 1, pageInfo.getSize());
 
         // 4. Repository 조회
-        Page<DeptWorkSystemRowDTO> pageResult = attendanceRepository.findDeptWorkSystemRows(
+        Page<DeptWorkSystemDTO> pageResult = attendanceRepository.findDeptWorkSystemRows(
                 departmentId,
                 workDate,
                 pageable
@@ -230,4 +380,69 @@ public class AttendanceService {
                 pageResult.getTotalElements()
         );
     }
+
+    /**
+     * 근태 점수 대시보드 페이지 조회
+     *
+     * - 직원별 지각/결근 횟수와 점수를 조회
+     * - departmentId가 null이면 전체 부서 대상
+     * - startDate / endDate가 null이면 오늘 날짜로 보정
+     *
+     * @param departmentId 부서 ID (null이면 전체)
+     * @param startDate    조회 시작일
+     * @param endDate      조회 종료일
+     * @param page         요청 페이지 번호 (1부터 시작)
+     * @param size         페이지 크기
+     * @return 근태 점수 대시보드 페이지 응답
+     */
+    public PageResponse<AttendanceDashboardDTO>  getAttendanceDashboardList(
+            Integer departmentId,
+            LocalDate startDate,
+            LocalDate endDate,
+            int page,
+            int size
+    ){
+        // 1. 날짜 보정 (null 이면 오늘 날짜 사용, start > end 이면 스왑)
+        LocalDate today = LocalDate.now();
+
+        LocalDate finalStart = (startDate != null) ? startDate : today;
+        LocalDate finalEnd = (endDate != null) ? endDate : today;
+
+        if (finalStart.isAfter(finalEnd)) {
+            LocalDate tmp = finalStart;
+            finalStart = finalEnd;
+            finalEnd = tmp;
+        }
+
+        // 2. 페이지 계산 (우리 공통 유틸 사용)
+        PageInfo pageInfo = PageCalculator.calculate(
+                page,
+                size,
+                Integer.MAX_VALUE    // 실제 totalCount는 JPA Page에서 계산
+        );
+
+        // 3. Pageable 생성 (0-based 변환)
+        PageRequest pageable = PageRequest.of(
+                pageInfo.getPage() - 1,
+                pageInfo.getSize()
+        );
+
+        // 4. Repository 호출
+        Page<AttendanceDashboardDTO> pageResult =
+                attendanceDashboardRepository.findAttendanceDashboard(
+                        departmentId,
+                        finalStart,
+                        finalEnd,
+                        pageable
+                );
+
+        // 5. 공통 PageResponse로 변환
+        return PageResponse.of(
+                pageResult.getContent(),
+                pageResult.getNumber() + 1,      // 0-based → 1-based
+                pageResult.getSize(),
+                pageResult.getTotalElements()
+        );
+    }
+
 }

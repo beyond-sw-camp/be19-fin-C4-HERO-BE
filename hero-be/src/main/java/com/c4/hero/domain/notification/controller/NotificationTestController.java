@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
  *
  * History
  * 2025/12/14 (혜원) 최초 작성
+ * 2025/12/19 (혜원) @Transactional 범위를 클래스에서 메소드 레벨로 축소
  * </pre>
  *
  * @author 혜원
@@ -37,7 +38,6 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/test/notifications")
 @RequiredArgsConstructor
 @Tag(name = "Notification Test", description = "알림 테스트 API")
-@Transactional  // AFTER_COMMIT 리스너 실행을 위해 필수
 public class NotificationTestController {
 
     private final ApplicationEventPublisher eventPublisher;
@@ -49,6 +49,7 @@ public class NotificationTestController {
      * - 근태 승인 처리 → DB 저장 → 알림 이벤트 발행 → 커밋 → 알림 발송
      */
     @PostMapping("/attendance-approved")
+    @Transactional // AFTER_COMMIT 리스너 실행을 위해 필요한 메소드에만 부여
     @Operation(summary = "근태 승인 알림 발송", description = "테스트용 근태 승인 알림")
     public NotificationDTO sendAttendanceApproved(
             @RequestParam Integer employeeId,
@@ -82,6 +83,7 @@ public class NotificationTestController {
      * - AttendanceService.rejectAttendance() 메서드에 추가 예정
      */
     @PostMapping("/attendance-rejected")
+    @Transactional
     @Operation(summary = "근태 반려 알림 발송")
     public NotificationDTO sendAttendanceRejected(
             @RequestParam Integer employeeId,
@@ -115,6 +117,7 @@ public class NotificationTestController {
      * - DocumentService.approveDocument() 메서드에 추가 예정
      */
     @PostMapping("/document-approved")
+    @Transactional
     @Operation(summary = "결재 승인 알림 발송")
     public NotificationDTO sendDocumentApproved(
             @RequestParam Integer employeeId,
@@ -148,6 +151,7 @@ public class NotificationTestController {
      * - PayrollService.createPayroll() 메서드에 추가 예정
      */
     @PostMapping("/payroll-paid")
+    @Transactional
     @Operation(summary = "급여 지급 알림 발송")
     public NotificationDTO sendPayrollPaid(
             @RequestParam Integer employeeId,
@@ -181,6 +185,7 @@ public class NotificationTestController {
      * - EvaluationService.startEvaluation() 메서드에 추가 예정
      */
     @PostMapping("/evaluation-started")
+    @Transactional
     @Operation(summary = "평가 시작 알림 발송")
     public NotificationDTO sendEvaluationStarted(
             @RequestParam Integer employeeId,
@@ -213,6 +218,7 @@ public class NotificationTestController {
      * 자유롭게 알림 타입, 제목, 내용을 지정하여 테스트 가능
      */
     @PostMapping("/custom")
+    @Transactional
     @Operation(summary = "커스텀 알림 발송", description = "자유롭게 알림 내용 작성")
     public NotificationDTO sendCustomNotification(
             @RequestBody NotificationRegistDTO dto

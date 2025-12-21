@@ -15,7 +15,7 @@ import lombok.Setter;
  * </pre>
  *
  * @author 이지윤
- * @version 1.0
+ * @version 1.1
  */
 @AllArgsConstructor
 @NoArgsConstructor
@@ -24,7 +24,7 @@ import lombok.Setter;
 public class CorrectionDTO {
 
     /** 근태 정정 요청 PK (식별자) */
-    private int correctionId;
+    private Integer correctionId;
 
     /** 정정 대상 근무 일자 (yyyy-MM-dd) */
     private String date;
