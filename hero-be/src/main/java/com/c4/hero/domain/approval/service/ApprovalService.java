@@ -4,11 +4,12 @@
  * Description : 전자결재 문서 템플릿 및 즐겨찾기 관련 서비스
  *
  * History
- * 2025/12/15 (변민철) 최초 작성
+ * 2025/12/15 (민철) 최초 작성
+ * 2025/12/19 민철 ApprovalFormTemplate.java 문서템플릿 필드명 수정에 의한 getter메서드 수정
  * </pre>
  *
- * @author 변민철
- * @version 1.0
+ * @author 민철
+ * @version 1.1
  */
 package com.c4.hero.domain.approval.service;
 
@@ -55,7 +56,7 @@ public class ApprovalService {
         return templates.stream()
                 .map(t -> DocumentTemplateDTO.builder()
                         .id(t.getTemplateId())
-                        .name(t.getName())
+                        .name(t.getTemplateName())
                         .templateKey(t.getTemplateKey())
                         .category(t.getCategory())
                         .description(t.getDescription())
