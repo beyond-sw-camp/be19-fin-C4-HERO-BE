@@ -2,10 +2,10 @@ package com.c4.hero.domain.payroll.batch.repository;
 
 import com.c4.hero.domain.payroll.batch.entity.Payroll;
 import com.c4.hero.domain.payroll.common.type.PayrollStatus;
-import org.apache.ibatis.annotations.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -67,12 +67,15 @@ public interface PayrollRepository extends JpaRepository<Payroll, Integer> {
      */
     @Modifying
     @Query("""
-    update Payroll p
-    set p.status = :status
-    where p.batchId = :batchId
-      and p.status <> :status
-    """)
-    void lockAllByBatchId(@Param("batchId") Integer batchId);
+        update Payroll p
+           set p.status = :status
+         where p.batchId = :batchId
+           and p.status <> :status
+        """)
+    int updateStatusByBatchId(
+            @Param("batchId") Integer batchId,
+            @Param("status") PayrollStatus status
+    );
 
     /**
      * 해당 배치에 소속된 급여가 1건 이상 존재하는지 확인

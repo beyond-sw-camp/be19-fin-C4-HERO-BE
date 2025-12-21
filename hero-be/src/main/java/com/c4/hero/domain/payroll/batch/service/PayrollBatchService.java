@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 import java.util.List;
 
 /**
@@ -115,11 +116,26 @@ public class PayrollBatchService {
     public void confirm(Integer batchId) {
         PayrollBatch batch = getBatchOrThrow(batchId);
 
+        // 배치 상태 검증: CALCULATED 상태에서만 CONFIRMED로 전환 가능
+        if (batch.getStatus() != PayrollBatchStatus.CALCULATED) {
+            throw new BusinessException(ErrorCode.PAYROLL_BATCH_INVALID_STATUS_TRANSITION);
+        }
+
+        // FAILED 급여가 남아있으면 확정 불가
         if (payrollRepository.existsByBatchIdAndStatus(batchId, PayrollStatus.FAILED)) {
             throw new BusinessException(ErrorCode.PAYROLL_BATCH_HAS_FAILED);
         }
 
-        payrollRepository.lockAllByBatchId(batchId);
+        // 배치에 속한 급여가 하나도 없는데 확정 누르는 경우 방어
+        if (!payrollRepository.existsByBatchId(batchId)) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "확정할 급여 데이터가 없습니다.");
+        }
+
+        // 배치 내 급여 상태 일괄 CONFIRMED로 변경 (벌크 업데이트)
+        int updatedCount = payrollRepository.updateStatusByBatchId(batchId, PayrollStatus.CONFIRMED);
+        // 필요하면 updatedCount로 로그 남겨도 됨
+
+        // 배치 상태 CONFIRMED로 전환
         batch.confirm();
     }
 
