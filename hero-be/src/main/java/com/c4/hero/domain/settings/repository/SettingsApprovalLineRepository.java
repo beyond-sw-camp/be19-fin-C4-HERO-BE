@@ -1,7 +1,13 @@
 package com.c4.hero.domain.settings.repository;
 
+import com.c4.hero.domain.settings.dto.SettingsDefaultLineDTO;
+import com.c4.hero.domain.settings.dto.response.SettingsDocumentTemplateResponseDTO;
 import com.c4.hero.domain.settings.entity.SettingsApprovalLine;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
+import java.util.List;
+
 /**
  * <pre>
  * Class Name: SettingsApprovalLineRepository
@@ -16,4 +22,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * @version 1.0
  */
 public interface SettingsApprovalLineRepository extends JpaRepository<SettingsApprovalLine, Integer> {
+    List<SettingsApprovalLine> findByTemplate_TemplateId(Integer templateId);
+
 }

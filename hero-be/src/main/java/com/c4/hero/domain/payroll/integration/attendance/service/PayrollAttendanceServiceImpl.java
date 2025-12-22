@@ -6,6 +6,8 @@ import com.c4.hero.domain.payroll.integration.attendance.mapper.PayrollAttendanc
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.YearMonth;
+
 /**
  * <pre>
  * Class Name : PayrollAttendanceServiceImpl
@@ -76,17 +78,17 @@ public class PayrollAttendanceServiceImpl implements PayrollAttendanceService {
      * MVP 개발(추후에 심화 개발 후 변경 할 예정입니당)
      *  - 기준 근무 시간: 209시간
      *  - 초과근무 배율: 1.5
-     *  - 시급은 소수점 절사
+     *  - 시급은 소수점 절삭
      *
      * @throws BusinessException PAYROLL_ATTENDANCE_LOG_NOT_FOUND
      *         해당 월에 근태 기록이 존재하지 않는 경우
      */
     @Override
     public int calculateOvertime(String salaryMonth, Integer employeeId) {
-        String start = salaryMonth + "-01";
-        String end = salaryMonth + "-31";
+        YearMonth ym = YearMonth.parse(salaryMonth); // "YYYY-MM"
+        String start = ym.atDay(1).toString();       // YYYY-MM-01
+        String end = ym.atEndOfMonth().toString();   // YYYY-MM-28/29/30/31
 
-        // 근태 기록 존재 여부 검증
         int cnt = mapper.countAttendanceInMonth(employeeId, start, end);
         if (cnt == 0) {
             throw new BusinessException(ErrorCode.PAYROLL_ATTENDANCE_LOG_NOT_FOUND);
@@ -103,7 +105,7 @@ public class PayrollAttendanceServiceImpl implements PayrollAttendanceService {
         // 시급계산 = baseSalary / 209시간 (MVP)
         int hourly = (int) Math.floor((double)getBaseSalary(employeeId) / 209.0);
 
-        // 초근무 OT수당 계산 = OT시간 * 시급 * 1.5 (MVP  1.5배 가산)
+        // 초과근무 OT수당 계산 = OT시간 * 시급 * 1.5 (MVP  1.5배 가산)
         double overtimeHours = overtimeMin / 60.0;
         return (int) Math.round(overtimeHours * hourly * 1.5);
     }

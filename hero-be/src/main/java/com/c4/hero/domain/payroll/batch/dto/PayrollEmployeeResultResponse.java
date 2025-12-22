@@ -8,6 +8,7 @@ package com.c4.hero.domain.payroll.batch.dto;
  *
  * History
  *  2025/12/15 - 동근 최초 작성
+ *  2025/12/17 - 에러메시지 컬럼 추가
  * </pre>
  *
  *  @author 동근
@@ -24,6 +25,7 @@ package com.c4.hero.domain.payroll.batch.dto;
  * @param allowanceTotal 수당 합계
  * @param deductionTotal 공제 합계
  * @param totalPay       실지급액
+ * @param errorMessage   계산 실패 사유 (FAILED 상태일 경우 내려오는 상세 메시지)
  */
 public record PayrollEmployeeResultResponse(
         Integer payrollId,
@@ -36,5 +38,6 @@ public record PayrollEmployeeResultResponse(
         Integer overtimePay,
         Integer allowanceTotal,
         Integer deductionTotal,
-        Integer totalPay
+        Integer totalPay,
+        String errorMessage
 ) {}

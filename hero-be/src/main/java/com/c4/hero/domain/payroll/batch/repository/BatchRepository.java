@@ -33,4 +33,5 @@ public interface BatchRepository extends JpaRepository<PayrollBatch, Integer> {
      * @return 존재 여부
      */
     boolean existsBySalaryMonth(String salaryMonth);
+
 }

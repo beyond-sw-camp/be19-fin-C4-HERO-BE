@@ -26,10 +26,9 @@ import lombok.ToString;
 public class SettingsDocumentTemplateResponseDTO {
 
     private Integer templateId;
-
     private String templateName;
-
+    private String templateKey;
     private String category;
-
     private String description;
+    private Integer steps;
 }

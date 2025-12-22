@@ -35,6 +35,7 @@ import java.time.LocalDateTime;
 public class SettingsApprovalRef {
 
     @Id
+    @Column(name = "def_ref_id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer defRefId;
 

@@ -36,6 +36,7 @@ import java.time.LocalDateTime;
 public class SettingsApprovalLine {
 
     @Id
+    @Column(name = "def_line_id")
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer defLineId;
 

@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
  * 2025/12/09 (승건) 토큰 만료 예외 처리 추가
  * 2025/12/10 (승건) 권한 정보에 'ROLE_' 접두사 추가
  * 2025/12/17 (승건) 토큰 정보 추출 메소드 추가 및 employeeNumber 추가
+ * 2025/12/22 (혜원) 기본 User 대신 CustomUserDetails 객체 반환하도록 수정
  * </pre>
  *
  * @author 이승건
@@ -149,7 +150,18 @@ public class JwtUtil {
                 Arrays.stream(claims.get("auth").toString().split(","))
                         .map(SimpleGrantedAuthority::new)
                         .collect(Collectors.toList());
-        UserDetails principal = new User(claims.getSubject(), "", authorities);
+
+        CustomUserDetails principal = new CustomUserDetails(
+                getEmployeeId(accessToken),      // claims에서 employeeId 가져오기
+                getEmployeeNumber(accessToken),  // claims에서 employeeNumber 가져오기
+                getEmployeeName(accessToken),    // claims에서 employeeName 가져오기
+                getDepartmentId(accessToken),
+                getDepartmentName(accessToken),
+                getGradeId(accessToken),
+                getGradeName(accessToken),
+                getJobTitleId(accessToken),
+                getJobTitleName(accessToken)
+        );
 
         return new UsernamePasswordAuthenticationToken(principal, "", authorities);
     }

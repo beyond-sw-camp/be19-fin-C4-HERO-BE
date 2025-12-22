@@ -1,8 +1,11 @@
 package com.c4.hero.domain.settings.service;
 
+import com.c4.hero.common.exception.BusinessException;
+import com.c4.hero.common.exception.ErrorCode;
 import com.c4.hero.common.response.PageResponse;
 import com.c4.hero.domain.approval.entity.ApprovalFormTemplate;
 import com.c4.hero.domain.approval.repository.ApprovalTemplateRepository;
+import com.c4.hero.domain.department.entity.Department;
 import com.c4.hero.domain.employee.entity.Employee;
 import com.c4.hero.domain.employee.entity.Grade;
 import com.c4.hero.domain.employee.entity.JobTitle;
@@ -11,12 +14,20 @@ import com.c4.hero.domain.employee.repository.EmployeeGradeRepository;
 import com.c4.hero.domain.employee.repository.EmployeeJobTitleRepository;
 import com.c4.hero.domain.employee.repository.EmployeeRepository;
 import com.c4.hero.domain.employee.repository.EmployeeRoleRepository;
+import com.c4.hero.domain.settings.dto.SettingsDefaultLineDTO;
+import com.c4.hero.domain.settings.dto.SettingsDefaultRefDTO;
+import com.c4.hero.domain.settings.dto.response.DepartmentResponseDTO;
+import com.c4.hero.domain.settings.dto.response.SettingsApprovalResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsDepartmentManagerDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsDepartmentResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsDocumentTemplateResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsPermissionsResponseDTO;
+import com.c4.hero.domain.settings.entity.SettingsApprovalLine;
+import com.c4.hero.domain.settings.entity.SettingsApprovalRef;
 import com.c4.hero.domain.settings.entity.SettingsDepartment;
 import com.c4.hero.domain.settings.mapper.SettingsMapper;
+import com.c4.hero.domain.settings.repository.SettingsApprovalLineRepository;
+import com.c4.hero.domain.settings.repository.SettingsApprovalRefRepository;
 import com.c4.hero.domain.settings.repository.SettingsDepartmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -38,6 +49,8 @@ import java.util.stream.Collectors;
  *
  * History
  * 2025/12/16 (승건) 최초 작성
+ * 2025/12/19 (민철) 설정 페이지 내 서식목록 조회 api
+ * 2025/12/21 (민철) 서식별 기본 설정 조회 api
  * </pre>
  *
  * @author 승건
@@ -48,6 +61,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SettingsQueryService {
 
+
+    private final SettingsApprovalLineRepository settingsApprovalLineRepository;
+    private final SettingsApprovalRefRepository settingsApprovalRefRepository;
     private final ApprovalTemplateRepository approvalTemplateRepository;
 	private final SettingsDepartmentRepository departmentRepository;
 	private final EmployeeRepository employeeRepository;
@@ -60,7 +76,7 @@ public class SettingsQueryService {
 
 	private final SettingsMapper settingsMapper;
 
-	/**
+    /**
 	 * 부서 트리 구조 조회
 	 *
 	 * @return 부서 트리 목록
@@ -208,20 +224,58 @@ public class SettingsQueryService {
      */
     public List<SettingsDocumentTemplateResponseDTO> getTemplates() {
 
-        List<SettingsDocumentTemplateResponseDTO> list = new ArrayList<>();
-        List<ApprovalFormTemplate> templates = approvalTemplateRepository.findAll();
-
-        templates.forEach(template -> {
-            SettingsDocumentTemplateResponseDTO response =  SettingsDocumentTemplateResponseDTO.builder()
-                    .templateId(template.getTemplateId())
-                    .templateName(template.getTemplateName())
-                    .category(template.getCategory())
-                    .description(template.getDescription())
-                    .build();
-            list.add(response);
-                }
-        );
+        List<SettingsDocumentTemplateResponseDTO> list =
+                approvalTemplateRepository.findByTemplateWithStepsCount();
 
        return list;
     }
+
+    /**
+     * 서식별 기본 결재선/참조목록 조회
+     *
+     * @param templateId 서식ID
+     * @return response 기본 서식
+     */
+    public SettingsApprovalResponseDTO getDocSettings(Integer templateId) {
+
+        List<SettingsApprovalLine> defLines = settingsApprovalLineRepository.findByTemplate_TemplateId(templateId);
+
+        List<SettingsApprovalRef> defRefs = settingsApprovalRefRepository.findByTemplate_TemplateId(templateId);
+
+        List<SettingsDefaultLineDTO> lineDTOs = defLines.stream().map(
+                defLine -> SettingsDefaultLineDTO.builder()
+                        .seq(defLine.getSeq())
+                        .departmentId(defLine.getDepartmentId())
+                        .targetType(defLine.getDepartmentId() != 0 ? "SPECIFIC_DEPT" : "DRAFTER_DEPT")
+                        .build()).collect(Collectors.toList());
+
+        List<SettingsDefaultRefDTO> refDTOs = defRefs.stream().map(
+                defRef -> SettingsDefaultRefDTO.builder()
+                        .departmentId(defRef.getDepartmentId())
+                        .targetType(defRef.getDepartmentId() != 0 ? "SPECIFIC_DEPT" : "DRAFTER_DEPT")
+                        .build()).collect(Collectors.toList());
+
+        SettingsApprovalResponseDTO response = SettingsApprovalResponseDTO.builder()
+                .lines(lineDTOs)
+                .references(refDTOs)
+                .build();
+
+        return response;
+    }
+    /**
+     * 부서목록 조회
+     *
+     * @param
+     * @return list 부서목록
+     */
+    public List<DepartmentResponseDTO> getApprovalDepartments() {
+        List<SettingsDepartment> departments = departmentRepository.findByDepartmentIdGreaterThan(0);
+        List<DepartmentResponseDTO> departmentListDTOs = departments.stream().map(
+                department -> DepartmentResponseDTO.builder()
+                        .departmentId(department.getDepartmentId())
+                        .departmentName(department.getDepartmentName())
+                        .build()).collect(Collectors.toList());
+        return departmentListDTOs;
+    }
+
 }

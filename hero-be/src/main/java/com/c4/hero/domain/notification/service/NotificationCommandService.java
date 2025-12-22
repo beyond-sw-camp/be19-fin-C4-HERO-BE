@@ -23,11 +23,11 @@ import java.util.List;
  *
  * History
  * 2025/12/16 (혜원) 최초작성 (CQRS 패턴 적용 - Command 분리)
-
+ * 2025/12/22 (혜원) 읽음 처리 및 삭제 관련 보안 파라미터(employeeId) 적용 및 로직 정비
  * </pre>
  *
  * @author 혜원
- * @version 2.0
+ * @version 2.1
  */
 @Slf4j
 @Service
@@ -48,7 +48,7 @@ public class NotificationCommandService {
     public NotificationDTO registAndSendNotification(NotificationRegistDTO notificationRegistDTO) {
         log.info("[알림 저장 시작]");
 
-        // 먼저 알림 설정 확인
+        // 1. 알림 설정 확인 (수신 거부 여부 등)
         NotificationSettingsDTO settings = settingsService.findSettingsByEmployeeId(
                 notificationRegistDTO.getEmployeeId()
         );
@@ -61,10 +61,10 @@ public class NotificationCommandService {
             return null; // 알림 발송하지 않음
         }
 
-        // 파라미터로 받은 RegistDTO 값을 주입
+        // 2. DTO 생성
         NotificationDTO notificationDTO = NotificationDTO.builder()
                 .employeeId(notificationRegistDTO.getEmployeeId())
-                .type(notificationRegistDTO.getType())
+                .type(notificationRegistDTO.getType())  // 전달받은 카테고리 그대로 사용
                 .title(notificationRegistDTO.getTitle())
                 .message(notificationRegistDTO.getMessage())
                 .link(notificationRegistDTO.getLink())
@@ -74,12 +74,14 @@ public class NotificationCommandService {
                 .evaluationId(notificationRegistDTO.getEvaluationId())
                 .build();
 
-        // DB 저장
+        // 3. DB 저장
         notificationMapper.insertNotification(notificationDTO);
-        log.info("알림 DB 저장완료: type={}, employeeId={}",
-                notificationDTO.getType(), notificationDTO.getEmployeeId());
+        log.info("알림 DB 저장완료: notificationId={}, category={}, employeeId={}",
+                notificationDTO.getNotificationId(),
+                notificationDTO.getType(),
+                notificationDTO.getEmployeeId());
 
-        // WebSocket으로 실시간 전송
+        // 4. WebSocket 전송
         try {
             messagingTemplate.convertAndSend(
                     "/topic/notifications/" + notificationDTO.getEmployeeId(),
@@ -88,105 +90,78 @@ public class NotificationCommandService {
             log.info("알림 WebSocket 전송 완료: employeeId={}", notificationDTO.getEmployeeId());
         } catch (Exception e) {
             log.error("WebSocket 전송 실패: {}", e.getMessage());
-            // DB는 저장됐으니 실시간 전송 실패해도 괜찮음
         }
 
         return notificationDTO;
     }
 
     /**
-     * 특정 직원의 알림 목록 조회
-     *
-     * @param employeeId 직원 ID
-     * @return List<NotificationDTO> 알림 목록
-     */
-    public List<NotificationDTO> registAllNotification(Integer employeeId) {
-        return notificationMapper.selectAllNotification(employeeId);
-    }
-
-    /**
-     * 미읽은 알림 개수 조회
-     *
-     * @param employeeId 직원 ID
-     * @return int 미읽은 알림 개수
-     */
-    public int findUnreadNotification(Integer employeeId) {
-        return notificationMapper.selectUnreadNotification(employeeId);
-    }
-
-    /**
-     * 알림 읽음 처리
+     * 특정 알림 읽음 처리 (복구된 기능!)
      *
      * @param notificationId 알림 ID
+     * @param employeeId 직원 ID (로그 및 보안용)
      */
     @Transactional
-    public void modifyIsRead(Integer notificationId) {
+    public void modifyIsRead(Integer notificationId, Integer employeeId) {
         notificationMapper.updateIsRead(notificationId);
-        log.info("알림 읽음 처리: notificationId={}", notificationId);
+        log.info("알림 읽음 처리 완료: notificationId={}, employeeId={}", notificationId, employeeId);
     }
 
     /**
-     * 모든 알림 읽음 처리
+     * 모든 알림 읽음 처리 (복구된 기능!)
      *
      * @param employeeId 직원 ID
      */
     @Transactional
     public void modifyAllIsRead(Integer employeeId) {
         notificationMapper.updateAllIsRead(employeeId);
-        log.info("모든 알림 읽음 처리: employeeId={}", employeeId);
+        log.info("모든 알림 읽음 처리 완료: employeeId={}", employeeId);
     }
 
     /**
      * 알림 소프트 삭제
      *
      * @param notificationId 알림 ID
+     * @param employeeId 직원 ID
      */
     @Transactional
-    public void softRemoveNotification(Integer notificationId) {
+    public void softRemoveNotification(Integer notificationId, Integer employeeId) {
         notificationMapper.softDeleteNotification(notificationId);
-        log.info("알림 소프트 삭제 완료: notificationId={}", notificationId);
+        log.info("알림 소프트 삭제 완료: notificationId={}, employeeId={}", notificationId, employeeId);
     }
 
     /**
      * 소프트 삭제된 알림 복구
      *
      * @param notificationId 알림 ID
+     * @param employeeId 직원 ID
      */
     @Transactional
-    public void modifyNotification(Integer notificationId) {
+    public void modifyNotification(Integer notificationId, Integer employeeId) {
         notificationMapper.updateNotification(notificationId);
-        log.info("알림 복구 완료: notificationId={}", notificationId);
+        log.info("알림 복구 완료: notificationId={}, employeeId={}", notificationId, employeeId);
     }
 
     /**
      * 알림 영구 삭제
      *
      * @param notificationId 알림 ID
+     * @param employeeId 직원 ID
      */
     @Transactional
-    public void removeNotification(Integer notificationId) {
+    public void removeNotification(Integer notificationId, Integer employeeId) {
         notificationMapper.deleteNotification(notificationId);
-        log.info("알림 영구 삭제 완료: notificationId={}", notificationId);
-    }
-
-    /**
-     * 소프트 삭제된 알림 목록 조회
-     *
-     * @param employeeId 직원 ID
-     * @return 삭제된 알림 목록
-     */
-    public List<NotificationDTO> findDeletedNotifications(Integer employeeId) {
-        return notificationMapper.selectDeletedNotifications(employeeId);
+        log.info("알림 영구 삭제 완료: notificationId={}, employeeId={}", notificationId, employeeId);
     }
 
     /**
      * 30일 지난 소프트 삭제 알림 자동 영구 삭제
      * 매일 자정에 실행
      */
-    @Scheduled(cron = "0 0 0 * * *")  // 매일 자정
+    @Scheduled(cron = "0 0 0 * * *")
     @Transactional
     public void cleanupDeletedNotifications() {
-        log.info("소프트 삭제 알림 자동 정리 시작");
+        log.info("[스케줄러] 소프트 삭제 알림 자동 정리 시작");
 
         LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
 
@@ -194,13 +169,13 @@ public class NotificationCommandService {
         List<NotificationDTO> oldDeleted =
                 notificationMapper.selectOldDeletedNotifications(thirtyDaysAgo);
 
-        log.info("정리 대상 알림 개수: {}", oldDeleted.size());
+        log.info("[스케줄러] 정리 대상 알림 개수: {}", oldDeleted.size());
 
         // 영구 삭제
         for (NotificationDTO notification : oldDeleted) {
             notificationMapper.deleteNotification(notification.getNotificationId());
         }
 
-        log.info("소프트 삭제 알림 자동 정리 완료: {}개 영구 삭제", oldDeleted.size());
+        log.info("[스케줄러] 소프트 삭제 알림 자동 정리 완료: {}개 영구 삭제", oldDeleted.size());
     }
 }
