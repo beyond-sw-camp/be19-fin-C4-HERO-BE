@@ -13,11 +13,14 @@ package com.c4.hero.domain.approval.entity;
  * @version 1.1
  */
 
+import com.c4.hero.domain.settings.entity.SettingsApprovalLine;
+import com.c4.hero.domain.settings.entity.SettingsApprovalRef;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "tbl_approval_form_template")
@@ -57,4 +60,14 @@ public class ApprovalFormTemplate {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    /** 기본 결재선 */
+    @JoinColumn(name = "def_line_id")
+    @OneToMany(fetch = FetchType.LAZY)
+    private List<SettingsApprovalLine> lines;
+
+    /** 기본 참조목록 */
+    @JoinColumn(name = "def_ref_id")
+    @OneToMany(fetch = FetchType.LAZY)
+    private List<SettingsApprovalRef> references;
 }

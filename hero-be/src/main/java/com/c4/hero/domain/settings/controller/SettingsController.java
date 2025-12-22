@@ -5,8 +5,10 @@ import com.c4.hero.common.response.PageResponse;
 import com.c4.hero.domain.employee.entity.Grade;
 import com.c4.hero.domain.employee.entity.JobTitle;
 import com.c4.hero.domain.employee.entity.Role;
+import com.c4.hero.domain.settings.dto.response.DepartmentResponseDTO;
 import com.c4.hero.domain.settings.dto.request.*;
 import com.c4.hero.domain.settings.dto.request.SettingsApprovalRequestDTO;
+import com.c4.hero.domain.settings.dto.response.SettingsApprovalResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsDepartmentResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsDocumentTemplateResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsPermissionsResponseDTO;
@@ -35,10 +37,11 @@ import java.util.List;
  * History
  * 2025/12/16 승건 최초 작성
  * 2025/12/18 민철 - 결재선 설정을 위한 컨트롤러 메서드 작성
+ * 2025/12/21 민철 - 결재 관리 관련 기능 조회 api
  * </pre>
  *
  * @author 승건
- * @version 1.1
+ * @version 1.2
  */
 @RestController
 @RequestMapping("/api/settings")
@@ -186,22 +189,7 @@ public class SettingsController {
 	}
 
     /**
-     * 서식별 기본 결재선 설정
-     *
-     * @param   settings 설정값들
-     * @return ResponseEntity<>
-     */
-    @PostMapping("/approvals/{templateId}")
-    public ResponseEntity<String> registDefaultLine(
-            @PathVariable Integer templateId,
-            @RequestBody SettingsApprovalRequestDTO settings){
-
-        String response = settingsCommandService.applySettings(templateId, settings);
-        return ResponseEntity.ok().body(response);
-    }
-
-    /**
-     * 서식목록 조회
+     * 결재 관리 탭 서식목록 조회 api
      *
      * @param
      * @return List<SettingsDocumentTemplateResponseDTO> 서식 목록 조회
@@ -211,5 +199,46 @@ public class SettingsController {
 
         List<SettingsDocumentTemplateResponseDTO> lists = settingsQueryService.getTemplates();
         return ResponseEntity.ok().body(lists);
+    }
+
+    /**
+     * 결재 관리 탭 부서목록 조회 api
+     *
+     * @param
+     * @return List<DepartmentResponseDTO> 부서 목록
+     */
+    @GetMapping("/approvals/departments")
+    public ResponseEntity<List<DepartmentResponseDTO>> getApprovalDepartments() {
+        List<DepartmentResponseDTO> list = settingsQueryService.getApprovalDepartments();
+        return ResponseEntity.ok().body(list);
+    }
+
+    /**
+     * 서식별 기본 결재선/참조목록 설정 조회 api
+     *
+     * @param templateId 서식 ID
+     * @return settings 서식이 가지는 기본 결재선/참조목록 설정
+     */
+    @GetMapping("/approvals/templates/{templateId}")
+    public ResponseEntity<SettingsApprovalResponseDTO> getApprovalSettings(
+            @PathVariable Integer templateId) {
+
+        SettingsApprovalResponseDTO response = settingsQueryService.getDocSettings(templateId);
+        return ResponseEntity.ok().body(response);
+    }
+
+    /**
+     * 서식별 기본 결재선 설정 저장 api
+     *
+     * @param   settings 설정값들
+     * @return ResponseEntity<String>
+     */
+    @PostMapping("/approvals/templates/{templateId}")
+    public ResponseEntity<String> registDefaultLine(
+            @PathVariable Integer templateId,
+            @RequestBody SettingsApprovalRequestDTO settings){
+
+        String response = settingsCommandService.applySettings(templateId, settings);
+        return ResponseEntity.ok().body(response);
     }
 }

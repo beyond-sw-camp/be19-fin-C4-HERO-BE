@@ -1,7 +1,11 @@
 package com.c4.hero.domain.settings.repository;
 
+import com.c4.hero.domain.settings.dto.SettingsDefaultRefDTO;
 import com.c4.hero.domain.settings.entity.SettingsApprovalRef;
 import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
 /**
  * <pre>
  * Class Name: SettingsApprovalRefRepository
@@ -16,4 +20,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * @version 1.0
  */
 public interface SettingsApprovalRefRepository extends JpaRepository<SettingsApprovalRef, Integer> {
+    List<SettingsApprovalRef> findByTemplate_TemplateId(Integer templateId);
 }
