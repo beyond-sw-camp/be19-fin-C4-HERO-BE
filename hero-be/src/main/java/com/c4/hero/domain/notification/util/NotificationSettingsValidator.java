@@ -32,27 +32,19 @@ public class NotificationSettingsValidator {
         }
 
         switch (type) {
-            case "ATTENDANCE_CHECK_IN":
+            case "attendance":
                 return settings.getAttendanceEnabled();
 
-            case "PAYROLL_PAID":
-            case "PAYSLIP_GENERATED":
+            case "payroll":
                 return settings.getPayrollEnabled();
 
-            case "DOCUMENT_APPROVED":
-            case "DOCUMENT_PENDING":
-            case "DOCUMENT_REJECTED":
+            case "document":
                 return settings.getApprovalEnabled();
 
-            case "LEAVE_APPROVED":
-                return settings.getLeaveEnabled();
-
-            case "EVALUATION_COMPLETED":
-            case "EVALUATION_STARTED":
+            case "evaluation":
                 return settings.getEvaluationEnabled();
 
-            case "SYSTEM_NOTICE":
-            case "TRAINING_NOTICE":
+            case "system":
                 return settings.getSystemEnabled();
 
             default:

@@ -11,6 +11,7 @@
   2025/12/12 (혜원) 최초 작성
   2025/12/15 (혜원) 알림 삭제 관련 쿼리 추가
   2025/12/22 (혜원) JWT 리팩토링이랑 조회 조건 수정한 내용을 추가
+  2025/12/22 (혜원) insert 시 생성된 ID 자동 매핑 설정 추가 (useGeneratedKeys)
 </pre>
 
   @author 혜원
@@ -37,7 +38,10 @@
         <result property="evaluationId" column="evaluation_id"/>
     </resultMap>
 
-    <insert id="insertNotification" parameterType="com.c4.hero.domain.notification.dto.NotificationDTO">
+    <insert id="insertNotification"
+            useGeneratedKeys="true"
+            keyProperty="notificationId"
+            parameterType="com.c4.hero.domain.notification.dto.NotificationDTO">
         INSERT INTO tbl_notification (
             type,
             title,
