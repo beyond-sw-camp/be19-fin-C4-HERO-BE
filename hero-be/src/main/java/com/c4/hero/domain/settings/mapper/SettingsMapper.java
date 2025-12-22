@@ -1,5 +1,6 @@
 package com.c4.hero.domain.settings.mapper;
 
+import com.c4.hero.domain.settings.dto.response.SettingsNotificationHistoryResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsPermissionsResponseDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -15,6 +16,7 @@ import java.util.Map;
  *
  * History
  * 2025/12/16 (승건) 최초 작성
+ * 2025/12/22 (혜원) 알림 관리 매퍼 작성
  * </pre>
  *
  * @author 승건
@@ -46,4 +48,28 @@ public interface SettingsMapper {
 	 * @return 사원 권한 목록 개수
 	 */
 	int countEmployeePermissions(@Param("params") Map<String, Object> params);
+
+    /**
+     * 알림 발송 이력 조회
+     *
+     * @param params   검색 조건
+     * @param pageable 페이징 정보
+     * @return 알림 발송 이력 목록
+     */
+    List<SettingsNotificationHistoryResponseDTO> findNotificationHistory(@Param("params") Map<String, Object> params, @Param("pageable") Pageable pageable);
+
+    /**
+     * 알림 발송 이력 개수 조회
+     *
+     * @param params 검색 조건
+     * @return 알림 발송 이력 개수
+     */
+    int countNotificationHistory(@Param("params") Map<String, Object> params);
+
+    /**
+     * 알림 발송 통계 조회
+     *
+     * @return 알림 발송 통계
+     */
+    Map<String, Object> selectNotificationStatistics();
 }
