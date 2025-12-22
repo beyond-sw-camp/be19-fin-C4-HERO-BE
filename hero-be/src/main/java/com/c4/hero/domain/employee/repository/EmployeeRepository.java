@@ -1,6 +1,7 @@
 package com.c4.hero.domain.employee.repository;
 
 import com.c4.hero.domain.employee.entity.Employee;
+import com.c4.hero.domain.employee.type.EmployeeStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -15,11 +16,12 @@ import java.util.Optional;
  * Description: Employee 엔티티에 대한 데이터 접근을 위한 Repository
  *
  * History
- * 2025/12/09 이승건 최초 작성
+ * 2025/12/09 (승건) 최초 작성
+ * 2025/12/22 (혜원) 알림 관련 필요한 엔티티 조회 기능 추가
  * </pre>
  *
  * @author 이승건
- * @version 1.0
+ * @version 2.0
  */
 public interface EmployeeRepository extends JpaRepository<Employee, Integer> {
 
@@ -45,9 +47,48 @@ public interface EmployeeRepository extends JpaRepository<Employee, Integer> {
 
     List<Employee> findAllByEmployeeDepartment_DepartmentIdIn(List<Integer> departmentIds);
 
+    /**
+     * 직급 ID 목록으로 직원 조회
+     *
+     * @param gradeIds 직급 ID 목록
+     * @return 직원 목록
+     */
     List<Employee> findAllByGrade_GradeIdIn(List<Integer> gradeIds);
 
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Employee e SET e.grade = null WHERE e.grade.gradeId IN :gradeIds")
     void updateGradeByGradeIds(@Param("gradeIds") List<Integer> gradeIds);
+
+    /**
+     * 특정 상태가 아닌 모든 직원 조회
+     *
+     * @param status 제외할 상태
+     * @return 직원 목록
+     */
+    List<Employee> findAllByStatusNot(EmployeeStatus status);
+
+    /**
+     * 직책 ID 목록으로 직원 조회
+     *
+     * @param jobTitleIds 직책 ID 목록
+     * @return 직원 목록
+     */
+    List<Employee> findAllByJobTitle_JobTitleIdIn(List<Integer> jobTitleIds);
+
+    /**
+     * 부서, 직급, 직책 조건에 해당하는 직원 조회 (중복 제거)
+     *
+     * @param departmentIds 부서 ID 목록 (null 가능)
+     * @param gradeIds      직급 ID 목록 (null 가능)
+     * @param jobTitleIds   직책 ID 목록 (null 가능)
+     * @return 직원 목록
+     */
+    @Query("SELECT DISTINCT e FROM Employee e " +
+           "WHERE (:departmentIds IS NULL OR e.employeeDepartment.departmentId IN :departmentIds) " +
+           "OR (:gradeIds IS NULL OR e.grade.gradeId IN :gradeIds) " +
+           "OR (:jobTitleIds IS NULL OR e.jobTitle.jobTitleId IN :jobTitleIds)")
+    List<Employee> findEmployeesByGroupConditions(
+            @Param("departmentIds") List<Integer> departmentIds,
+            @Param("gradeIds") List<Integer> gradeIds,
+            @Param("jobTitleIds") List<Integer> jobTitleIds);
 }
