@@ -234,7 +234,7 @@ public class SettingsController {
      * @return ResponseEntity<String>
      */
     @PutMapping("/approvals/templates/{templateId}")
-    public ResponseEntity<CustomResponse<Void>> registDefaultLine(
+    public ResponseEntity<Void> registDefaultLine(
             @PathVariable Integer templateId,
             @RequestBody SettingsApprovalRequestDTO settings){
 
