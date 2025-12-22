@@ -104,12 +104,12 @@ public class PromotionController {
     }
 
     /**
-     * 현재 로그인한 사람의 부서를 이용해 관련된 승진 계획이 있는지 조회
+     * (팀장용) 추천 가능한 승진 계획 목록을 조회합니다.
      *
      * @param request HTTP 요청 (토큰 추출용)
      * @return 추천 가능한 승진 계획 목록
      */
-    @GetMapping("/plan/recommend")
+    @GetMapping("/nominations")
     public ResponseEntity<CustomResponse<List<PromotionPlanResponseDTO>>> getRecommendPromotionPlan(
             HttpServletRequest request
     ) {
@@ -125,14 +125,13 @@ public class PromotionController {
     }
 
     /**
-     * 현재 로그인한 사람의 부서를 이용해 관련된 승진 계획의 상세 정보를 조회합니다.
-     * (본인 부서 및 하위 부서원만 포함)
+     * (팀장용) 특정 승진 계획의 상세 정보를 조회합니다. (본인 부서 및 하위 부서원만 포함)
      *
      * @param promotionId 승진 계획 ID
      * @param request     HTTP 요청 (토큰 추출용)
      * @return 필터링된 승진 계획 상세 정보
      */
-    @GetMapping("/plan/recommend/{promotionId}")
+    @GetMapping("/nominations/{promotionId}")
     public ResponseEntity<CustomResponse<PromotionPlanDetailResponseDTO>> getRecommendPromotionPlanDetail(
             @PathVariable Integer promotionId,
             HttpServletRequest request
@@ -155,7 +154,7 @@ public class PromotionController {
      * @param request     HTTP 요청 (토큰 추출용)
      * @return 성공 응답
      */
-    @PostMapping("/nominate")
+    @PostMapping("/nominations")
     public ResponseEntity<CustomResponse<Void>> nominateCandidate(
             @Valid @RequestBody PromotionNominationRequestDTO requestDTO,
             HttpServletRequest request
@@ -177,7 +176,7 @@ public class PromotionController {
      * @param request     HTTP 요청 (토큰 추출용)
      * @return 성공 응답
      */
-    @DeleteMapping("/nominate/{candidateId}")
+    @DeleteMapping("/nominations/{candidateId}")
     public ResponseEntity<CustomResponse<Void>> cancelNomination(
             @PathVariable Integer candidateId,
             HttpServletRequest request
