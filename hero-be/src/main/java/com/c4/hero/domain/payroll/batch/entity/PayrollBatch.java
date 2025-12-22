@@ -2,7 +2,7 @@ package com.c4.hero.domain.payroll.batch.entity;
 
 import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
-import com.c4.hero.domain.payroll.common.enums.PayrollBatchStatus;
+import com.c4.hero.domain.payroll.common.type.PayrollBatchStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
