@@ -17,5 +17,5 @@ import org.springframework.stereotype.Repository;
  * @version 1.0
  */
 @Repository
-public interface NotificationHistoryRepository extends JpaRepository<SettingsNotificationHistory, Integer> {
+public interface SettingsNotificationHistoryRepository extends JpaRepository<SettingsNotificationHistory, Integer> {
 }
