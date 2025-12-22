@@ -9,6 +9,7 @@ import com.c4.hero.domain.employee.repository.EmployeeDepartmentRepository;
 import com.c4.hero.domain.employee.repository.EmployeeGradeRepository;
 import com.c4.hero.domain.employee.repository.EmployeeRepository;
 import com.c4.hero.domain.promotion.dto.PromotionDetailPlanDTO;
+import com.c4.hero.domain.promotion.dto.request.PromotionNominationRequestDTO;
 import com.c4.hero.domain.promotion.dto.request.PromotionPlanRequestDTO;
 import com.c4.hero.domain.promotion.entity.PromotionCandidate;
 import com.c4.hero.domain.promotion.entity.PromotionDetail;
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,11 +35,12 @@ import java.util.stream.Collectors;
  * Description: 승진 관련 CUD(생성, 수정, 삭제) 비즈니스 로직을 처리하는 서비스
  *
  * History
- * 2025/12/19 승건 최초 작성
+ * 2025/12/19 (승건) 최초 작성
+ * 2025/12/22 (승건) 후보자 추천 및 추천 취소 로직 추가
  * </pre>
  *
  * @author 승건
- * @version 1.0
+ * @version 1.1
  */
 @Service
 @RequiredArgsConstructor
@@ -87,6 +90,56 @@ public class PromotionCommandService {
     }
 
     /**
+     * 승진 후보자를 추천합니다.
+     *
+     * @param nominatorId 추천인 ID
+     * @param request     추천 요청 DTO
+     */
+    public void nominateCandidate(Integer nominatorId, PromotionNominationRequestDTO request) {
+        // 1. 후보자 조회
+        PromotionCandidate candidate = promotionCandidateRepository.findById(request.getCandidateId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROMOTION_CANDIDATE_NOT_FOUND));
+
+        // 2. 승진 계획 마감일 체크
+        validateNominationPeriod(candidate.getPromotionDetail().getPromotionPlan());
+
+        // 3. 자기 추천 방지
+        if (candidate.getEmployee().getEmployeeId().equals(nominatorId)) {
+            throw new BusinessException(ErrorCode.PROMOTION_SELF_NOMINATION_NOT_ALLOWED);
+        }
+
+        // 4. 추천인 조회
+        Employee nominator = employeeRepository.findById(nominatorId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        // 5. 추천 정보 업데이트
+        candidate.nominate(nominator, request.getNominationReason());
+    }
+
+    /**
+     * 승진 후보자 추천을 취소합니다.
+     *
+     * @param candidateId 후보자 ID
+     * @param nominatorId 취소 요청자(추천인) ID
+     */
+    public void cancelNomination(Integer candidateId, Integer nominatorId) {
+        // 1. 후보자 조회
+        PromotionCandidate candidate = promotionCandidateRepository.findById(candidateId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROMOTION_CANDIDATE_NOT_FOUND));
+
+        // 2. 승진 계획 마감일 체크
+        validateNominationPeriod(candidate.getPromotionDetail().getPromotionPlan());
+
+        // 3. 권한 체크 (본인이 추천한 건인지)
+        if (candidate.getNominator() == null || !candidate.getNominator().getEmployeeId().equals(nominatorId)) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED, "본인이 추천한 후보자만 취소할 수 있습니다.");
+        }
+
+        // 4. 추천 취소
+        candidate.cancelNomination();
+    }
+
+    /**
      * 승진 계획 요청 값의 비즈니스 규칙을 검증합니다.
      *
      * @param request 검증할 승진 계획 요청
@@ -99,6 +152,21 @@ public class PromotionCommandService {
         // 상세 계획은 최소 1개 이상 포함되어야 함
         if (CollectionUtils.isEmpty(request.getDetailPlan())) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "승진 상세 계획은 최소 1개 이상 포함되어야 합니다.");
+        }
+    }
+
+    /**
+     * 추천 가능한 기간인지 검증합니다.
+     *
+     * @param plan 승진 계획
+     */
+    private void validateNominationPeriod(PromotionPlan plan) {
+        LocalDate now = LocalDate.now();
+        if (now.isAfter(plan.getNominationDeadlineAt())) {
+            throw new BusinessException(ErrorCode.PROMOTION_NOMINATION_PERIOD_EXPIRED, "추천 기간이 마감되었습니다.");
+        }
+        if (now.isAfter(plan.getAppointmentAt())) {
+            throw new BusinessException(ErrorCode.PROMOTION_PLAN_FINISHED, "이미 완료된 승진 계획입니다.");
         }
     }
 

@@ -20,10 +20,11 @@ import org.springframework.http.HttpStatus;
  * 2025-12-09 (이승건) Access Token 만료 에러 추가
  * 2025-12-16 (동근) 급여 관련 에러 코드 추가
  * 2025-12-16 (승건) 부서장 관련 에러 코드 추가
+ * 2025-12-22 (승건) 승진 관련 에러 코드 추가
  * </pre>
  *
  * @author 혜원
- * @version 1.4
+ * @version 1.5
  */
 @Getter
 @RequiredArgsConstructor
@@ -69,6 +70,11 @@ public enum ErrorCode {
      * 관리자 데이터 수정/삭제 불가
      */
     CANNOT_MODIFY_ADMIN_DATA(HttpStatus.FORBIDDEN, "C008", "관리자 데이터는 수정/삭제할 수 없습니다."),
+
+    /**
+     * 접근 거부 (본인 소유 아님 등)
+     */
+    ACCESS_DENIED(HttpStatus.FORBIDDEN, "C009", "접근 권한이 없습니다."),
 
     // ===== 사원(Employee) 관련 에러 =====
     /**
@@ -196,7 +202,27 @@ public enum ErrorCode {
     /**
      * 올바르지 않은 승진 대상 직급
      */
-    INVALID_PROMOTION_TARGET_GRADE(HttpStatus.BAD_REQUEST, "PR002", "올바르지 않은 승진 대상 직급입니다.");
+    INVALID_PROMOTION_TARGET_GRADE(HttpStatus.BAD_REQUEST, "PR002", "올바르지 않은 승진 대상 직급입니다."),
+
+    /**
+     * 승진 후보자를 찾을 수 없음
+     */
+    PROMOTION_CANDIDATE_NOT_FOUND(HttpStatus.NOT_FOUND, "PR003", "해당 승진 후보자를 찾을 수 없습니다."),
+
+    /**
+     * 추천 기간 마감
+     */
+    PROMOTION_NOMINATION_PERIOD_EXPIRED(HttpStatus.BAD_REQUEST, "PR004", "추천 기간이 마감되었습니다."),
+
+    /**
+     * 이미 완료된 승진 계획
+     */
+    PROMOTION_PLAN_FINISHED(HttpStatus.BAD_REQUEST, "PR005", "이미 완료된 승진 계획입니다."),
+
+    /**
+     * 자기 추천 불가
+     */
+    PROMOTION_SELF_NOMINATION_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "PR006", "본인을 추천할 수 없습니다.");
 
 
     /** HTTP 상태 코드 */

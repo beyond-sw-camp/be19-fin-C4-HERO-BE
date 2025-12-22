@@ -10,7 +10,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -23,10 +22,11 @@ import lombok.NoArgsConstructor;
  *
  * History
  * 2025/12/19 (승건) 최초 작성
+ * 2025/12/22 (승건) 추천 및 추천 취소 메서드 추가
  * </pre>
  *
  * @author 승건
- * @version 1.0
+ * @version 1.1
  */
 @Entity
 @Table(name = "tbl_promotion_candidate")
@@ -89,4 +89,22 @@ public class PromotionCandidate {
     @Column(name = "evaluation_point", nullable = false)
     private Integer evaluationPoint;
 
+    /**
+     * 후보자를 추천합니다.
+     *
+     * @param nominator 추천인
+     * @param reason    추천 사유
+     */
+    public void nominate(Employee nominator, String reason) {
+        this.nominator = nominator;
+        this.nominationReason = reason;
+    }
+
+    /**
+     * 후보자 추천을 취소합니다.
+     */
+    public void cancelNomination() {
+        this.nominator = null;
+        this.nominationReason = null;
+    }
 }

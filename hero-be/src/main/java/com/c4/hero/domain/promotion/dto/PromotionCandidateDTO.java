@@ -13,6 +13,7 @@ import lombok.ToString;
  *
  * History
  * 2025/12/19 (승건) 최초 작성
+ * 2025/12/22 (승건) 승진 후보자 ID 추가
  * </pre>
  *
  * @author 승건
@@ -25,7 +26,8 @@ import lombok.ToString;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PromotionCandidateDTO {
-    private Integer employeeId;         // 승진 후보자 ID
+    private Integer candidateId;        // 승진 후보자 ID
+    private Integer employeeId;         // 승진 후보자의 사원 ID
     private String employeeName;        // 승진 후보자 이름
     private String employeeNumber;      // 승진 후보자 사번
     private String department;          // 승진 후보자 부서

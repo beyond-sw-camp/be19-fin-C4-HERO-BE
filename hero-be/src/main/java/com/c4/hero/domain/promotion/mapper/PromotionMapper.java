@@ -47,4 +47,21 @@ public interface PromotionMapper {
      * @return 승진 계획 상세 정보 (하위 계획 포함)
      */
     PromotionPlanDetailResponseDTO selectPromotionPlanDetail(int promotionId);
+
+    /**
+     * 특정 부서(및 하위 부서)의 직원이 후보자로 등록된 승진 계획 목록을 조회합니다.
+     *
+     * @param departmentIds 부서 ID 목록
+     * @return 승진 계획 목록
+     */
+    List<PromotionPlanResponseDTO> selectRecommendPromotionPlan(@Param("departmentIds") List<Integer> departmentIds);
+
+    /**
+     * 특정 승진 계획의 상세 정보를 조회하되, 지정된 부서(및 하위 부서)에 속한 후보자만 포함합니다.
+     *
+     * @param promotionId   승진 계획 ID
+     * @param departmentIds 조회할 부서 ID 목록 (팀장 부서 + 하위 부서)
+     * @return 필터링된 승진 계획 상세 정보
+     */
+    PromotionPlanDetailResponseDTO selectRecommendPromotionPlanDetail(@Param("promotionId") int promotionId, @Param("departmentIds") List<Integer> departmentIds);
 }

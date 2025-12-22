@@ -4,7 +4,6 @@ import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
 import com.c4.hero.common.response.PageResponse;
 import com.c4.hero.domain.employee.entity.EmployeeDepartment;
-import com.c4.hero.domain.employee.entity.Grade;
 import com.c4.hero.domain.employee.repository.EmployeeDepartmentRepository;
 import com.c4.hero.domain.employee.repository.EmployeeGradeRepository;
 import com.c4.hero.domain.promotion.dto.PromotionDepartmentDTO;
@@ -33,10 +32,11 @@ import java.util.stream.Collectors;
  *
  * History
  * 2025/12/19 (승건) 최초 작성
+ * 2025/12/22 (승건) 추천 가능 승진 계획 조회 로직 추가
  * </pre>
  *
  * @author 승건
- * @version 1.0
+ * @version 1.1
  */
 @Service
 @RequiredArgsConstructor
@@ -165,5 +165,73 @@ public class PromotionQueryService {
                         .grade(grade.getGrade())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 팀장이 추천할 수 있는 승진 계획 목록을 조회합니다.
+     * 자신의 부서 및 모든 하위 부서에 속한 직원이 후보 대상인 계획만 조회합니다.
+     *
+     * @param departmentId 팀장의 부서 ID
+     * @return 추천 가능한 승진 계획 목록
+     */
+    public List<PromotionPlanResponseDTO> getRecommendPromotionPlan(Integer departmentId) {
+        // 1. 현재 부서 및 모든 하위 부서 ID 목록 조회
+        List<Integer> departmentIds = findAllSubDepartmentIds(departmentId);
+
+        // 2. 부서 목록이 비어있으면 빈 리스트 반환
+        if (departmentIds.isEmpty()) {
+            throw new BusinessException(ErrorCode.DEPARTMENT_NOT_FOUND);
+        }
+
+        // 3. Mapper를 통해 추천 가능한 승진 계획 조회
+        return promotionMapper.selectRecommendPromotionPlan(departmentIds);
+    }
+
+    /**
+     * 팀장이 추천할 수 있는 승진 계획의 상세 정보를 조회합니다.
+     * 자신의 부서 및 모든 하위 부서에 속한 후보자만 포함하여 조회합니다.
+     *
+     * @param promotionId  승진 계획 ID
+     * @param departmentId 팀장의 부서 ID
+     * @return 필터링된 승진 계획 상세 정보
+     */
+    public PromotionPlanDetailResponseDTO getRecommendPromotionPlanDetail(Integer promotionId, Integer departmentId) {
+        // 1. 현재 부서 및 모든 하위 부서 ID 목록 조회
+        List<Integer> departmentIds = findAllSubDepartmentIds(departmentId);
+
+        // 2. 부서 목록이 비어있으면 예외 처리 (혹은 빈 결과 반환)
+        if (departmentIds.isEmpty()) {
+            throw new BusinessException(ErrorCode.DEPARTMENT_NOT_FOUND);
+        }
+
+        // 3. Mapper를 통해 필터링된 상세 정보 조회
+        PromotionPlanDetailResponseDTO response = promotionMapper.selectRecommendPromotionPlanDetail(promotionId, departmentIds);
+
+        // 4. 조회 결과가 없으면 예외 발생 (해당 계획에 내 부서원이 한 명도 없는 경우 등)
+        if (response == null) {
+            throw new BusinessException(ErrorCode.PROMOTION_PLAN_NOT_FOUND);
+        }
+
+        return response;
+    }
+
+    /**
+     * 주어진 부서 ID를 포함한 모든 하위 부서의 ID 목록을 재귀적으로 조회합니다.
+     *
+     * @param parentDepartmentId 시작 부서 ID
+     * @return 해당 부서 및 모든 하위 부서 ID 목록
+     */
+    private List<Integer> findAllSubDepartmentIds(Integer parentDepartmentId) {
+        List<Integer> allDepartmentIds = new ArrayList<>();
+        if (parentDepartmentId != null) {
+            allDepartmentIds.add(parentDepartmentId);
+            // 직속 하위 부서 목록 조회
+            List<EmployeeDepartment> subDepartments = departmentRepository.findByParentDepartmentId(parentDepartmentId);
+            // 각 하위 부서에 대해 재귀적으로 탐색
+            for (EmployeeDepartment subDept : subDepartments) {
+                allDepartmentIds.addAll(findAllSubDepartmentIds(subDept.getDepartmentId()));
+            }
+        }
+        return allDepartmentIds;
     }
 }
