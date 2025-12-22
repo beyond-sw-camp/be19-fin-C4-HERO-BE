@@ -13,7 +13,7 @@ import lombok.ToString;
  *
  * History
  * 2025/12/19 (승건) 최초 작성
- * 2025/12/22 (승건) 후보자 ID 추가
+ * 2025/12/22 (승건) 승진 후보자 ID 추가
  * </pre>
  *
  * @author 승건
