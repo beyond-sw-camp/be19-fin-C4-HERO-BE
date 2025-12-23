@@ -383,7 +383,7 @@ public class AttendanceService {
         // 4. 공통 PageResponse로 변환
         return PageResponse.of(
                 pageResult.getContent(),
-                pageResult.getNumber() + 1,      // 0-based → 1-based
+                pageResult.getNumber() ,
                 pageResult.getSize(),
                 pageResult.getTotalElements()
         );
