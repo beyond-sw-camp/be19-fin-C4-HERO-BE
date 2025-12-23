@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,11 +23,14 @@ import lombok.Setter;
  * @author 이승건
  * @version 1.0
  */
+
+@Builder
 @Entity
 @Table(name = "tbl_grade")
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
 public class Grade {
 
     /**

@@ -1,6 +1,6 @@
 package com.c4.hero.domain.payroll.batch.entity;
 
-import com.c4.hero.domain.payroll.common.enums.PayrollStatus;
+import com.c4.hero.domain.payroll.common.type.PayrollStatus;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -29,6 +29,7 @@ import lombok.NoArgsConstructor;
  *
  * History
  *  2025/12/15 - 동근 최초 작성
+ *  2025/12/18 - 동근 도메인 로직 확장
  * </pre>
  *
  *  @author 동근
@@ -63,7 +64,7 @@ public class Payroll {
 
     private Integer employeeId;
     private Integer batchId;
-
+    private String errorMessage;
     /**
      * 급여 계산 성공 시 생성 팩토리 메서드
      *
@@ -129,5 +130,82 @@ public class Payroll {
      */
     public void lock() {
         this.status = PayrollStatus.CONFIRMED;
+    }
+
+    /**
+     * 급여가 CONFIRMED 상태인지 여부
+     *
+     * @return true = 확정됨 / false = 수정 가능
+     */
+    public boolean isLocked() {
+        return this.status == PayrollStatus.CONFIRMED; // PAID 있으면 같이
+    }
+
+    /**
+     * 기존 Payroll 엔티티에 계산 결과 적용
+     * 제약
+     *  - 확정(CONFIRMED) 이후에는 수정 불가
+     *  - 성공 시 기존 errorMessage 제거
+     *
+     * @param batchId   배치 ID
+     * @param base      기본급
+     * @param overtime  초과근무 수당
+     * @param allowance 수당 합계
+     * @param deduction 공제 합계
+     */
+    public void applyCalculated(Integer batchId, int base, int overtime, int allowance, int deduction) {
+        if (isLocked()) {
+            throw new IllegalStateException("CONFIRMED 이후 급여는 수정할 수 없습니다.");
+        }
+        this.batchId = batchId;
+        this.baseSalary = base;
+        this.overtimePay = overtime;
+        this.allowanceTotal = allowance;
+        this.deductionTotal = deduction;
+        this.totalPay = base + overtime + allowance - deduction;
+        this.status = PayrollStatus.CALCULATED;
+        this.errorMessage = null;
+    }
+
+    /**
+     * 기존 Payroll 엔티티를 계산 실패 상태로 전환
+     *
+     * @param batchId 배치 ID
+     * @param message 실패 사유(프론트 오류 모달에서 표시됨)
+     */
+    public void markFailed(Integer batchId, String message) {
+        if (isLocked()) {
+            throw new IllegalStateException("CONFIRMED 이후 급여는 수정할 수 없습니다.");
+        }
+        this.batchId = batchId;
+        this.baseSalary = 0;
+        this.overtimePay = 0;
+        this.allowanceTotal = 0;
+        this.deductionTotal = 0;
+        this.totalPay = 0;
+        this.status = PayrollStatus.FAILED;
+        this.errorMessage = message;
+    }
+
+    /**
+     * 급여 계산 전 READY 상태의 Payroll 엔티티 생성
+     *
+     * @param employeeId 사원 ID
+     * @param batchId    배치 ID
+     * @param month      급여월
+     * @return READY 상태의 Payroll
+     */
+    public static Payroll ready(Integer employeeId, Integer batchId, String month) {
+        Payroll p = new Payroll();
+        p.employeeId = employeeId;
+        p.batchId = batchId;
+        p.salaryMonth = month;
+        p.baseSalary = 0;
+        p.overtimePay = 0;
+        p.allowanceTotal = 0;
+        p.deductionTotal = 0;
+        p.totalPay = 0;
+        p.status = PayrollStatus.READY;
+        return p;
     }
 }

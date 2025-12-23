@@ -1,6 +1,6 @@
 package com.c4.hero.domain.auth.controller;
 
-import com.c4.hero.common.response.ApiResponse;
+import com.c4.hero.common.response.CustomResponse;
 import com.c4.hero.domain.auth.service.AuthService;
 import com.c4.hero.domain.auth.security.JwtUtil;
 import jakarta.servlet.http.Cookie;
@@ -73,14 +73,14 @@ public class AuthController {
      * @return 새로 발급된 Access Token
      */
     @PostMapping("/refresh")
-    public ResponseEntity<ApiResponse<Map<String, String>>> refreshAccessToken(
+    public ResponseEntity<CustomResponse<Map<String, String>>> refreshAccessToken(
             @CookieValue(JwtUtil.REFRESH_TOKEN_COOKIE_NAME) String refreshToken) {
 
         String newAccessToken = authService.refreshAccessToken(refreshToken);
 
         // 새로 발급된 Access Token을 응답 본문에 담아 반환
         Map<String, String> responseBody = Map.of("accessToken", newAccessToken);
-        return ResponseEntity.ok(ApiResponse.success(responseBody));
+        return ResponseEntity.ok(CustomResponse.success(responseBody));
     }
 
     /**
@@ -90,10 +90,10 @@ public class AuthController {
      * @return 성공 메시지
      */
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout(HttpServletResponse response) {
+    public ResponseEntity<CustomResponse<Void>> logout(HttpServletResponse response) {
         // Refresh Token이 담긴 쿠키를 만료시켜 클라이언트에서 삭제하도록 함
         response.addCookie(createExpiredCookie());
-        return ResponseEntity.ok(ApiResponse.success());
+        return ResponseEntity.ok(CustomResponse.success());
     }
 
     /**

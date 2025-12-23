@@ -16,10 +16,11 @@ import java.util.List;
  *
  * History
  *  2025/12/15 - 동근 최초 작성
+ *  2025/12/18 - 동근 항목 단위 삭제 로직 추가
  * </pre>
  *
  *  @author 동근
- *  @version 1.0
+ *  @version 1.1
  */
 public interface PayrollItemRepository extends JpaRepository<PayrollItem, Integer> {
 
@@ -30,4 +31,17 @@ public interface PayrollItemRepository extends JpaRepository<PayrollItem, Intege
      * @return 급여에 포함된 항목 목록
      */
     List<PayrollItem> findAllByPayrollId(Integer payrollId);
+
+
+    /**
+     * 급여 항목 삭제 (수당/공제 항목 수정 시 기존 항목을 제거할 때 사용)
+     * @param payrollId  급여 ID
+     * @param itemType 항목 타입(ALLOWANCE 수당 / DEDUCTION 공제 등)
+     * @param itemCode 항목 코드
+     */
+    void deleteByPayrollIdAndItemTypeAndItemCode(
+            Integer payrollId,
+            String itemType,
+            String itemCode
+    );
 }

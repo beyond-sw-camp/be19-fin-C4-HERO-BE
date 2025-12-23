@@ -26,7 +26,7 @@ import lombok.Getter;
  */
 @Getter
 @JsonInclude(JsonInclude.Include.NON_NULL) // null 값은 JSON에 포함하지 않음
-public class ApiResponse<T> {
+public class CustomResponse<T> {
 
     /** 성공 여부 (true: 성공, false: 실패) */
     private final boolean success;
@@ -44,7 +44,7 @@ public class ApiResponse<T> {
      * private 생성자
      * 정적 팩토리 메서드를 통해서만 생성 가능
      */
-    private ApiResponse(boolean success, T data, String errorCode, String message) {
+    private CustomResponse(boolean success, T data, String errorCode, String message) {
         this.success = success;
         this.data = data;
         this.errorCode = errorCode;
@@ -61,8 +61,8 @@ public class ApiResponse<T> {
      * 예시: ApiResponse.success(employee)
      * 결과: { "success": true, "data": {...} }
      */
-    public static <T> ApiResponse<T> success(T data) {
-        return new ApiResponse<>(true, data, null, null);
+    public static <T> CustomResponse<T> success(T data) {
+        return new CustomResponse<>(true, data, null, null);
     }
 
     /**
@@ -76,8 +76,8 @@ public class ApiResponse<T> {
      * 예시: ApiResponse.success(employee, "사원 등록 완료")
      * 결과: { "success": true, "data": {...}, "message": "사원 등록 완료" }
      */
-    public static <T> ApiResponse<T> success(T data, String message) {
-        return new ApiResponse<>(true, data, null, message);
+    public static <T> CustomResponse<T> success(T data, String message) {
+        return new CustomResponse<>(true, data, null, message);
     }
 
     /**
@@ -88,8 +88,8 @@ public class ApiResponse<T> {
      * 예시: ApiResponse.success()
      * 결과: { "success": true }
      */
-    public static ApiResponse<Void> success() {
-        return new ApiResponse<>(true, null, null, null);
+    public static CustomResponse<Void> success() {
+        return new CustomResponse<>(true, null, null, null);
     }
 
     /**
@@ -103,7 +103,7 @@ public class ApiResponse<T> {
      * 예시: ApiResponse.error("E001", "사원을 찾을 수 없습니다")
      * 결과: { "success": false, "errorCode": "E001", "message": "사원을 찾을 수 없습니다" }
      */
-    public static <T> ApiResponse<T> error(String errorCode, String message) {
-        return new ApiResponse<>(false, null, errorCode, message);
+    public static <T> CustomResponse<T> error(String errorCode, String message) {
+        return new CustomResponse<>(false, null, errorCode, message);
     }
 }

@@ -1,4 +1,4 @@
-package com.c4.hero.domain.payroll.common.enums;
+package com.c4.hero.domain.payroll.common.type;
 
 /**
  * <pre>

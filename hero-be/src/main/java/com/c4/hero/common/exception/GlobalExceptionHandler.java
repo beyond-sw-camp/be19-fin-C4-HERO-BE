@@ -1,6 +1,6 @@
 package com.c4.hero.common.exception;
 
-import com.c4.hero.common.response.ApiResponse;
+import com.c4.hero.common.response.CustomResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
@@ -38,12 +38,12 @@ public class GlobalExceptionHandler {
      * @return 에러 응답 (ErrorCode에 정의된 상태 코드)
      */
     @ExceptionHandler(BusinessException.class)
-    protected ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
+    protected ResponseEntity<CustomResponse<Void>> handleBusinessException(BusinessException e) {
         log.error("BusinessException: {}", e.getMessage(), e);
         ErrorCode errorCode = e.getErrorCode();
         return ResponseEntity
                 .status(errorCode.getStatus())
-                .body(ApiResponse.error(errorCode.getCode(), e.getMessage()));
+                .body(CustomResponse.error(errorCode.getCode(), e.getMessage()));
     }
 
     /**
@@ -56,13 +56,13 @@ public class GlobalExceptionHandler {
      * @return 400 Bad Request와 유효성 검증 실패 메시지
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    protected ResponseEntity<ApiResponse<Void>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
+    protected ResponseEntity<CustomResponse<Void>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
         log.error("MethodArgumentNotValidException: {}", e.getMessage());
         // 첫 번째 유효성 검증 실패 메시지 반환
         String message = e.getBindingResult().getAllErrors().get(0).getDefaultMessage();
         return ResponseEntity
                 .badRequest()
-                .body(ApiResponse.error(ErrorCode.INVALID_INPUT_VALUE.getCode(), message));
+                .body(CustomResponse.error(ErrorCode.INVALID_INPUT_VALUE.getCode(), message));
     }
 
     /**
@@ -75,12 +75,12 @@ public class GlobalExceptionHandler {
      * @return 400 Bad Request와 바인딩 실패 메시지
      */
     @ExceptionHandler(BindException.class)
-    protected ResponseEntity<ApiResponse<Void>> handleBindException(BindException e) {
+    protected ResponseEntity<CustomResponse<Void>> handleBindException(BindException e) {
         log.error("BindException: {}", e.getMessage());
         String message = e.getBindingResult().getAllErrors().get(0).getDefaultMessage();
         return ResponseEntity
                 .badRequest()
-                .body(ApiResponse.error(ErrorCode.INVALID_INPUT_VALUE.getCode(), message));
+                .body(CustomResponse.error(ErrorCode.INVALID_INPUT_VALUE.getCode(), message));
     }
 
     /**
@@ -94,11 +94,11 @@ public class GlobalExceptionHandler {
      * @return 500 Internal Server Error와 서버 오류 메시지
      */
     @ExceptionHandler(Exception.class)
-    protected ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
+    protected ResponseEntity<CustomResponse<Void>> handleException(Exception e) {
         log.error("Exception: {}", e.getMessage(), e);
         return ResponseEntity
                 .internalServerError()
-                .body(ApiResponse.error(
+                .body(CustomResponse.error(
                         ErrorCode.INTERNAL_SERVER_ERROR.getCode(),
                         ErrorCode.INTERNAL_SERVER_ERROR.getMessage()
                 ));

@@ -5,11 +5,12 @@ package com.c4.hero.domain.approval.dto;
  * Description : 전자결재 문서 템플릿 정보를 전달하기 위한 DTO
  *
  * History
- * 2025/12/15 (변민철) 최초 작성
+ * 2025/12/15 (민철) 최초 작성
+ * 2025/12/19 민철 ApprovalFormTemplate.java 문서 템플릿 필드명 수정에 따른 getter메서드 수정
  * </pre>
  *
- * @author 변민철
- * @version 1.0
+ * @author 민철
+ * @version 1.1
  */
 import com.c4.hero.domain.approval.entity.ApprovalFormTemplate;
 import lombok.Builder;
@@ -44,7 +45,7 @@ public class DocumentTemplateDTO {
     public static DocumentTemplateDTO from(ApprovalFormTemplate entity) {
         return DocumentTemplateDTO.builder()
                 .id(entity.getTemplateId())
-                .name(entity.getName())
+                .name(entity.getTemplateName())
                 .templateKey(entity.getTemplateKey())
                 .category(entity.getCategory())
                 .description(entity.getDescription())

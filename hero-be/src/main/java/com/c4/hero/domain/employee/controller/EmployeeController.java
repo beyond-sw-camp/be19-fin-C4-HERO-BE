@@ -1,6 +1,6 @@
 package com.c4.hero.domain.employee.controller;
 
-import com.c4.hero.common.response.ApiResponse;
+import com.c4.hero.common.response.CustomResponse;
 import com.c4.hero.common.response.PageResponse;
 import com.c4.hero.domain.auth.security.JwtUtil;
 import com.c4.hero.domain.employee.dto.response.EmployeeSearchOptionsResponseDTO;
@@ -64,9 +64,9 @@ public class EmployeeController {
      * @return 성공 시 ApiResponse<Void>
      */
     @PostMapping("/signup")
-    public ResponseEntity<ApiResponse<Void>> signup(@Valid @RequestBody SignupRequestDTO request) {
+    public ResponseEntity<CustomResponse<Void>> signup(@Valid @RequestBody SignupRequestDTO request) {
         employeeCommandService.signup(request);
-        return ResponseEntity.ok(ApiResponse.success());
+        return ResponseEntity.ok(CustomResponse.success());
     }
 
     /**
@@ -76,9 +76,9 @@ public class EmployeeController {
      * @return 페이징된 직원 정보
      */
     @GetMapping("/search")
-    public ResponseEntity<ApiResponse<PageResponse<EmployeeListResponseDTO>>> search(@ModelAttribute EmployeeSearchDTO searchDTO) {
+    public ResponseEntity<CustomResponse<PageResponse<EmployeeListResponseDTO>>> search(@ModelAttribute EmployeeSearchDTO searchDTO) {
         PageResponse<EmployeeListResponseDTO> result = employeeQueryService.getEmployees(searchDTO);
-        return ResponseEntity.ok(ApiResponse.success(result));
+        return ResponseEntity.ok(CustomResponse.success(result));
     }
 
 
@@ -88,9 +88,9 @@ public class EmployeeController {
      * @return 검색 옵션 목록
      */
     @GetMapping("/search-options")
-    public ResponseEntity<ApiResponse<EmployeeSearchOptionsResponseDTO>> getEmployeeSearchOptions() {
+    public ResponseEntity<CustomResponse<EmployeeSearchOptionsResponseDTO>> getEmployeeSearchOptions() {
         EmployeeSearchOptionsResponseDTO result = employeeQueryService.getEmployeeSearchOptions();
-        return ResponseEntity.ok(ApiResponse.success(result));
+        return ResponseEntity.ok(CustomResponse.success(result));
     }
 
 
@@ -101,9 +101,9 @@ public class EmployeeController {
      * @return 직원의 상세 정보
      */
     @GetMapping("/{employeeId}")
-    public ResponseEntity<ApiResponse<EmployeeDetailResponseDTO>> getEmployeeDetail(@PathVariable Integer employeeId) {
+    public ResponseEntity<CustomResponse<EmployeeDetailResponseDTO>> getEmployeeDetail(@PathVariable Integer employeeId) {
         EmployeeDetailResponseDTO result = employeeQueryService.findById(employeeId);
-        return ResponseEntity.ok(ApiResponse.success(result));
+        return ResponseEntity.ok(CustomResponse.success(result));
     }
 
     /**
@@ -113,40 +113,40 @@ public class EmployeeController {
      * @return 본인 정보
      */
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<MyInfoResponseDTO>> getMyInfo(HttpServletRequest request) {
+    public ResponseEntity<CustomResponse<MyInfoResponseDTO>> getMyInfo(HttpServletRequest request) {
         String token = jwtUtil.resolveToken(request);
         Integer currentEmployeeId = jwtUtil.getEmployeeId(token);
         MyInfoResponseDTO result = employeeQueryService.getMyInfo(currentEmployeeId);
-        return ResponseEntity.ok(ApiResponse.success(result));
+        return ResponseEntity.ok(CustomResponse.success(result));
     }
 
     /**
      * 직원 정보 수정 (인사 직원 사용)
      */
     @PutMapping("/{employeeId}")
-    public ResponseEntity<ApiResponse<Void>> updateEmployee(HttpServletRequest request, @PathVariable Integer employeeId, @RequestBody EmployeeUpdateRequestDTO requestDTO) {
+    public ResponseEntity<CustomResponse<Void>> updateEmployee(HttpServletRequest request, @PathVariable Integer employeeId, @RequestBody EmployeeUpdateRequestDTO requestDTO) {
         String token = jwtUtil.resolveToken(request);
         // TODO: 토큰에서 사용자 정보(관리자 권한) 확인
         // employeeCommandService.updateEmployee(employeeId, requestDTO);
-        return ResponseEntity.ok(ApiResponse.success());
+        return ResponseEntity.ok(CustomResponse.success());
     }
 
     /**
      * 직원 정보 수정 (본인 사용)
      */
     @PutMapping("/me")
-    public ResponseEntity<ApiResponse<Void>> selfUpdateEmployee(HttpServletRequest request, @RequestBody EmployeeSelfUpdateRequestDTO requestDTO) {
+    public ResponseEntity<CustomResponse<Void>> selfUpdateEmployee(HttpServletRequest request, @RequestBody EmployeeSelfUpdateRequestDTO requestDTO) {
         String token = jwtUtil.resolveToken(request);
         Integer currentEmployeeId = jwtUtil.getEmployeeId(token);
         // employeeCommandService.selfUpdateEmployee(currentEmployeeId, requestDTO);
-        return ResponseEntity.ok(ApiResponse.success());
+        return ResponseEntity.ok(CustomResponse.success());
     }
 
     /**
      * 퇴사한 사람들
      */
     @GetMapping("/leave")
-    public ResponseEntity<ApiResponse<EmployeeListResponseDTO>> getResignedEmployees() {
+    public ResponseEntity<CustomResponse<EmployeeListResponseDTO>> getResignedEmployees() {
 
         //
         return null;
@@ -156,16 +156,16 @@ public class EmployeeController {
      * 직원 퇴사 처리
      */
     @DeleteMapping("/{employeeId}")
-    public ResponseEntity<ApiResponse<Void>> terminateEmployee(@PathVariable Integer employeeId) {
+    public ResponseEntity<CustomResponse<Void>> terminateEmployee(@PathVariable Integer employeeId) {
         // employeeCommandService.terminateEmployee(employeeId);
-        return ResponseEntity.ok(ApiResponse.success());
+        return ResponseEntity.ok(CustomResponse.success());
     }
 
     /**
      * 로그인 로그 확인
      */
     @GetMapping("/login-log/{employeeId}")
-    public ResponseEntity<ApiResponse<List<LoginHistoryResponseDTO>>> getLoginHistory(@PathVariable Integer employeeId) {
+    public ResponseEntity<CustomResponse<List<LoginHistoryResponseDTO>>> getLoginHistory(@PathVariable Integer employeeId) {
         // List<LoginHistoryResponseDTO> history = employeeQueryService.getLoginHistory(employeeId);
         // return ResponseEntity.ok(ApiResponse.success(history));
         return null; // 임시
@@ -175,7 +175,7 @@ public class EmployeeController {
      * 부서 이동 로그 확인
      */
     @GetMapping("/department-log/{employeeId}")
-    public ResponseEntity<ApiResponse<List<DepartmentHistoryResponseDTO>>> getDepartmentHistory(@PathVariable Integer employeeId) {
+    public ResponseEntity<CustomResponse<List<DepartmentHistoryResponseDTO>>> getDepartmentHistory(@PathVariable Integer employeeId) {
         // List<DepartmentHistoryResponseDTO> history = employeeQueryService.getDepartmentHistory(employeeId);
         // return ResponseEntity.ok(ApiResponse.success(history));
         return null; // 임시
@@ -185,7 +185,7 @@ public class EmployeeController {
      * 직급 로그 확인
      */
     @GetMapping("/grade-log/{employeeId}")
-    public ResponseEntity<ApiResponse<List<GradeHistoryResponseDTO>>> getGradeHistory(@PathVariable Integer employeeId) {
+    public ResponseEntity<CustomResponse<List<GradeHistoryResponseDTO>>> getGradeHistory(@PathVariable Integer employeeId) {
         // List<GradeHistoryResponseDTO> history = employeeQueryService.getGradeHistory(employeeId);
         // return ResponseEntity.ok(ApiResponse.success(history));
         return null; // 임시
@@ -199,9 +199,9 @@ public class EmployeeController {
      * EmployeePasswordChangeServicec에서 처리
      */
     @PostMapping("/change-password-auth")
-    public ResponseEntity<ApiResponse<Void>> authChangePassword(@Valid @RequestBody SignupRequestDTO request) {
+    public ResponseEntity<CustomResponse<Void>> authChangePassword(@Valid @RequestBody SignupRequestDTO request) {
         // passwordChangeService.sendAuthCode(request.getEmail());
-        return ResponseEntity.ok(ApiResponse.success());
+        return ResponseEntity.ok(CustomResponse.success());
     }
 
     /**
@@ -210,8 +210,8 @@ public class EmployeeController {
      * EmployeePasswordChangeServicec에서 처리
      */
     @PostMapping("/change-password")
-    public ResponseEntity<ApiResponse<Void>> changePassword(@Valid @RequestBody PasswordChangeRequestDTO request) {
+    public ResponseEntity<CustomResponse<Void>> changePassword(@Valid @RequestBody PasswordChangeRequestDTO request) {
         // passwordChangeService.changePassword(request);
-        return ResponseEntity.ok(ApiResponse.success());
+        return ResponseEntity.ok(CustomResponse.success());
     }
 }
