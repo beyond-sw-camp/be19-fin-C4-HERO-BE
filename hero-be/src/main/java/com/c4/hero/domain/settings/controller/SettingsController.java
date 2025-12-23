@@ -234,13 +234,13 @@ public class SettingsController {
      * @param   settings 설정값들
      * @return ResponseEntity<String>
      */
-    @PostMapping("/approvals/templates/{templateId}")
-    public ResponseEntity<String> registDefaultLine(
+    @PutMapping("/approvals/templates/{templateId}")
+    public ResponseEntity<Void> registDefaultLine(
             @PathVariable Integer templateId,
             @RequestBody SettingsApprovalRequestDTO settings){
 
-        String response = settingsCommandService.applySettings(templateId, settings);
-        return ResponseEntity.ok().body(response);
+        settingsCommandService.applySettings(templateId, settings);
+        return ResponseEntity.ok().build();
     }
 
     /**

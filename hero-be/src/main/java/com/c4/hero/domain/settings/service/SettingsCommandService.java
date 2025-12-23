@@ -80,19 +80,19 @@ public class SettingsCommandService {
 	private final EmployeeAccountRepository accountRepository;
 	private final EmployeeAccountRoleRepository accountRoleRepository;
 	private final EmployeeRoleRepository roleRepository;
-    private final ApprovalTemplateRepository templateRepository;
-    private final SettingsApprovalLineRepository settingsApprovalLineRepository;
-    private final SettingsApprovalRefRepository settingsApprovalRefRepository;
-    private final SettingsNotificationHistoryRepository settingsNotificationHistoryRepository;
+  private final ApprovalTemplateRepository templateRepository;
+  private final SettingsApprovalLineRepository settingsApprovalLineRepository;
+  private final SettingsApprovalRefRepository settingsApprovalRefRepository;
+  private final SettingsNotificationHistoryRepository settingsNotificationHistoryRepository;
 
 	private final EmployeeCommandService employeeCommandService;
-    private final NotificationCommandService notificationCommandService;
+  private final NotificationCommandService notificationCommandService;
 
 	private static final int ADMIN_DEPARTMENT_ID = 0;
 	private static final int TEMP_DEPARTMENT_ID = -1;
 	private static final int ADMIN_ID = 0;
 
-    /**
+   /**
 	 * 부서 정보 트리 저장 및 수정
 	 *
 	 * @param departmentDtos 부서 정보 목록
@@ -392,67 +392,49 @@ public class SettingsCommandService {
      * @return String 설정 저장 성공 / 실패 메시지
      */
     @Transactional
-    public String applySettings(Integer templateId, SettingsApprovalRequestDTO settings) {
+    public void applySettings(Integer templateId, SettingsApprovalRequestDTO settings) {
 
         ApprovalFormTemplate template = templateRepository.findById(templateId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
-        List<SettingsApprovalLine> lines = new ArrayList<>();
+        settingsApprovalLineRepository.deleteAllByTemplate(template);
+        settingsApprovalRefRepository.deleteAllByTemplate(template);
 
-        for (SettingsDefaultLineDTO line : settings.getLines()) {
-
-            if (SPECIFIC_DEPT.name().equals(line.getTargetType())) {
-                SettingsApprovalLine lineEntity = SettingsApprovalLine.builder()
-                        .seq(line.getSeq())
+        List<SettingsApprovalLine> lines = settings.getLines().stream()
+                .filter(this::isValidLineTarget)
+                .map(lineDto -> SettingsApprovalLine.builder()
+                        .seq(lineDto.getSeq())
                         .template(template)
-                        .departmentId(line.getDepartmentId())
-                        .build();
+                        .departmentId(lineDto.getDepartmentId())
+                        .build())
+                .collect(Collectors.toList());
 
-                lines.add(lineEntity);
-
-            } else if (DRAFTER_DEPT.name().equals(line.getTargetType())) {
-                SettingsApprovalLine lineEntity = SettingsApprovalLine.builder()
-                        .seq(line.getSeq())
-                        .template(template)
-                        .departmentId(line.getDepartmentId())
-                        .build();
-                lines.add(lineEntity);
-            }
-        }
-
-        try {
+        if (!lines.isEmpty()) {
             settingsApprovalLineRepository.saveAll(lines);
-        } catch (Exception e) {
-            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "기본결재선 적용 실패");
         }
 
-        List<SettingsApprovalRef> refs = new ArrayList<>();
-
-        for (SettingsDefaultRefDTO ref : settings.getReferences()) {
-            if (SPECIFIC_DEPT.name().equals(ref.getTargetType())) {
-                SettingsApprovalRef refEntity = SettingsApprovalRef.builder()
+        List<SettingsApprovalRef> refs = settings.getReferences().stream()
+                .filter(this::isValidRefTarget)
+                .map(refDto -> SettingsApprovalRef.builder()
                         .template(template)
-                        .departmentId(ref.getDepartmentId())
-                        .build();
+                        .departmentId(refDto.getDepartmentId())
+                        .build())
+                .collect(Collectors.toList());
 
-                refs.add(refEntity);
-
-            } else if (DRAFTER_DEPT.name().equals(ref.getTargetType())) {
-                SettingsApprovalRef refEntity = SettingsApprovalRef.builder()
-                        .template(template)
-                        .departmentId(ref.getDepartmentId())
-                        .build();
-                refs.add(refEntity);
-            }
-        }
-
-        try {
+        if (!refs.isEmpty()) {
             settingsApprovalRefRepository.saveAll(refs);
-        } catch (Exception e) {
-            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "기본참조선 적용 실패");
         }
 
-        return "결재 설정 적용 성공";
+    }
+  
+    private boolean isValidLineTarget(SettingsDefaultLineDTO line) {
+        String type = line.getTargetType();
+        return SPECIFIC_DEPT.name().equals(type) || DRAFTER_DEPT.name().equals(type);
+    }
+
+    private boolean isValidRefTarget(SettingsDefaultRefDTO ref) {
+        String type = ref.getTargetType();
+        return SPECIFIC_DEPT.name().equals(type) || DRAFTER_DEPT.name().equals(type);
     }
 
     /**
@@ -572,5 +554,5 @@ public class SettingsCommandService {
                 .sentAt(LocalDateTime.now())
                 .build();
         settingsNotificationHistoryRepository.save(history);
-    }
+  }
 }
