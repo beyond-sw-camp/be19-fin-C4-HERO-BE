@@ -1,6 +1,7 @@
 package com.c4.hero.domain.settings.mapper;
 
 import com.c4.hero.domain.settings.dto.response.SettingsNotificationHistoryResponseDTO;
+import com.c4.hero.domain.settings.dto.response.SettingsNotificationStatisticsResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsPermissionsResponseDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -71,5 +72,5 @@ public interface SettingsMapper {
      *
      * @return 알림 발송 통계
      */
-    Map<String, Object> selectNotificationStatistics();
+    SettingsNotificationStatisticsResponseDTO selectNotificationStatistics();
 }

@@ -50,7 +50,6 @@ import java.util.stream.Collectors;
  *
  * History
  * 2025/12/16 (승건) 최초 작성
- * 2025/12/22 (혜원) 알림 관련 조회 기능 추가
  * 2025/12/19 (민철) 설정 페이지 내 서식목록 조회 api
  * 2025/12/21 (민철) 서식별 기본 설정 조회 api
  * 2025/12/22 (혜원) 알림 관련 조회 기능 추가
@@ -64,15 +63,14 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SettingsQueryService {
 
-
-    private final SettingsApprovalLineRepository settingsApprovalLineRepository;
-    private final SettingsApprovalRefRepository settingsApprovalRefRepository;
-    private final ApprovalTemplateRepository approvalTemplateRepository;
-	private final SettingsDepartmentRepository departmentRepository;
 	private final EmployeeRepository employeeRepository;
 	private final EmployeeGradeRepository gradeRepository;
 	private final EmployeeJobTitleRepository jobTitleRepository;
 	private final EmployeeRoleRepository roleRepository;
+    private final SettingsApprovalLineRepository settingsApprovalLineRepository;
+    private final SettingsApprovalRefRepository settingsApprovalRefRepository;
+    private final ApprovalTemplateRepository approvalTemplateRepository;
+    private final SettingsDepartmentRepository departmentRepository;
 
 	private static final int ADMIN_DEPARTMENT_ID = 0;
 	private static final int TEMP_DEPARTMENT_ID = -1;
@@ -80,7 +78,7 @@ public class SettingsQueryService {
 	private final SettingsMapper settingsMapper;
     private final WebSocketSessionManager webSocketSessionManager;
 
-    /**
+	/**
 	 * 부서 트리 구조 조회
 	 *
 	 * @return 부서 트리 목록
@@ -203,22 +201,22 @@ public class SettingsQueryService {
 		return settingsMapper.selectPolicy();
 	}
 
-	/**
-	 * 사원 권한 목록 조회 (페이징)
-	 *
-	 * @param pageable 페이징 정보
-	 * @param query    검색어
-	 * @return 사원 권한 목록 페이지 응답
-	 */
-	public PageResponse<SettingsPermissionsResponseDTO> getEmployeePermissions(Pageable pageable, String query) {
-		Map<String, Object> params = new HashMap<>();
-		params.put("query", query);
+    /**
+     * 사원 권한 목록 조회 (페이징)
+     *
+     * @param pageable 페이징 정보
+     * @param query    검색어
+     * @return 사원 권한 목록 페이지 응답
+     */
+    public PageResponse<SettingsPermissionsResponseDTO> getEmployeePermissions(Pageable pageable, String query) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("query", query);
 
-		List<SettingsPermissionsResponseDTO> content = settingsMapper.findEmployeePermissions(params, pageable);
-		int total = settingsMapper.countEmployeePermissions(params);
+        List<SettingsPermissionsResponseDTO> content = settingsMapper.findEmployeePermissions(params, pageable);
+        int total = settingsMapper.countEmployeePermissions(params);
 
-		return PageResponse.of(content, pageable.getPageNumber(), pageable.getPageSize(), total);
-	}
+        return PageResponse.of(content, pageable.getPageNumber(), pageable.getPageSize(), total);
+    }
 
     /**
      * 문서 서식 목록
@@ -230,7 +228,7 @@ public class SettingsQueryService {
         List<SettingsDocumentTemplateResponseDTO> list =
                 approvalTemplateRepository.findByTemplateWithStepsCount();
 
-       return list;
+        return list;
     }
 
     /**
@@ -265,7 +263,6 @@ public class SettingsQueryService {
 
         return response;
     }
-
     /**
      * 부서목록 조회
      *
@@ -281,6 +278,7 @@ public class SettingsQueryService {
                         .build()).collect(Collectors.toList());
         return departmentListDTOs;
     }
+
 
     /**
      * 알림 발송 이력 조회
@@ -314,16 +312,19 @@ public class SettingsQueryService {
      * @return 알림 발송 통계 DTO
      */
     public SettingsNotificationStatisticsResponseDTO getNotificationStatistics() {
-        Map<String, Object> statistics = settingsMapper.selectNotificationStatistics();
+        SettingsNotificationStatisticsResponseDTO statistics = settingsMapper.selectNotificationStatistics();
 
-        return SettingsNotificationStatisticsResponseDTO.builder()
-                .todayCount(((Number) statistics.get("todayCount")).intValue())
-                .weekCount(((Number) statistics.get("weekCount")).intValue())
-                .monthCount(((Number) statistics.get("monthCount")).intValue())
-                .totalCount(((Number) statistics.get("totalCount")).intValue())
-                .averageSuccessRate(((Number) statistics.get("averageSuccessRate")).doubleValue())
-                .activeConnections(webSocketSessionManager.getActiveConnectionCount())
-                .build();
+        if (statistics == null) {
+            statistics = new SettingsNotificationStatisticsResponseDTO();
+            statistics.setTodayCount(0);
+            statistics.setWeekCount(0);
+            statistics.setMonthCount(0);
+            statistics.setTotalCount(0);
+            statistics.setAverageSuccessRate(0.0);
+        }
+
+        statistics.setActiveConnections(webSocketSessionManager.getActiveConnectionCount());
+        return statistics;
     }
 
     /**
