@@ -92,4 +92,10 @@ public interface VacationRepository extends JpaRepository<VacationLog, Integer> 
             @Param("rangeStart") LocalDate rangeStart,
             @Param("rangeEnd") LocalDate rangeEnd
     );
+
+    List<VacationLog> findByStartDateLessThanEqualAndEndDateGreaterThanEqual(
+            LocalDate end,
+            LocalDate start
+    );
+
 }

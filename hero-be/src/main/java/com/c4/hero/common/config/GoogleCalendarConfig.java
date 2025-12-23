@@ -1,4 +1,4 @@
-package com.c4.hero.domain.vacation.google;
+package com.c4.hero.common.config;
 
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.HttpTransport;
