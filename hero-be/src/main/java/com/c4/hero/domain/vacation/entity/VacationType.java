@@ -34,7 +34,7 @@ public class VacationType {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "vacation_type_id")
-    private int vacationTypeId;
+    private Integer vacationTypeId;
 
     /** 휴가 유형 이름 (예: 연차, 반차, 병가 등) */
     @Column(name = "vacation_type_name")

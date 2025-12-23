@@ -26,10 +26,10 @@ import java.time.LocalTime;
 public class DeptWorkSystemDTO {
 
     /** 직원 PK (식별자) */
-    private int employeeId;
+    private Integer employeeId;
 
     /** 부서 PK (식별자) */
-    private int departmentId;
+    private Integer departmentId;
 
     /** 직원 이름 */
     private String employeeName;

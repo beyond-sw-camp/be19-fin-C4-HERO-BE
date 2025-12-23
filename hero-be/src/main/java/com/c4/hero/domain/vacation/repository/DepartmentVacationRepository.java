@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -72,8 +72,8 @@ public interface DepartmentVacationRepository extends JpaRepository<VacationLog,
     )
     List<DepartmentVacationDTO> findDepartmentVacationByMonth(
             @Param("departmentId") Integer departmentId,
-            @Param("monthStart") LocalDateTime monthStart,
-            @Param("monthEnd") LocalDateTime monthEnd,
+            @Param("monthStart") LocalDate monthStart,
+            @Param("monthEnd") LocalDate monthEnd,
             @Param("status") VacationStatus status
     );
 
@@ -87,8 +87,8 @@ public interface DepartmentVacationRepository extends JpaRepository<VacationLog,
      */
     default List<DepartmentVacationDTO> findApprovedDepartmentVacationByMonth(
             Integer departmentId,
-            LocalDateTime monthStart,
-            LocalDateTime monthEnd
+            LocalDate monthStart,
+            LocalDate monthEnd
     ) {
         return findDepartmentVacationByMonth(
                 departmentId,

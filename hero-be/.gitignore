@@ -73,3 +73,6 @@ logs/
 ### Others ###
 *.tmp
 *.swp
+
+# Google service account
+src/main/resources/**/service-account.json

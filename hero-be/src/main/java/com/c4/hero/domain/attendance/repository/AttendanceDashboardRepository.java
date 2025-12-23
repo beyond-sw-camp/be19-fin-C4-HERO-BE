@@ -22,7 +22,6 @@ import java.time.LocalDate;
  * 특정 기간 동안의 근태 이력을 기준으로,
  * 직원별 지각/결근 횟수 및 근태 점수를 집계하여 대시보드 데이터를 제공합니다.
  * 부서 기준 필터링(전체/특정부서)과 페이지네이션을 지원합니다.
- *
  * 점수 계산 로직:
  * <ul>
  *     <li>기본 점수: 100점</li>
@@ -53,38 +52,37 @@ public interface AttendanceDashboardRepository extends JpaRepository<Attendance,
      */
     @Query(
             value = """
-                select new com.c4.hero.domain.attendance.dto.AttendanceDashboardDTO(
-                    e.employeeId,
-                    e.employeeNumber,
-                    e.employeeName,
-                    d.departmentId,
-                    d.departmentName,
-                    sum(case when a.state = 'LATE' then 1 else 0 end),
-                    sum(case when a.state = 'ABSENT' then 1 else 0 end),
-                    100
-                      - sum(case when a.state = 'LATE' then 1 else 0 end) * 1
-                      - sum(case when a.state = 'ABSENT' then 1 else 0 end) * 2
-                )
-                from Attendance a
-                    join a.employee e
-                    join e.employeeDepartment d
-                where (:departmentId is null or d.departmentId = :departmentId)
-                  and a.workDate between :startDate and :endDate
-                group by
-                    e.employeeId,
-                    e.employeeNumber,
-                    e.employeeName,
-                    d.departmentId,
-                    d.departmentName
-                """,
+        select new com.c4.hero.domain.attendance.dto.AttendanceDashboardDTO(
+            e.employeeId,
+            e.employeeNumber,
+            e.employeeName,
+            d.departmentId,
+            d.departmentName,
+            coalesce(sum(case when a.state = '지각' then 1L else 0L end), 0L),
+            coalesce(sum(case when a.state = '결근' then 1L else 0L end), 0L),
+            100L
+              - coalesce(sum(case when a.state = '지각' then 1L else 0L end), 0L)
+              - coalesce(sum(case when a.state = '결근' then 1L else 0L end), 0L) * 2L
+        )
+        from Employee e
+            join e.employeeDepartment d
+            left join Attendance a
+                on a.employee = e
+               and a.workDate between :startDate and :endDate
+        where (:departmentId is null or d.departmentId = :departmentId)
+        group by
+            e.employeeId,
+            e.employeeNumber,
+            e.employeeName,
+            d.departmentId,
+            d.departmentName
+        """,
             countQuery = """
-                select count(distinct e.employeeId)
-                from Attendance a
-                    join a.employee e
-                    join e.employeeDepartment d
-                where (:departmentId is null or d.departmentId = :departmentId)
-                  and a.workDate between :startDate and :endDate
-                """
+        select count(e.employeeId)
+        from Employee e
+            join e.employeeDepartment d
+        where (:departmentId is null or d.departmentId = :departmentId)
+        """
     )
     Page<AttendanceDashboardDTO> findAttendanceDashboard(
             @Param("departmentId") Integer departmentId,

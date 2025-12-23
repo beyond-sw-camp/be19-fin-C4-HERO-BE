@@ -5,6 +5,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+
 /**
  * <pre>
  * Class Name: PersonalDTO
@@ -28,19 +32,19 @@ public class PersonalDTO {
     private Integer attendanceId;
 
     /** 근무 날짜 (yyyy-MM-dd) */
-    private String workDate;
+    private LocalDate workDate;
 
     /** 근무 상태 (정상, 지각, 결근 등) */
     private String state;
 
     /** 근무 시작 시간 (HH:mm) */
-    private String startTime;
+    private LocalTime startTime;
 
     /** 근무 종료 시간 (HH:mm) */
-    private String endTime;
+    private LocalTime endTime;
 
     /** 총 근무 시간(분 단위 또는 계산된 시간) */
-    private Integer workDuration;
+    private String workDuration;
 
     /** 적용 근무제 이름 */
     private String workSystemName;

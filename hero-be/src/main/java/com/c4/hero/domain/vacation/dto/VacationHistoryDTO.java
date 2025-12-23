@@ -29,13 +29,13 @@ import java.time.LocalDate;
 public class VacationHistoryDTO {
 
     /** 휴가 이력 PK (식별자) */
-    private int vacationLogId;
+    private Integer vacationLogId;
 
     /** 휴가 시작일 (yyyy-MM-dd) */
-    private LocalDateTime startDate;
+    private LocalDate startDate;
 
     /** 휴가 종료일 (yyyy-MM-dd) */
-    private LocalDateTime endDate;
+    private LocalDate endDate;
 
     /** 휴가 유형 이름 (예: 연차, 반차, 병가 등) */
     private String vacationTypeName;
@@ -60,8 +60,8 @@ public class VacationHistoryDTO {
      * @param approvalStatus   승인 현황
      */
     public VacationHistoryDTO(
-            LocalDateTime startDate,
-            LocalDateTime endDate,
+            LocalDate startDate,
+            LocalDate endDate,
             String vacationTypeName,
             String reason,
             VacationStatus approvalStatus

@@ -8,6 +8,7 @@ import com.c4.hero.domain.attendance.dto.AttSummaryDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -48,8 +49,9 @@ public interface AttendanceMapper {
      */
     AttSummaryDTO selectPersonalSummary(
             @Param("employeeId") Integer employeeId,
-            @Param("startDate") String startDate,
-            @Param("endDate") String endDate
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+
     );
 
     /**
@@ -72,8 +74,9 @@ public interface AttendanceMapper {
             @Param("employeeId") Integer employeeId,
             @Param("offset") Integer offset,
             @Param("size") Integer size,
-            @Param("startDate") String startDate,
-            @Param("endDate") String endDate
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+
     );
 
     /**
@@ -92,8 +95,9 @@ public interface AttendanceMapper {
      */
     int selectPersonalCount(
             @Param("employeeId") Integer employeeId,
-            @Param("startDate") String startDate,
-            @Param("endDate") String endDate
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+
     );
 
 
@@ -117,8 +121,9 @@ public interface AttendanceMapper {
             @Param("employeeId") Integer employeeId,
             @Param("offset") Integer offset,
             @Param("size") Integer size,
-            @Param("startDate") String startDate,
-            @Param("endDate") String endDate
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+
     );
 
     /**
@@ -136,8 +141,9 @@ public interface AttendanceMapper {
      */
     int selectOvertimeCount(
             @Param("employeeId") Integer employeeId,
-            @Param("startDate") String startDate,
-            @Param("endDate") String endDate
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+
     );
 
     /**
@@ -160,8 +166,9 @@ public interface AttendanceMapper {
             @Param("employeeId")  Integer employeeId,
             @Param("offset") Integer offset,
             @Param("size") Integer size,
-            @Param("startDate") String startDate,
-            @Param("endDate") String endDate
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+
     );
 
     /**
@@ -179,8 +186,9 @@ public interface AttendanceMapper {
      */
     int selectCorrectionCount(
             @Param("employeeId")  Integer employeeId,
-            @Param("startDate") String startDate,
-            @Param("endDate") String endDate
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+
     );
 
     /**
@@ -204,8 +212,9 @@ public interface AttendanceMapper {
             @Param("employeeId")  Integer employeeId,
             @Param("offset") Integer offset,
             @Param("size") Integer size,
-            @Param("startDate") String startDate,
-            @Param("endDate") String endDate
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+
     );
 
     /**
@@ -223,7 +232,8 @@ public interface AttendanceMapper {
      */
     int selectChangeLogCount(
             @Param("employeeId") Integer employeeId,
-            @Param("startDate") String startDate,
-            @Param("endDate") String endDate
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+
     );
 }

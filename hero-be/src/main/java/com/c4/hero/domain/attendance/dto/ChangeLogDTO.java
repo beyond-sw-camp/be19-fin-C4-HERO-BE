@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalTime;
+
 /**
  * <pre>
  * Class Name: ChangeLogDTO
@@ -33,10 +35,10 @@ public class ChangeLogDTO {
     private String changeReason;
 
     /** 변경된 근무제의 출근 시간 (HH:mm 또는 HH:mm:ss) */
-    private String startTime;
+    private LocalTime startTime;
 
     /** 변경된 근무제의 퇴근 시간 (HH:mm 또는 HH:mm:ss) */
-    private String endTime;
+    private LocalTime endTime;
 
     /** 적용된 근무제 이름 (예: 시차출퇴근제, 선택적 근로제 등) */
     private String workSystemName;

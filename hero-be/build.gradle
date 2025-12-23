@@ -25,6 +25,19 @@ repositories {
 }
 
 dependencies {
+
+    // Google Calendar API (services.calendar.*)
+    implementation 'com.google.apis:google-api-services-calendar:v3-rev20251207-2.0.0'
+
+    // Google API Client (GoogleNetHttpTransport 등)
+    implementation 'com.google.api-client:google-api-client:2.6.0'
+
+    // JacksonFactory (jackson2.JacksonFactory)
+    implementation 'com.google.http-client:google-http-client-jackson2:1.44.2'
+
+    // Service Account Credentials (com.google.auth.*)
+    implementation 'com.google.auth:google-auth-library-oauth2-http:1.23.0'
+
     // springboot starter
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
