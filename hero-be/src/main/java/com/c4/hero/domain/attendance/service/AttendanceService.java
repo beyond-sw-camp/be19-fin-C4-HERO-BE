@@ -6,6 +6,7 @@ import com.c4.hero.common.response.PageResponse;
 import com.c4.hero.domain.attendance.dto.*;
 import com.c4.hero.domain.attendance.mapper.AttendanceMapper;
 import com.c4.hero.domain.attendance.repository.AttendanceDashboardRepository;
+import com.c4.hero.domain.attendance.repository.AttendanceDashboardSummaryRepository;
 import com.c4.hero.domain.attendance.repository.DeptWorkSystemRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.time.YearMonth;
 
 /**
  * <pre>
@@ -42,6 +44,7 @@ public class AttendanceService {
     /** 근태 점수 대시보드 조회용 JPA 레포지토리 */
     private final AttendanceDashboardRepository attendanceDashboardRepository;
 
+    private final AttendanceDashboardSummaryRepository  attendanceDashboardSummaryRepository;
     /**
      * 요약 카드용 기본 기간(이번 달 1일~오늘)을 계산한다
      *
@@ -80,6 +83,25 @@ public class AttendanceService {
                 (endDate != null) ? endDate : defaultEnd;     // yyyy-MM-dd
 
         return new DateRange(finalStartDate, finalEndDate);
+    }
+
+    private DateRange resolveDashboardMonth(String month) {
+        YearMonth ym = (month != null && !month.isBlank())
+                ? YearMonth.parse(month)   // "2025-12"
+                : YearMonth.now();
+
+        LocalDate start = ym.atDay(1);
+        LocalDate end = ym.atEndOfMonth();
+
+        // 현재 월이면 미래 날짜 제외(오늘까지)
+        if (ym.equals(YearMonth.now())) {
+            LocalDate today = LocalDate.now();
+            if (end.isAfter(today)) {
+                end = today;
+            }
+        }
+
+        return new DateRange(start, end);
     }
 
     /**
@@ -341,33 +363,28 @@ public class AttendanceService {
      * - startDate / endDate가 null이면 오늘 날짜로 보정
      *
      * @param departmentId 부서 ID (null이면 전체)
-     * @param startDate    조회 시작일
-     * @param endDate      조회 종료일
+     * @param month        필터링 달
+     * @param scoreSort    오름차순/내림차순
      * @param page         요청 페이지 번호 (1부터 시작)
      * @param size         페이지 크기
      * @return 근태 점수 대시보드 페이지 응답
      */
     public PageResponse<AttendanceDashboardDTO>  getAttendanceDashboardList(
             Integer departmentId,
-            LocalDate startDate,
-            LocalDate endDate,
+            String month,
+            String scoreSort,
             int page,
             int size
     ){
-        // 1. 날짜 보정 (null 이면 오늘 날짜 사용, start > end 이면 스왑)
-        LocalDate today = LocalDate.now();
-        LocalDate defaultStart = today.withDayOfMonth(1);
+        // 1. 월 -> 기간 변환
+        DateRange range = resolveDashboardMonth(month);
+        LocalDate finalStart = range.startDate();
+        LocalDate finalEnd = range.endDate();
 
-        LocalDate finalStart = (startDate != null) ? startDate : defaultStart;
-        LocalDate finalEnd = (endDate != null) ? endDate : today;
+        // 2. scoreSort 기본값 보정
+        String finalSort = (scoreSort == null || scoreSort.isBlank() ? "DESC" : scoreSort);
 
-        if (finalStart.isAfter(finalEnd)) {
-            LocalDate tmp = finalStart;
-            finalStart = finalEnd;
-            finalEnd = tmp;
-        }
-
-        // 2) Pageable 생성 (요청 page는 1-based로 들어온다고 가정)
+        // 3) Pageable 생성
         int pageIndex = Math.max(page - 1, 0);
         Pageable pageable = PageRequest.of(pageIndex, size);
 
@@ -377,6 +394,7 @@ public class AttendanceService {
                         departmentId,
                         finalStart,
                         finalEnd,
+                        finalSort,
                         pageable
                 );
 
@@ -389,4 +407,25 @@ public class AttendanceService {
         );
     }
 
+    public AttendanceDashboardSummaryDTO getAttendanceDashboardSummary(
+            Integer departmentId,
+            String month   // ✅ "YYYY-MM"
+    ) {
+        // 1) total은 월 무관 (부서만 반영)
+        long total = attendanceDashboardSummaryRepository.countTotalEmployees(departmentId);
+
+        // 2) 우수/위험은 월 기준
+        DateRange range = resolveDashboardMonth(month);
+        LocalDate startDate = range.startDate();
+        LocalDate endDate = range.endDate();
+
+        long excellent = attendanceDashboardSummaryRepository.countExcellentEmployees(
+                departmentId, startDate, endDate
+        );
+        long risky = attendanceDashboardSummaryRepository.countRiskyEmployees(
+                departmentId, startDate, endDate
+        );
+
+        return new AttendanceDashboardSummaryDTO(total, excellent, risky);
+    }
 }

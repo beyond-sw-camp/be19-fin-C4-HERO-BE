@@ -2,6 +2,7 @@ package com.c4.hero.domain.attendance.controller;
 
 import com.c4.hero.common.response.PageResponse;
 import com.c4.hero.domain.attendance.dto.AttendanceDashboardDTO;
+import com.c4.hero.domain.attendance.dto.AttendanceDashboardSummaryDTO;
 import com.c4.hero.domain.attendance.dto.ChangeLogDTO;
 import com.c4.hero.domain.attendance.dto.CorrectionDTO;
 import com.c4.hero.domain.attendance.dto.DeptWorkSystemDTO;
@@ -178,19 +179,25 @@ public class AttendanceController {
     @GetMapping("/dashboard")
     public PageResponse<AttendanceDashboardDTO> getAttendanceDashboardList(
             @RequestParam(name = "departmentId", required = false) Integer departmentId,
-            @RequestParam(name = "startDate", required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(name = "endDate", required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(name = "month", required = false) String month,
+            @RequestParam(name = "scoreSort", required = false, defaultValue = "DESC") String scoreSort,
             @RequestParam(name = "page", defaultValue = "1") int page,
             @RequestParam(name = "size", defaultValue = "10") int size
     ) {
         return attendanceService.getAttendanceDashboardList(
                 departmentId,
-                startDate,
-                endDate,
+                month,
+                scoreSort,
                 page,
                 size
         );
+    }
+
+    @GetMapping("/dashboard/summary")
+    public AttendanceDashboardSummaryDTO getAttendanceDashboardSummary(
+            @RequestParam(name = "departmentId", required = false) Integer departmentId,
+            @RequestParam(name = "month", required = false) String month // "YYYY-MM"
+    ) {
+        return attendanceService.getAttendanceDashboardSummary(departmentId, month);
     }
 }

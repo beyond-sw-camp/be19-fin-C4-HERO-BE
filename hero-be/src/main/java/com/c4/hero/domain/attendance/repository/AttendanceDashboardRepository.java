@@ -39,7 +39,7 @@ public interface AttendanceDashboardRepository extends JpaRepository<Attendance,
      *
      * <p>조회 조건</p>
      * <ul>
-     *     <li>{@code startDate} ~ {@code endDate} 기간의 근태 이력을 기준으로 집계</li>
+     *     <li>month 기간의 근태 이력을 기준으로 집계</li>
      *     <li>{@code departmentId}가 null이면 전체 부서, 값이 있으면 해당 부서만 대상</li>
      *     <li>직원별로 지각 횟수, 결근 횟수, 계산된 점수를 함께 반환</li>
      * </ul>
@@ -76,18 +76,31 @@ public interface AttendanceDashboardRepository extends JpaRepository<Attendance,
             e.employeeName,
             d.departmentId,
             d.departmentName
-        """,
-            countQuery = """
-        select count(e.employeeId)
-        from Employee e
-            join e.employeeDepartment d
-        where (:departmentId is null or d.departmentId = :departmentId)
-        """
+        order by
+            case when :scoreSort = 'ASC' then (
+                    100L
+                      - coalesce(sum(case when a.state = '지각' then 1L else 0L end), 0L)
+                      - coalesce(sum(case when a.state = '결근' then 1L else 0L end), 0L) * 2L  
+                    ) end asc,
+                    case when :scoreSort = 'DESC' then(
+                    100L
+                      - coalesce(sum(case when a.state = '지각' then 1L else 0L end), 0L)
+                      - coalesce(sum(case when a.state = '결근' then 1L else 0L end), 0L) * 2L  
+                    ) end desc,
+                    e.employeeId asc
+                """,
+                    countQuery = """
+                select count(e.employeeId)
+                from Employee e
+                    join e.employeeDepartment d
+                where (:departmentId is null or d.departmentId = :departmentId)
+                """
     )
     Page<AttendanceDashboardDTO> findAttendanceDashboard(
             @Param("departmentId") Integer departmentId,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate,
+            @Param("scoreSort") String scoreSort,
             Pageable pageable
     );
 }
