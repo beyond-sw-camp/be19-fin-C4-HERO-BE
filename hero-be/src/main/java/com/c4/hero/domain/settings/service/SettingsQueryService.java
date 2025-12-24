@@ -1,11 +1,7 @@
 package com.c4.hero.domain.settings.service;
 
-import com.c4.hero.common.exception.BusinessException;
-import com.c4.hero.common.exception.ErrorCode;
 import com.c4.hero.common.response.PageResponse;
-import com.c4.hero.domain.approval.entity.ApprovalFormTemplate;
 import com.c4.hero.domain.approval.repository.ApprovalTemplateRepository;
-import com.c4.hero.domain.department.entity.Department;
 import com.c4.hero.domain.employee.entity.Employee;
 import com.c4.hero.domain.employee.entity.Grade;
 import com.c4.hero.domain.employee.entity.JobTitle;
@@ -14,6 +10,7 @@ import com.c4.hero.domain.employee.repository.EmployeeGradeRepository;
 import com.c4.hero.domain.employee.repository.EmployeeJobTitleRepository;
 import com.c4.hero.domain.employee.repository.EmployeeRepository;
 import com.c4.hero.domain.employee.repository.EmployeeRoleRepository;
+import com.c4.hero.domain.notification.service.WebSocketSessionManager;
 import com.c4.hero.domain.settings.dto.SettingsDefaultLineDTO;
 import com.c4.hero.domain.settings.dto.SettingsDefaultRefDTO;
 import com.c4.hero.domain.settings.dto.response.DepartmentResponseDTO;
@@ -21,7 +18,10 @@ import com.c4.hero.domain.settings.dto.response.SettingsApprovalResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsDepartmentManagerDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsDepartmentResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsDocumentTemplateResponseDTO;
+import com.c4.hero.domain.settings.dto.response.SettingsNotificationHistoryResponseDTO;
+import com.c4.hero.domain.settings.dto.response.SettingsNotificationStatisticsResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsPermissionsResponseDTO;
+import com.c4.hero.domain.settings.dto.response.SettingsWebSocketHealthResponseDTO;
 import com.c4.hero.domain.settings.entity.SettingsApprovalLine;
 import com.c4.hero.domain.settings.entity.SettingsApprovalRef;
 import com.c4.hero.domain.settings.entity.SettingsDepartment;
@@ -34,6 +34,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -51,32 +52,33 @@ import java.util.stream.Collectors;
  * 2025/12/16 (승건) 최초 작성
  * 2025/12/19 (민철) 설정 페이지 내 서식목록 조회 api
  * 2025/12/21 (민철) 서식별 기본 설정 조회 api
+ * 2025/12/22 (혜원) 알림 관련 조회 기능 추가
  * </pre>
  *
  * @author 승건
- * @version 1.0
+ * @version 2.0
  */
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class SettingsQueryService {
 
-
-    private final SettingsApprovalLineRepository settingsApprovalLineRepository;
-    private final SettingsApprovalRefRepository settingsApprovalRefRepository;
-    private final ApprovalTemplateRepository approvalTemplateRepository;
-	private final SettingsDepartmentRepository departmentRepository;
 	private final EmployeeRepository employeeRepository;
 	private final EmployeeGradeRepository gradeRepository;
 	private final EmployeeJobTitleRepository jobTitleRepository;
 	private final EmployeeRoleRepository roleRepository;
+    private final SettingsApprovalLineRepository settingsApprovalLineRepository;
+    private final SettingsApprovalRefRepository settingsApprovalRefRepository;
+    private final ApprovalTemplateRepository approvalTemplateRepository;
+    private final SettingsDepartmentRepository departmentRepository;
 
 	private static final int ADMIN_DEPARTMENT_ID = 0;
 	private static final int TEMP_DEPARTMENT_ID = -1;
 
 	private final SettingsMapper settingsMapper;
+    private final WebSocketSessionManager webSocketSessionManager;
 
-    /**
+	/**
 	 * 부서 트리 구조 조회
 	 *
 	 * @return 부서 트리 목록
@@ -199,27 +201,26 @@ public class SettingsQueryService {
 		return settingsMapper.selectPolicy();
 	}
 
-	/**
-	 * 사원 권한 목록 조회 (페이징)
-	 *
-	 * @param pageable 페이징 정보
-	 * @param query    검색어
-	 * @return 사원 권한 목록 페이지 응답
-	 */
-	public PageResponse<SettingsPermissionsResponseDTO> getEmployeePermissions(Pageable pageable, String query) {
-		Map<String, Object> params = new HashMap<>();
-		params.put("query", query);
+    /**
+     * 사원 권한 목록 조회 (페이징)
+     *
+     * @param pageable 페이징 정보
+     * @param query    검색어
+     * @return 사원 권한 목록 페이지 응답
+     */
+    public PageResponse<SettingsPermissionsResponseDTO> getEmployeePermissions(Pageable pageable, String query) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("query", query);
 
-		List<SettingsPermissionsResponseDTO> content = settingsMapper.findEmployeePermissions(params, pageable);
-		int total = settingsMapper.countEmployeePermissions(params);
+        List<SettingsPermissionsResponseDTO> content = settingsMapper.findEmployeePermissions(params, pageable);
+        int total = settingsMapper.countEmployeePermissions(params);
 
-		return PageResponse.of(content, pageable.getPageNumber(), pageable.getPageSize(), total);
-	}
+        return PageResponse.of(content, pageable.getPageNumber(), pageable.getPageSize(), total);
+    }
 
     /**
      * 문서 서식 목록
      *
-     * @param
      * @return List<SettingsDocumentTemplateResponseDTO>
      */
     public List<SettingsDocumentTemplateResponseDTO> getTemplates() {
@@ -227,7 +228,7 @@ public class SettingsQueryService {
         List<SettingsDocumentTemplateResponseDTO> list =
                 approvalTemplateRepository.findByTemplateWithStepsCount();
 
-       return list;
+        return list;
     }
 
     /**
@@ -278,4 +279,78 @@ public class SettingsQueryService {
         return departmentListDTOs;
     }
 
+
+    /**
+     * 알림 발송 이력 조회
+     *
+     * @param pageable  페이징 정보
+     * @param startDate 조회 시작일
+     * @param endDate   조회 종료일
+     * @param type      알림 타입
+     * @return 알림 발송 이력 페이지 응답
+     */
+    public PageResponse<SettingsNotificationHistoryResponseDTO> getNotificationHistory(
+            Pageable pageable,
+            String startDate,
+            String endDate,
+            String type) {
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("startDate", startDate);
+        params.put("endDate", endDate);
+        params.put("type", type);
+
+        List<SettingsNotificationHistoryResponseDTO> content = settingsMapper.findNotificationHistory(params, pageable);
+        int total = settingsMapper.countNotificationHistory(params);
+
+        return PageResponse.of(content, pageable.getPageNumber(), pageable.getPageSize(), total);
+    }
+
+    /**
+     * 알림 발송 통계 조회
+     *
+     * @return 알림 발송 통계 DTO
+     */
+    public SettingsNotificationStatisticsResponseDTO getNotificationStatistics() {
+        SettingsNotificationStatisticsResponseDTO statistics = settingsMapper.selectNotificationStatistics();
+
+        if (statistics == null) {
+            statistics = new SettingsNotificationStatisticsResponseDTO();
+            statistics.setTodayCount(0);
+            statistics.setWeekCount(0);
+            statistics.setMonthCount(0);
+            statistics.setTotalCount(0);
+            statistics.setAverageSuccessRate(0.0);
+        }
+
+        statistics.setActiveConnections(webSocketSessionManager.getActiveConnectionCount());
+        return statistics;
+    }
+
+    /**
+     * WebSocket 연결 상태 Health Check
+     *
+     * @return WebSocket 연결 상태 DTO
+     */
+    public SettingsWebSocketHealthResponseDTO checkWebSocketHealth() {
+        // WebSocket 세션 정보 조회
+        List<SettingsWebSocketHealthResponseDTO.WebSocketSessionInfo> sessions =
+                webSocketSessionManager.getAllSessions().stream()
+                        .map(session -> SettingsWebSocketHealthResponseDTO.WebSocketSessionInfo.builder()
+                                .sessionId(session.getSessionId())
+                                .employeeId(session.getEmployeeId())
+                                .employeeName(session.getEmployeeName())
+                                .connectedAt(session.getConnectedAt())
+                                .build())
+                        .collect(Collectors.toList());
+
+        return SettingsWebSocketHealthResponseDTO.builder()
+                .status("UP")
+                .activeConnections(sessions.size())
+                .maxConnections(1000) // 설정값
+                .averageResponseTime(webSocketSessionManager.getAverageResponseTime())
+                .lastCheckTime(LocalDateTime.now())
+                .sessions(sessions)
+                .build();
+    }
 }

@@ -23,7 +23,7 @@ import java.time.LocalDate;
  * 부서별 근무제/근태 현황 조회와 같이 JPA로 처리 가능한 조회 로직을 제공합니다.
  *
  * @author 이지윤
- * @version 1.0
+ * @version 1.1
  */
 public interface DeptWorkSystemRepository extends JpaRepository<Attendance, Integer> {
 
@@ -51,7 +51,7 @@ public interface DeptWorkSystemRepository extends JpaRepository<Attendance, Inte
                     a.state,
                     jt.jobTitle,
                     wst.workSystemName,
-                    tmpl.startTime,
+                    tmpl.startTime ,
                     tmpl.endTime
                 )
                 from Attendance a
@@ -63,6 +63,7 @@ public interface DeptWorkSystemRepository extends JpaRepository<Attendance, Inte
                         on tmpl.workSystemType = wst
                 where a.workDate = :workDate
                   and d.departmentId = :departmentId
+                  and e.employeeId <> :employeeId
                 order by e.employeeName asc
                 """,
             countQuery = """
@@ -72,9 +73,12 @@ public interface DeptWorkSystemRepository extends JpaRepository<Attendance, Inte
                     join e.employeeDepartment d
                 where a.workDate = :workDate
                   and d.departmentId = :departmentId
+                  and e.employeeId <> :employeeId
                 """
     )
     Page<DeptWorkSystemDTO> findDeptWorkSystemRows(
+
+            @Param("employeeId") Integer employeeId,
             @Param("departmentId") Integer departmentId,
             @Param("workDate") LocalDate workDate,
             Pageable pageable

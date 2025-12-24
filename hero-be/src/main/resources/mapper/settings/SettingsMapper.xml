@@ -94,4 +94,63 @@
         </where>
     </select>
 
+    <!-- 알림 -->
+    <!-- 알림 발송 이력 조회 -->
+    <select id="findNotificationHistory" resultType="com.c4.hero.domain.settings.dto.response.SettingsNotificationHistoryResponseDTO">
+        SELECT
+        nh.history_id AS historyId,
+        nh.title,
+        nh.message,
+        nh.type,
+        nh.scope,
+        nh.target_count AS targetCount,
+        nh.success_count AS successCount,
+        nh.failure_count AS failureCount,
+        e.employee_name AS senderName,
+        nh.sent_at AS sentAt
+        FROM tbl_notification_history nh
+        LEFT JOIN tbl_employee e ON nh.sender_id = e.employee_id
+        <where>
+            <if test="params.startDate != null and params.startDate != ''">
+                AND DATE(nh.sent_at) >= #{params.startDate}
+            </if>
+            <if test="params.endDate != null and params.endDate != ''">
+                AND DATE(nh.sent_at) &lt;= #{params.endDate}
+            </if>
+            <if test="params.type != null and params.type != ''">
+                AND nh.type = #{params.type}
+            </if>
+        </where>
+        ORDER BY nh.sent_at DESC
+        LIMIT #{pageable.offset}, #{pageable.pageSize}
+    </select>
+
+    <!-- 알림 발송 이력 총 개수 -->
+    <select id="countNotificationHistory" resultType="int">
+        SELECT COUNT(*)
+        FROM tbl_notification_history nh
+        <where>
+            <if test="params.startDate != null and params.startDate != ''">
+                AND DATE(nh.sent_at) >= #{params.startDate}
+            </if>
+            <if test="params.endDate != null and params.endDate != ''">
+                AND DATE(nh.sent_at) &lt;= #{params.endDate}
+            </if>
+            <if test="params.type != null and params.type != ''">
+                AND nh.type = #{params.type}
+            </if>
+        </where>
+    </select>
+
+    <!-- 알림 발송 통계 조회 -->
+    <select id="selectNotificationStatistics" resultType="com.c4.hero.domain.settings.dto.response.SettingsNotificationStatisticsResponseDTO">
+        SELECT
+            COALESCE(SUM(CASE WHEN DATE(sent_at) = CURDATE() THEN 1 ELSE 0 END), 0) AS todayCount,
+            COALESCE(SUM(CASE WHEN YEARWEEK(sent_at, 1) = YEARWEEK(CURDATE(), 1) THEN 1 ELSE 0 END), 0) AS weekCount,
+            COALESCE(SUM(CASE WHEN YEAR(sent_at) = YEAR(CURDATE()) AND MONTH(sent_at) = MONTH(CURDATE()) THEN 1 ELSE 0 END), 0) AS monthCount,
+            COUNT(*) AS totalCount,
+            COALESCE(AVG(CASE WHEN target_count > 0 THEN (success_count * 100.0 / target_count) ELSE 0 END), 0) AS averageSuccessRate
+        FROM tbl_notification_history
+    </select>
+
 </mapper>

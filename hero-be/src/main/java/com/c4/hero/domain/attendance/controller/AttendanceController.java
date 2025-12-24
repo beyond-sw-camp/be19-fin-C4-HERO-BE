@@ -77,8 +77,8 @@ public class AttendanceController {
     @GetMapping("/personal/summary")
     public AttSummaryDTO getPersonalSummary(
             HttpServletRequest request,
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate
     ) {
         Integer employeeId = getEmployeeIdFromToken(request);
 
@@ -100,8 +100,8 @@ public class AttendanceController {
             HttpServletRequest request,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate
     ) {
         Integer employeeId = getEmployeeIdFromToken(request);
 
@@ -114,8 +114,8 @@ public class AttendanceController {
             HttpServletRequest request,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate
     ){
         Integer employeeId = getEmployeeIdFromToken(request);
 
@@ -127,21 +127,21 @@ public class AttendanceController {
             HttpServletRequest request,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate
     ){
         Integer employeeId = getEmployeeIdFromToken(request);
 
         return attendanceService.getCorrectionList(employeeId, page, size, startDate, endDate);
     }
 
-    @GetMapping("/changeLog")
+    @GetMapping("/changelog")
     public PageResponse<ChangeLogDTO> getChangeLogList(
             HttpServletRequest request,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate
+            @RequestParam(required = false) LocalDate startDate,
+            @RequestParam(required = false) LocalDate endDate
     ){
         Integer employeeId = getEmployeeIdFromToken(request);
 
@@ -158,8 +158,9 @@ public class AttendanceController {
      * @return PageResponse<DeptWorkSystemRowDTO>
      */
 
-    @GetMapping("/DeptWorkSystem")
+    @GetMapping("/deptworksystem")
     public PageResponse<DeptWorkSystemDTO> getDeptWorkSystemList(
+            HttpServletRequest request,
             @RequestParam Integer departmentId,
             @RequestParam
             @DateTimeFormat(iso= DateTimeFormat.ISO.DATE)
@@ -167,8 +168,10 @@ public class AttendanceController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ){
+        Integer employeeId = getEmployeeIdFromToken(request);
+
         return attendanceService.getDeptWorkSystemList(
-                departmentId, workDate, page, size
+                employeeId, departmentId, workDate, page, size
         );
     }
 

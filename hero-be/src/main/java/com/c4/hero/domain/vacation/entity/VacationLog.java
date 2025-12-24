@@ -4,6 +4,8 @@ import com.c4.hero.domain.employee.entity.Employee;
 import com.c4.hero.domain.vacation.type.VacationStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -14,7 +16,10 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import java.time.LocalDateTime;
+import lombok.Setter;
+
+import java.time.LocalDate;
+
 
 /**
  * <pre>
@@ -35,19 +40,20 @@ import java.time.LocalDateTime;
 @Table(name = "tbl_vacation_log")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
+@Setter
 public class VacationLog {
 
     /** 휴가 이력 PK (식별자) */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "vacation_log_id")
-    private int vacationLogId;
+    private Integer vacationLogId;
 
     /** 휴가 시작일 (yyyy-MM-dd) */
-    private LocalDateTime startDate;
+    private LocalDate startDate;
 
     /** 휴가 종료일 (yyyy-MM-dd) */
-    private LocalDateTime endDate;
+    private LocalDate endDate;
 
     /** 휴가 유형 정보 (예: 연차, 반차, 병가 등) */
     @ManyToOne(fetch = FetchType.LAZY)
@@ -58,6 +64,7 @@ public class VacationLog {
     private String reason;
 
     /** 휴가 결재 상태 (예: PENDING, APPROVED, REJECTED 등) */
+    @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private VacationStatus approvalStatus;
 
@@ -66,4 +73,6 @@ public class VacationLog {
     @JoinColumn(name = "employee_id")
     private Employee employee;
 
+    @Column(name = "google_event_id")
+    private String googleEventId;
 }

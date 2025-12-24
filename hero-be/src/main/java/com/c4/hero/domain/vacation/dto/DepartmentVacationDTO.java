@@ -3,8 +3,8 @@ package com.c4.hero.domain.vacation.dto;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import java.time.LocalDate;
 
-import java.time.LocalDateTime;
 
 /**
  * <pre>
@@ -39,8 +39,8 @@ public class DepartmentVacationDTO {
     private String vacationTypeName;
 
     /** 휴가 시작 일시 (캘린더/타임라인 표시용) */
-    private LocalDateTime startDate;
+    private LocalDate startDate;
 
     /** 휴가 종료 일시 (캘린더/타임라인 표시용) */
-    private LocalDateTime endDate;
+    private LocalDate endDate;
 }

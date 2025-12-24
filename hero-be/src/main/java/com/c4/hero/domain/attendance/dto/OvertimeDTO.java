@@ -5,6 +5,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+
 /**
  * <pre>
  * Class Name: OvertimeDTO
@@ -27,13 +30,13 @@ public class OvertimeDTO {
     private Integer overtimeId;
 
     /** 초과 근무 일자 (yyyy-MM-dd) */
-    private String date;
+    private LocalDate date;
 
     /** 초과 근무 시작 시간 (HH:mm 또는 HH:mm:ss) */
-    private String startTime;
+    private LocalTime startTime;
 
     /** 초과 근무 종료 시간 (HH:mm 또는 HH:mm:ss) */
-    private String endTime;
+    private LocalTime endTime;
 
     /** 초과 근무 시간(단위: 시간, 예: 1.5 = 1시간 30분) */
     private float overtimeHours;
