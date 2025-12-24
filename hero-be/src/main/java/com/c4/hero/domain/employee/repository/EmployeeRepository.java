@@ -97,8 +97,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, Integer> {
      */
     @Query("SELECT DISTINCT e FROM Employee e " +
            "WHERE (:departmentIds IS NULL OR e.employeeDepartment.departmentId IN :departmentIds) " +
-           "OR (:gradeIds IS NULL OR e.grade.gradeId IN :gradeIds) " +
-           "OR (:jobTitleIds IS NULL OR e.jobTitle.jobTitleId IN :jobTitleIds)")
+           "AND (:gradeIds IS NULL OR e.grade.gradeId IN :gradeIds) " +
+           "AND (:jobTitleIds IS NULL OR e.jobTitle.jobTitleId IN :jobTitleIds)")
     List<Employee> findEmployeesByGroupConditions(
             @Param("departmentIds") List<Integer> departmentIds,
             @Param("gradeIds") List<Integer> gradeIds,
