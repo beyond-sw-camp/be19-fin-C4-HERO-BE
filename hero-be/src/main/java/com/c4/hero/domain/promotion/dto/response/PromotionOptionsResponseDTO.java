@@ -29,7 +29,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class PromotionOptionsDTO {
+public class PromotionOptionsResponseDTO {
     private List<PromotionDepartmentDTO> promotionDepartmentDTOList;
     private List<PromotionGradeDTO> promotionGradeDTOList;
 }
