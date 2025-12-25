@@ -2,9 +2,12 @@ package com.c4.hero.domain.settings.controller;
 
 import com.c4.hero.common.response.CustomResponse;
 import com.c4.hero.common.response.PageResponse;
+import com.c4.hero.domain.employee.entity.Employee;
 import com.c4.hero.domain.employee.entity.Grade;
 import com.c4.hero.domain.employee.entity.JobTitle;
 import com.c4.hero.domain.employee.entity.Role;
+import com.c4.hero.domain.notification.dto.NotificationRegistDTO;
+import com.c4.hero.domain.notification.service.NotificationCommandService;
 import com.c4.hero.domain.settings.dto.response.DepartmentResponseDTO;
 import com.c4.hero.domain.settings.dto.request.*;
 import com.c4.hero.domain.settings.dto.response.*;
@@ -14,11 +17,14 @@ import com.c4.hero.domain.settings.dto.response.SettingsDepartmentResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsDocumentTemplateResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsPermissionsResponseDTO;
 import com.c4.hero.domain.settings.service.SettingsCommandService;
+import com.c4.hero.domain.settings.service.SettingsNotificationCommandService;
+import com.c4.hero.domain.settings.service.SettingsNotificationQueryService;
 import com.c4.hero.domain.settings.service.SettingsQueryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,6 +46,7 @@ import java.util.List;
  * 2025/12/18 (민철) 결재선 설정을 위한 컨트롤러 메서드 작성
  * 2025/12/21 (민철) 결재 관리 관련 기능 조회 api
  * 2025/12/22 (혜원) 관리자 알림 발송 및 관리 기능 추가
+ * 2025/12/24 (혜원) 서비스 파일명 변경으로 인하여 수정
  * </pre>
  *
  * @author 승건
@@ -49,12 +56,16 @@ import java.util.List;
 @RequestMapping("/api/settings")
 @RequiredArgsConstructor
 @Slf4j
+@PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'HR_MANAGER')")
 public class SettingsController {
 
 	private final SettingsCommandService settingsCommandService;
 	private final SettingsQueryService settingsQueryService;
+    private final NotificationCommandService notificationCommandService;
+    private final SettingsNotificationCommandService settingsNotificationCommandService;
+    private final SettingsNotificationQueryService settingsNotificationQueryService; // 추가
 
-	/**
+    /**
 	 * 부서 목록 조회 (트리 구조)
 	 *
 	 * @return 부서 트리 구조 목록
@@ -243,6 +254,7 @@ public class SettingsController {
         return ResponseEntity.ok().build();
     }
 
+
     /**
      * 전체 직원 대상 알림 발송
      *
@@ -252,7 +264,7 @@ public class SettingsController {
     @PostMapping("/notifications/broadcast")
     public ResponseEntity<CustomResponse<String>> broadcastNotification(
             @RequestBody SettingsNotificationBroadcastRequestDTO request) {
-        settingsCommandService.broadcastNotification(request);
+        settingsNotificationCommandService.broadcastNotification(request);
         return ResponseEntity.ok(CustomResponse.success("Broadcast notification sent successfully"));
     }
 
@@ -265,7 +277,7 @@ public class SettingsController {
     @PostMapping("/notifications/group")
     public ResponseEntity<CustomResponse<String>> sendGroupNotification(
             @RequestBody SettingsNotificationGroupRequestDTO request) {
-        settingsCommandService.sendGroupNotification(request);
+        settingsNotificationCommandService.sendGroupNotification(request);
         return ResponseEntity.ok(CustomResponse.success("Group notification sent successfully"));
     }
 
@@ -278,17 +290,41 @@ public class SettingsController {
     @PostMapping("/notifications/individual")
     public ResponseEntity<CustomResponse<String>> sendIndividualNotification(
             @RequestBody SettingsNotificationIndividualRequestDTO request) {
-        settingsCommandService.sendIndividualNotification(request);
+        settingsNotificationCommandService.sendIndividualNotification(request);
         return ResponseEntity.ok(CustomResponse.success("Individual notification sent successfully"));
+    }
+
+    /**
+     * 알림 발송 공통 로직 (Controller에서 직접 처리)
+     */
+    private int sendNotifications(List<Employee> employees, String title, String message, String type, String link) {
+        int successCount = 0;
+        for (Employee employee : employees) {
+            try {
+                NotificationRegistDTO registDTO = NotificationRegistDTO.builder()
+                        .employeeId(employee.getEmployeeId())
+                        .type(type)
+                        .title(title)
+                        .message(message)
+                        .link(link)
+                        .build();
+                if (notificationCommandService.registAndSendNotification(registDTO) != null) {
+                    successCount++;
+                }
+            } catch (Exception e) {
+                log.error("Failed to send notification to employee {}: {}", employee.getEmployeeId(), e.getMessage());
+            }
+        }
+        return successCount;
     }
 
     /**
      * 알림 발송 이력 조회
      *
-     * @param pageable 페이징 정보
+     * @param pageable  페이징 정보
      * @param startDate 조회 시작일 (optional)
-     * @param endDate 조회 종료일 (optional)
-     * @param type 알림 타입 (optional)
+     * @param endDate   조회 종료일 (optional)
+     * @param type      알림 타입 (optional)
      * @return 발송 이력 목록
      */
     @GetMapping("/notifications/history")
@@ -297,8 +333,10 @@ public class SettingsController {
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate,
             @RequestParam(required = false) String type) {
+
         PageResponse<SettingsNotificationHistoryResponseDTO> history =
-                settingsQueryService.getNotificationHistory(pageable, startDate, endDate, type);
+                settingsNotificationQueryService.getNotificationHistory(pageable, startDate, endDate, type);
+
         return ResponseEntity.ok(CustomResponse.success(history));
     }
 
@@ -309,7 +347,9 @@ public class SettingsController {
      */
     @GetMapping("/notifications/statistics")
     public ResponseEntity<CustomResponse<SettingsNotificationStatisticsResponseDTO>> getNotificationStatistics() {
-        SettingsNotificationStatisticsResponseDTO statistics = settingsQueryService.getNotificationStatistics();
+        SettingsNotificationStatisticsResponseDTO statistics =
+                settingsNotificationQueryService.getNotificationStatistics();
+
         return ResponseEntity.ok(CustomResponse.success(statistics));
     }
 
@@ -320,7 +360,9 @@ public class SettingsController {
      */
     @GetMapping("/notifications/health")
     public ResponseEntity<CustomResponse<SettingsWebSocketHealthResponseDTO>> checkWebSocketHealth() {
-        SettingsWebSocketHealthResponseDTO health = settingsQueryService.checkWebSocketHealth();
+        SettingsWebSocketHealthResponseDTO health =
+                settingsNotificationQueryService.checkWebSocketHealth();
+
         return ResponseEntity.ok(CustomResponse.success(health));
     }
 }

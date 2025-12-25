@@ -10,7 +10,6 @@ import com.c4.hero.domain.employee.repository.EmployeeGradeRepository;
 import com.c4.hero.domain.employee.repository.EmployeeJobTitleRepository;
 import com.c4.hero.domain.employee.repository.EmployeeRepository;
 import com.c4.hero.domain.employee.repository.EmployeeRoleRepository;
-import com.c4.hero.domain.notification.service.WebSocketSessionManager;
 import com.c4.hero.domain.settings.dto.SettingsDefaultLineDTO;
 import com.c4.hero.domain.settings.dto.SettingsDefaultRefDTO;
 import com.c4.hero.domain.settings.dto.response.DepartmentResponseDTO;
@@ -18,10 +17,7 @@ import com.c4.hero.domain.settings.dto.response.SettingsApprovalResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsDepartmentManagerDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsDepartmentResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsDocumentTemplateResponseDTO;
-import com.c4.hero.domain.settings.dto.response.SettingsNotificationHistoryResponseDTO;
-import com.c4.hero.domain.settings.dto.response.SettingsNotificationStatisticsResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsPermissionsResponseDTO;
-import com.c4.hero.domain.settings.dto.response.SettingsWebSocketHealthResponseDTO;
 import com.c4.hero.domain.settings.entity.SettingsApprovalLine;
 import com.c4.hero.domain.settings.entity.SettingsApprovalRef;
 import com.c4.hero.domain.settings.entity.SettingsDepartment;
@@ -53,6 +49,7 @@ import java.util.stream.Collectors;
  * 2025/12/19 (민철) 설정 페이지 내 서식목록 조회 api
  * 2025/12/21 (민철) 서식별 기본 설정 조회 api
  * 2025/12/22 (혜원) 알림 관련 조회 기능 추가
+ * 2025/12/23 (혜원) 알림 관련 SettingsNotificationQueryService로 분리
  * </pre>
  *
  * @author 승건
@@ -63,143 +60,142 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SettingsQueryService {
 
-	private final EmployeeRepository employeeRepository;
-	private final EmployeeGradeRepository gradeRepository;
-	private final EmployeeJobTitleRepository jobTitleRepository;
-	private final EmployeeRoleRepository roleRepository;
+    private final EmployeeRepository employeeRepository;
+    private final EmployeeGradeRepository gradeRepository;
+    private final EmployeeJobTitleRepository jobTitleRepository;
+    private final EmployeeRoleRepository roleRepository;
     private final SettingsApprovalLineRepository settingsApprovalLineRepository;
     private final SettingsApprovalRefRepository settingsApprovalRefRepository;
     private final ApprovalTemplateRepository approvalTemplateRepository;
     private final SettingsDepartmentRepository departmentRepository;
 
-	private static final int ADMIN_DEPARTMENT_ID = 0;
-	private static final int TEMP_DEPARTMENT_ID = -1;
+    private static final int ADMIN_DEPARTMENT_ID = 0;
+    private static final int TEMP_DEPARTMENT_ID = -1;
 
-	private final SettingsMapper settingsMapper;
-    private final WebSocketSessionManager webSocketSessionManager;
+    private final SettingsMapper settingsMapper;
 
-	/**
-	 * 부서 트리 구조 조회
-	 *
-	 * @return 부서 트리 목록
-	 */
-	public List<SettingsDepartmentResponseDTO> getDepartmentTree() {
-		// 1. 0번과 -1번 부서를 제외한 모든 부서 조회
-		List<Integer> excludedIds = List.of(ADMIN_DEPARTMENT_ID, TEMP_DEPARTMENT_ID);
-		List<SettingsDepartment> flatList = departmentRepository.findAllByDepartmentIdNotIn(excludedIds);
+    /**
+     * 부서 트리 구조 조회
+     *
+     * @return 부서 트리 목록
+     */
+    public List<SettingsDepartmentResponseDTO> getDepartmentTree() {
+        // 1. 0번과 -1번 부서를 제외한 모든 부서 조회
+        List<Integer> excludedIds = List.of(ADMIN_DEPARTMENT_ID, TEMP_DEPARTMENT_ID);
+        List<SettingsDepartment> flatList = departmentRepository.findAllByDepartmentIdNotIn(excludedIds);
 
-		// 2. 모든 매니저 ID 수집 (중복 제거, null 제외)
-		List<Integer> managerIds = flatList.stream()
-				.map(SettingsDepartment::getManagerId)
-				.filter(Objects::nonNull)
-				.distinct()
-				.collect(Collectors.toList());
+        // 2. 모든 매니저 ID 수집 (중복 제거, null 제외)
+        List<Integer> managerIds = flatList.stream()
+                .map(SettingsDepartment::getManagerId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
 
-		// 3. 매니저 정보 한 번에 조회
-		Map<Integer, Employee> managersMap = employeeRepository.findAllById(managerIds).stream()
-				.collect(Collectors.toMap(Employee::getEmployeeId, Function.identity()));
+        // 3. 매니저 정보 한 번에 조회
+        Map<Integer, Employee> managersMap = employeeRepository.findAllById(managerIds).stream()
+                .collect(Collectors.toMap(Employee::getEmployeeId, Function.identity()));
 
-		// 4. 엔티티 리스트를 DTO 리스트로 변환하면서 매니저 정보 주입
-		List<SettingsDepartmentResponseDTO> dtoList = flatList.stream()
-				.map(department -> convertToDto(department, managersMap.get(department.getManagerId())))
-				.collect(Collectors.toList());
+        // 4. 엔티티 리스트를 DTO 리스트로 변환하면서 매니저 정보 주입
+        List<SettingsDepartmentResponseDTO> dtoList = flatList.stream()
+                .map(department -> convertToDto(department, managersMap.get(department.getManagerId())))
+                .collect(Collectors.toList());
 
-		// 5. DTO 리스트를 트리 구조로 변환
-		return buildTree(dtoList);
-	}
+        // 5. DTO 리스트를 트리 구조로 변환
+        return buildTree(dtoList);
+    }
 
-	/**
-	 * 부서 엔티티를 DTO로 변환
-	 *
-	 * @param entity  부서 엔티티
-	 * @param manager 부서장 사원 정보
-	 * @return 부서 응답 DTO
-	 */
-	private SettingsDepartmentResponseDTO convertToDto(SettingsDepartment entity, Employee manager) {
-		SettingsDepartmentManagerDTO managerDTO = null;
-		if (manager != null) {
-			managerDTO = SettingsDepartmentManagerDTO.builder()
-					.employeeId(manager.getEmployeeId())
-					.employeeNumber(manager.getEmployeeNumber())
-					.employeeName(manager.getEmployeeName())
-					.jobTitle(manager.getJobTitle() != null ? manager.getJobTitle().getJobTitle() : null)
-					.grade(manager.getGrade() != null ? manager.getGrade().getGrade() : null)
-					.build();
-		}
+    /**
+     * 부서 엔티티를 DTO로 변환
+     *
+     * @param entity  부서 엔티티
+     * @param manager 부서장 사원 정보
+     * @return 부서 응답 DTO
+     */
+    private SettingsDepartmentResponseDTO convertToDto(SettingsDepartment entity, Employee manager) {
+        SettingsDepartmentManagerDTO managerDTO = null;
+        if (manager != null) {
+            managerDTO = SettingsDepartmentManagerDTO.builder()
+                    .employeeId(manager.getEmployeeId())
+                    .employeeNumber(manager.getEmployeeNumber())
+                    .employeeName(manager.getEmployeeName())
+                    .jobTitle(manager.getJobTitle() != null ? manager.getJobTitle().getJobTitle() : null)
+                    .grade(manager.getGrade() != null ? manager.getGrade().getGrade() : null)
+                    .build();
+        }
 
-		return SettingsDepartmentResponseDTO.builder()
-				.departmentId(entity.getDepartmentId())
-				.departmentName(entity.getDepartmentName())
-				.departmentPhone(entity.getDepartmentPhone())
-				.depth(entity.getDepth())
-				.parentDepartmentId(entity.getParentDepartmentId())
-				.manager(managerDTO)
-				.children(new ArrayList<>()) // children 리스트 초기화
-				.build();
-	}
+        return SettingsDepartmentResponseDTO.builder()
+                .departmentId(entity.getDepartmentId())
+                .departmentName(entity.getDepartmentName())
+                .departmentPhone(entity.getDepartmentPhone())
+                .depth(entity.getDepth())
+                .parentDepartmentId(entity.getParentDepartmentId())
+                .manager(managerDTO)
+                .children(new ArrayList<>()) // children 리스트 초기화
+                .build();
+    }
 
-	/**
-	 * 평면 리스트를 트리 구조로 변환
-	 *
-	 * @param flatList 평면 부서 목록
-	 * @return 트리 구조 부서 목록
-	 */
-	private List<SettingsDepartmentResponseDTO> buildTree(List<SettingsDepartmentResponseDTO> flatList) {
-		Map<Integer, SettingsDepartmentResponseDTO> map = new HashMap<>();
-		for (SettingsDepartmentResponseDTO dto : flatList) {
-			map.put(dto.getDepartmentId(), dto);
-		}
+    /**
+     * 평면 리스트를 트리 구조로 변환
+     *
+     * @param flatList 평면 부서 목록
+     * @return 트리 구조 부서 목록
+     */
+    private List<SettingsDepartmentResponseDTO> buildTree(List<SettingsDepartmentResponseDTO> flatList) {
+        Map<Integer, SettingsDepartmentResponseDTO> map = new HashMap<>();
+        for (SettingsDepartmentResponseDTO dto : flatList) {
+            map.put(dto.getDepartmentId(), dto);
+        }
 
-		List<SettingsDepartmentResponseDTO> tree = new ArrayList<>();
-		for (SettingsDepartmentResponseDTO dto : flatList) {
-			if (dto.getParentDepartmentId() != null) {
-				SettingsDepartmentResponseDTO parent = map.get(dto.getParentDepartmentId());
-				if (parent != null) {
-					parent.getChildren().add(dto);
-				}
-			} else {
-				// 최상위 부서
-				tree.add(dto);
-			}
-		}
-		return tree;
-	}
+        List<SettingsDepartmentResponseDTO> tree = new ArrayList<>();
+        for (SettingsDepartmentResponseDTO dto : flatList) {
+            if (dto.getParentDepartmentId() != null) {
+                SettingsDepartmentResponseDTO parent = map.get(dto.getParentDepartmentId());
+                if (parent != null) {
+                    parent.getChildren().add(dto);
+                }
+            } else {
+                // 최상위 부서
+                tree.add(dto);
+            }
+        }
+        return tree;
+    }
 
-	/**
-	 * 전체 직급 목록 조회
-	 *
-	 * @return 직급 목록
-	 */
-	public List<Grade> getAllGrades() {
-		return gradeRepository.findAll();
-	}
+    /**
+     * 전체 직급 목록 조회
+     *
+     * @return 직급 목록
+     */
+    public List<Grade> getAllGrades() {
+        return gradeRepository.findAll();
+    }
 
-	/**
-	 * 전체 직책 목록 조회
-	 *
-	 * @return 직책 목록
-	 */
-	public List<JobTitle> getAllJobTitles() {
-		return jobTitleRepository.findAll();
-	}
+    /**
+     * 전체 직책 목록 조회
+     *
+     * @return 직책 목록
+     */
+    public List<JobTitle> getAllJobTitles() {
+        return jobTitleRepository.findAll();
+    }
 
-	/**
-	 * 전체 권한 목록 조회
-	 *
-	 * @return 권한 목록
-	 */
-	public List<Role> getAllRoles() {
-		return roleRepository.findAll();
-	}
+    /**
+     * 전체 권한 목록 조회
+     *
+     * @return 권한 목록
+     */
+    public List<Role> getAllRoles() {
+        return roleRepository.findAll();
+    }
 
-	/**
-	 * 로그인 정책 조회
-	 *
-	 * @return 로그인 정책 값
-	 */
-	public Integer getLoginPolicy() {
-		return settingsMapper.selectPolicy();
-	}
+    /**
+     * 로그인 정책 조회
+     *
+     * @return 로그인 정책 값
+     */
+    public Integer getLoginPolicy() {
+        return settingsMapper.selectPolicy();
+    }
 
     /**
      * 사원 권한 목록 조회 (페이징)
@@ -266,7 +262,6 @@ public class SettingsQueryService {
     /**
      * 부서목록 조회
      *
-     * @param
      * @return list 부서목록
      */
     public List<DepartmentResponseDTO> getApprovalDepartments() {
@@ -277,80 +272,5 @@ public class SettingsQueryService {
                         .departmentName(department.getDepartmentName())
                         .build()).collect(Collectors.toList());
         return departmentListDTOs;
-    }
-
-
-    /**
-     * 알림 발송 이력 조회
-     *
-     * @param pageable  페이징 정보
-     * @param startDate 조회 시작일
-     * @param endDate   조회 종료일
-     * @param type      알림 타입
-     * @return 알림 발송 이력 페이지 응답
-     */
-    public PageResponse<SettingsNotificationHistoryResponseDTO> getNotificationHistory(
-            Pageable pageable,
-            String startDate,
-            String endDate,
-            String type) {
-
-        Map<String, Object> params = new HashMap<>();
-        params.put("startDate", startDate);
-        params.put("endDate", endDate);
-        params.put("type", type);
-
-        List<SettingsNotificationHistoryResponseDTO> content = settingsMapper.findNotificationHistory(params, pageable);
-        int total = settingsMapper.countNotificationHistory(params);
-
-        return PageResponse.of(content, pageable.getPageNumber(), pageable.getPageSize(), total);
-    }
-
-    /**
-     * 알림 발송 통계 조회
-     *
-     * @return 알림 발송 통계 DTO
-     */
-    public SettingsNotificationStatisticsResponseDTO getNotificationStatistics() {
-        SettingsNotificationStatisticsResponseDTO statistics = settingsMapper.selectNotificationStatistics();
-
-        if (statistics == null) {
-            statistics = new SettingsNotificationStatisticsResponseDTO();
-            statistics.setTodayCount(0);
-            statistics.setWeekCount(0);
-            statistics.setMonthCount(0);
-            statistics.setTotalCount(0);
-            statistics.setAverageSuccessRate(0.0);
-        }
-
-        statistics.setActiveConnections(webSocketSessionManager.getActiveConnectionCount());
-        return statistics;
-    }
-
-    /**
-     * WebSocket 연결 상태 Health Check
-     *
-     * @return WebSocket 연결 상태 DTO
-     */
-    public SettingsWebSocketHealthResponseDTO checkWebSocketHealth() {
-        // WebSocket 세션 정보 조회
-        List<SettingsWebSocketHealthResponseDTO.WebSocketSessionInfo> sessions =
-                webSocketSessionManager.getAllSessions().stream()
-                        .map(session -> SettingsWebSocketHealthResponseDTO.WebSocketSessionInfo.builder()
-                                .sessionId(session.getSessionId())
-                                .employeeId(session.getEmployeeId())
-                                .employeeName(session.getEmployeeName())
-                                .connectedAt(session.getConnectedAt())
-                                .build())
-                        .collect(Collectors.toList());
-
-        return SettingsWebSocketHealthResponseDTO.builder()
-                .status("UP")
-                .activeConnections(sessions.size())
-                .maxConnections(1000) // 설정값
-                .averageResponseTime(webSocketSessionManager.getAverageResponseTime())
-                .lastCheckTime(LocalDateTime.now())
-                .sessions(sessions)
-                .build();
     }
 }
