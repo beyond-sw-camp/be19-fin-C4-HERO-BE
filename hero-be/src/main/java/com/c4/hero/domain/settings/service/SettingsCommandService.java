@@ -4,7 +4,6 @@ import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
 import com.c4.hero.domain.approval.entity.ApprovalFormTemplate;
 import com.c4.hero.domain.approval.repository.ApprovalTemplateRepository;
-import com.c4.hero.domain.auth.security.CustomUserDetails;
 import com.c4.hero.domain.employee.entity.Account;
 import com.c4.hero.domain.employee.entity.AccountRole;
 import com.c4.hero.domain.employee.entity.Employee;
@@ -19,36 +18,26 @@ import com.c4.hero.domain.employee.repository.EmployeeRepository;
 import com.c4.hero.domain.employee.repository.EmployeeRoleRepository;
 import com.c4.hero.domain.employee.service.EmployeeCommandService;
 import com.c4.hero.domain.employee.type.ChangeType;
-import com.c4.hero.domain.employee.type.EmployeeStatus;
 import com.c4.hero.domain.employee.type.RoleType;
-import com.c4.hero.domain.notification.dto.NotificationRegistDTO;
-import com.c4.hero.domain.notification.service.NotificationCommandService;
 import com.c4.hero.domain.settings.dto.SettingsDefaultLineDTO;
 import com.c4.hero.domain.settings.dto.SettingsDefaultRefDTO;
 import com.c4.hero.domain.settings.dto.request.*;
-import com.c4.hero.domain.settings.entity.SettingsNotificationHistory;
 import com.c4.hero.domain.settings.entity.SettingsApprovalLine;
 import com.c4.hero.domain.settings.entity.SettingsApprovalRef;
 import com.c4.hero.domain.settings.entity.SettingsDepartment;
 import com.c4.hero.domain.settings.entity.SettingsLoginPolicy;
-import com.c4.hero.domain.settings.repository.SettingsNotificationHistoryRepository;
 import com.c4.hero.domain.settings.repository.SettingsApprovalLineRepository;
 import com.c4.hero.domain.settings.repository.SettingsApprovalRefRepository;
 import com.c4.hero.domain.settings.repository.SettingsDepartmentRepository;
 import com.c4.hero.domain.settings.repository.SettingsLoginPolicyRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
+
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -89,10 +78,8 @@ public class SettingsCommandService {
     private final ApprovalTemplateRepository templateRepository;
     private final SettingsApprovalLineRepository settingsApprovalLineRepository;
     private final SettingsApprovalRefRepository settingsApprovalRefRepository;
-    private final SettingsNotificationHistoryRepository settingsNotificationHistoryRepository;
 
     private final EmployeeCommandService employeeCommandService;
-    private final NotificationCommandService notificationCommandService;
 
     private static final int ADMIN_DEPARTMENT_ID = 0;
     private static final int TEMP_DEPARTMENT_ID = -1;
