@@ -35,7 +35,7 @@ import java.util.List;
 public class NotificationCommandService {
 
     private final NotificationMapper notificationMapper;
-    private final NotificationSettingsService settingsService;
+    private final NotificationMySettingsService settingsService;
     private final SimpMessagingTemplate messagingTemplate;
 
     /**
@@ -108,7 +108,7 @@ public class NotificationCommandService {
     }
 
     /**
-     * 모든 알림 읽음 처리 (복구된 기능!)
+     * 모든 알림 읽음 처리
      *
      * @param employeeId 직원 ID
      */
