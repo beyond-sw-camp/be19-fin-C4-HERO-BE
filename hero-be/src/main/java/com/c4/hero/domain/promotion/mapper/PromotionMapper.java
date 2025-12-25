@@ -1,6 +1,8 @@
 package com.c4.hero.domain.promotion.mapper;
 
+import com.c4.hero.domain.promotion.dto.response.PromotionDetailForReviewResponseDTO;
 import com.c4.hero.domain.promotion.dto.response.PromotionPlanDetailResponseDTO;
+import com.c4.hero.domain.promotion.dto.response.PromotionPlanForReviewResponseDTO;
 import com.c4.hero.domain.promotion.dto.response.PromotionPlanResponseDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -14,10 +16,12 @@ import java.util.List;
  *
  * History
  * 2025/12/19 (승건) 최초 작성
+ * 2025/12/23 (승건) 심사용 상세 조회 메서드 추가
+ * 2025/12/24 (승건) 심사용 목록 조회 메서드 추가
  * </pre>
  *
  * @author 승건
- * @version 1.0
+ * @version 1.2
  */
 @Mapper
 public interface PromotionMapper {
@@ -64,4 +68,19 @@ public interface PromotionMapper {
      * @return 필터링된 승진 계획 상세 정보
      */
     PromotionPlanDetailResponseDTO selectRecommendPromotionPlanDetail(@Param("promotionId") int promotionId, @Param("departmentIds") List<Integer> departmentIds);
+
+    /**
+     * 심사용 승진 계획 상세 정보를 조회합니다. (승인 현황 포함)
+     *
+     * @param promotionId 승진 계획 ID
+     * @return 심사용 승진 계획 상세 정보
+     */
+    PromotionPlanForReviewResponseDTO selectPromotionDetailForReview(@Param("promotionId") Integer promotionId);
+
+    /**
+     * 심사 가능한(추천 마감일이 지난) 승진 계획 목록을 조회합니다.
+     *
+     * @return 심사 대상 승진 계획 목록
+     */
+    List<PromotionPlanResponseDTO> selectPromotionPlanForReviewList();
 }

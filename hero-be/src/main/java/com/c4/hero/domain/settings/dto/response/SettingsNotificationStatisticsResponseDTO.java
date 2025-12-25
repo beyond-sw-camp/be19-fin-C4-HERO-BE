@@ -59,4 +59,3 @@ public class SettingsNotificationStatisticsResponseDTO {
      * 가장 많이 발송된 알림 타입
      */
     private String mostSentType;
-}

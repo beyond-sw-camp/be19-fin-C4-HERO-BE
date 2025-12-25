@@ -8,8 +8,9 @@ import com.c4.hero.domain.employee.repository.EmployeeDepartmentRepository;
 import com.c4.hero.domain.employee.repository.EmployeeGradeRepository;
 import com.c4.hero.domain.promotion.dto.PromotionDepartmentDTO;
 import com.c4.hero.domain.promotion.dto.PromotionGradeDTO;
-import com.c4.hero.domain.promotion.dto.response.PromotionOptionsDTO;
+import com.c4.hero.domain.promotion.dto.response.PromotionOptionsResponseDTO;
 import com.c4.hero.domain.promotion.dto.response.PromotionPlanDetailResponseDTO;
+import com.c4.hero.domain.promotion.dto.response.PromotionPlanForReviewResponseDTO;
 import com.c4.hero.domain.promotion.dto.response.PromotionPlanResponseDTO;
 import com.c4.hero.domain.promotion.mapper.PromotionMapper;
 import lombok.RequiredArgsConstructor;
@@ -33,10 +34,12 @@ import java.util.stream.Collectors;
  * History
  * 2025/12/19 (승건) 최초 작성
  * 2025/12/22 (승건) 추천 가능 승진 계획 조회 로직 추가
+ * 2025/12/23 (승건) 심사용 승진 계획 상세 조회 로직 추가
+ * 2025/12/24 (승건) 심사용 승진 계획 목록 조회 로직 추가
  * </pre>
  *
  * @author 승건
- * @version 1.1
+ * @version 1.3
  */
 @Service
 @RequiredArgsConstructor
@@ -98,14 +101,14 @@ public class PromotionQueryService {
      *
      * @return 승진 계획 옵션 정보
      */
-    public PromotionOptionsDTO getPromotionOptions() {
+    public PromotionOptionsResponseDTO getPromotionOptions() {
         // 1. 부서 트리 조회
         List<PromotionDepartmentDTO> departmentTree = getDepartmentTree();
 
         // 2. 직급 목록 조회
         List<PromotionGradeDTO> gradeList = getGradeList();
 
-        return PromotionOptionsDTO.builder()
+        return PromotionOptionsResponseDTO.builder()
                 .promotionDepartmentDTOList(departmentTree)
                 .promotionGradeDTOList(gradeList)
                 .build();
@@ -233,5 +236,31 @@ public class PromotionQueryService {
             }
         }
         return allDepartmentIds;
+    }
+
+    /**
+     * 심사용 승진 계획 상세 정보를 조회합니다. (승인 현황 포함)
+     *
+     * @param promotionId 승진 계획 ID
+     * @return 심사용 승진 계획 상세 정보
+     */
+    public PromotionPlanForReviewResponseDTO getPromotionDetailForReview(Integer promotionId) {
+        // Mapper를 통해 조회 (Mapper XML에서 approvedCount 계산 필요)
+        PromotionPlanForReviewResponseDTO response = promotionMapper.selectPromotionDetailForReview(promotionId);
+
+        if (response == null) {
+            throw new BusinessException(ErrorCode.PROMOTION_PLAN_NOT_FOUND);
+        }
+
+        return response;
+    }
+
+    /**
+     * 심사 가능한(추천 마감일이 지난) 승진 계획 목록을 조회합니다.
+     *
+     * @return 심사 대상 승진 계획 목록
+     */
+    public List<PromotionPlanResponseDTO> getPromotionPlansForReviewList() {
+        return promotionMapper.selectPromotionPlanForReviewList();
     }
 }

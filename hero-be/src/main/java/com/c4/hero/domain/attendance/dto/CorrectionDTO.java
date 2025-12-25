@@ -5,6 +5,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+
 /**
  * <pre>
  * Class Name: CorrectionDTO
@@ -27,20 +30,20 @@ public class CorrectionDTO {
     private Integer correctionId;
 
     /** 정정 대상 근무 일자 (yyyy-MM-dd) */
-    private String date;
+    private LocalDate date;
 
     /** 정정 전 출근 시간 (HH:mm 또는 HH:mm:ss) */
-    private String prevStartTime;
+    private LocalTime prevStartTime;
 
     /** 정정 전 퇴근 시간 (HH:mm 또는 HH:mm:ss) */
-    private String prevEndTime;
+    private LocalTime prevEndTime;
 
     /** 정정 사유 */
     private String reason;
 
     /** 정정 후 출근 시간 (HH:mm 또는 HH:mm:ss) */
-    private String newStartTime;
+    private LocalTime newStartTime;
 
     /** 정정 후 퇴근 시간 (HH:mm 또는 HH:mm:ss) */
-    private String newEndTime;
+    private LocalTime newEndTime;
 }

@@ -121,10 +121,11 @@
         ON att.work_system_type_id = wst.work_system_type_id
         <where>
             AND att.employee_id = #{employeeId}
-            <if test="startDate != null and startDate != ''">
+            <if test="startDate != null">
+
                 AND att.work_date &gt;= #{startDate}
             </if>
-            <if test="endDate != null and endDate != ''">
+            <if test="endDate != null">
                 AND att.work_date &lt;= #{endDate}
             </if>
         </where>
@@ -143,10 +144,11 @@
         ON att.work_system_type_id = wst.work_system_type_id
         <where>
             AND att.employee_id = #{employeeId}
-            <if test="startDate != null and startDate != ''">
+
+            <if test="startDate != null">
                 AND att.work_date &gt;= #{startDate}
             </if>
-            <if test="endDate != null and endDate != ''">
+            <if test="endDate != null">
                 AND att.work_date &lt;= #{endDate}
             </if>
         </where>
@@ -168,10 +170,10 @@
         FROM tbl_overtime ove
         <where>
             AND ove.employee_id = #{employeeId}
-            <if test="startDate != null and startDate != ''">
+            <if test="startDate != null">
                 AND ove.date &gt;= #{startDate}
             </if>
-            <if test="endDate != null and endDate != ''">
+            <if test="endDate != null">
                 AND ove.date &lt;= #{endDate}
             </if>
         </where>
@@ -188,10 +190,10 @@
         FROM tbl_overtime ove
         <where>
             AND ove.employee_id = #{employeeId}
-            <if test="startDate != null and startDate != ''">
+            <if test="startDate != null">
                 AND ove.date &gt;= #{startDate}
             </if>
-            <if test="endDate != null and endDate != ''">
+            <if test="endDate != null">
                 AND ove.date &lt;= #{endDate}
             </if>
         </where>
@@ -215,10 +217,10 @@
         ON cor.attendance_id = att.attendance_id
         <where>
             AND cor.employee_id = #{employeeId}
-            <if test="startDate != null and startDate != ''">
+            <if test="startDate != null">
                 AND cor.target_date &gt;= #{startDate}
             </if>
-            <if test="endDate != null and endDate != ''">
+            <if test="endDate != null">
                 AND cor.target_date &lt;= #{endDate}
             </if>
         </where>
@@ -237,10 +239,10 @@
         ON cor.attendance_id = att.attendance_id
         <where>
             AND cor.employee_id = #{employeeId}
-            <if test="startDate != null and startDate != ''">
+            <if test="startDate != null">
                 AND cor.target_date &gt;= #{startDate}
             </if>
-            <if test="endDate != null and endDate != ''">
+            <if test="endDate != null">
                 AND cor.target_date &lt;= #{endDate}
             </if>
         </where>
@@ -261,10 +263,10 @@
         FROM tbl_work_system_change_log cha
         <where>
             AND cha.employee_id = #{employeeId}
-            <if test="startDate != null and startDate != ''">
+            <if test="startDate != null">
                 AND cha.date &gt;= #{startDate}
             </if>
-            <if test="endDate != null and endDate != ''">
+            <if test="endDate != null">
                 AND cha.date &lt;= #{endDate}
             </if>
         </where>
@@ -281,10 +283,10 @@
         FROM tbl_work_system_change_log cha
         <where>
             AND cha.employee_id = #{employeeId}
-            <if test="startDate != null and startDate != ''">
+            <if test="startDate != null">
                 AND cha.date &gt;= #{startDate}
             </if>
-            <if test="endDate != null and endDate != ''">
+            <if test="endDate != null">
                 AND cha.date &lt;= #{endDate}
             </if>
         </where>

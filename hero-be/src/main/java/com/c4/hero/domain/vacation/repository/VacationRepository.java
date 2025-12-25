@@ -8,7 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.util.List;
 
 /**
  * <pre>
@@ -63,9 +64,38 @@ public interface VacationRepository extends JpaRepository<VacationLog, Integer> 
     )
     Page<VacationHistoryDTO> findVacationHistory(
             @Param("employeeId") Integer employeeId,
-            @Param("startDate") LocalDateTime startDate,
-            @Param("endDate") LocalDateTime endDate,
-
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
             Pageable pageable
     );
+
+    /**
+     * 특정 월(범위)과 "기간이 겹치는" 휴가 로그를 조회합니다.
+     *
+     * - 조건: v.startDate <= :rangeEnd AND v.endDate >= :rangeStart
+     * - 예: 12/31~1/02처럼 월을 가로지르는 휴가도 해당 월 조회에 포함됨
+     *
+     * @param rangeStart 월 시작일 (예: 2025-12-01)
+     * @param rangeEnd   월 종료일 (예: 2025-12-31)
+     * @return 해당 월과 겹치는 휴가 로그 목록
+     */
+    @Query(
+            """
+            select v
+            from VacationLog v
+            where v.startDate <= :rangeEnd
+              and v.endDate   >= :rangeStart
+            order by v.startDate asc
+            """
+    )
+    List<VacationLog> findOverlappingVacationLogs(
+            @Param("rangeStart") LocalDate rangeStart,
+            @Param("rangeEnd") LocalDate rangeEnd
+    );
+
+    List<VacationLog> findByStartDateLessThanEqualAndEndDateGreaterThanEqual(
+            LocalDate end,
+            LocalDate start
+    );
+
 }

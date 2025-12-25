@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 public class AttendanceDashboardDTO {
 
     /** 직원 PK */
-    private int employeeId;
+    private Integer employeeId;
 
     /** 사번 */
     private String employeeNumber;
@@ -28,7 +28,7 @@ public class AttendanceDashboardDTO {
     private String employeeName;
 
     /** 부서 ID */
-    private int departmentId;
+    private Integer departmentId;
 
     /** 부서명 */
     private String departmentName;

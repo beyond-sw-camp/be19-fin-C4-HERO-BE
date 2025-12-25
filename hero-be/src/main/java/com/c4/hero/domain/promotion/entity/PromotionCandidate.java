@@ -1,8 +1,11 @@
 package com.c4.hero.domain.promotion.entity;
 
 import com.c4.hero.domain.employee.entity.Employee;
+import com.c4.hero.domain.promotion.type.PromotionCandidateStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -23,10 +26,11 @@ import lombok.NoArgsConstructor;
  * History
  * 2025/12/19 (승건) 최초 작성
  * 2025/12/22 (승건) 추천 및 추천 취소 메서드 추가
+ * 2025/12/22 (승건) 상태 관리(Enum)로 변경 및 심사 메서드 추가
  * </pre>
  *
  * @author 승건
- * @version 1.1
+ * @version 1.2
  */
 @Entity
 @Table(name = "tbl_promotion_candidate")
@@ -72,10 +76,12 @@ public class PromotionCandidate {
     private String nominationReason;
 
     /**
-     * 승인 여부
+     * 승진 진행 상태
      */
-    @Column(name = "is_approved")
-    private Boolean isApproved;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    @Builder.Default
+    private PromotionCandidateStatus status = PromotionCandidateStatus.WAITING;
 
     /**
      * 반려 사유
@@ -106,5 +112,35 @@ public class PromotionCandidate {
     public void cancelNomination() {
         this.nominator = null;
         this.nominationReason = null;
+    }
+
+    /**
+     * 후보자 심사 결과를 반영합니다.
+     *
+     * @param isPassed 통과 여부
+     * @param rejectionReason 반려 사유 (반려 시 필수)
+     */
+    public void review(boolean isPassed, String rejectionReason) {
+        if (isPassed) {
+            this.status = PromotionCandidateStatus.REVIEW_PASSED;
+        } else {
+            this.status = PromotionCandidateStatus.REJECTED;
+        }
+        this.rejectionReason = rejectionReason;
+    }
+
+    /**
+     * 최종 승인 결과를 반영합니다.
+     *
+     * @param isPassed 승인 여부
+     * @param rejectionReason 반려 사유
+     */
+    public void confirmFinalApproval(boolean isPassed, String rejectionReason) {
+        if (isPassed) {
+            this.status = PromotionCandidateStatus.FINAL_APPROVED;
+        } else {
+            this.status = PromotionCandidateStatus.REJECTED;
+            this.rejectionReason = rejectionReason;
+        }
     }
 }
