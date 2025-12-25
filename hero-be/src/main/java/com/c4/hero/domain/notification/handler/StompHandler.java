@@ -20,7 +20,6 @@ import org.springframework.stereotype.Component;
  *
  * History
  * 2025/12/22 (혜원) 최초 작성 - JWT 기반 WebSocket 인증 구현
- * 2025/12/24 (혜원) 주석 추가 및 로깅 개선
  * </pre>
  *
  * @author 혜원
