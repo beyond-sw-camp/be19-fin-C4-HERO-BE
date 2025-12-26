@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+  <pre>
+  Xml Name  : TimeClockMapper
+  Description: 출퇴근 타각(Time Clock) 관련 MyBatis 매퍼 XML
+
+  History
+  2025/12/26 (혜원) 최초 작성
+
+  @author 혜원
+  @version 1.0
+-->
+
+<mapper namespace="com.c4.hero.domain.dashboard.mapper.DashboardMapper">
+
+<!-- 1) 출퇴근 상태 ResultMap - ClockStatusDTO 매핑 정의-->
+    <resultMap id="ClockStatusMap" type="com.c4.hero.domain.dashboard.dto.ClockStatusDTO">
+        <result property="attendanceId" column="attendance_id"/>
+        <result property="workDate"     column="work_date"/>
+        <result property="startTime"    column="start_time"/>
+        <result property="endTime"      column="end_time"/>
+        <result property="state"        column="state"/>
+        <result property="isClockedIn"  column="is_clocked_in"/>
+        <result property="isClockedOut" column="is_clocked_out"/>
+        <result property="workDuration" column="work_duration"/>
+    </resultMap>
+
+    <!-- 2) 출근 기록 INSERT TimeClockMapper.insertClockIn(...) -->
+    <insert id="insertClockIn" parameterType="map">
+        INSERT INTO tbl_attendance (
+            employee_id,
+            department_id,
+            work_date,
+            start_time,
+            end_time,
+            state,
+            work_system_type_id
+        ) VALUES (
+                     #{employeeId},
+                     #{departmentId},
+                     #{dto.workDate},
+                     CAST(#{dto.startTime} AS TIME),
+                     NULL,
+                     CASE
+                         WHEN CAST(#{dto.startTime} AS TIME) > '09:00:00' THEN '지각'
+                         ELSE '정상'
+                         END,
+                     #{dto.workSystemTypeId}
+                 )
+    </insert>
+
+    <!-- 3) 퇴근 시각 UPDATE + 근무시간 자동 계산 TimeClockMapper.updateClockOut(...) -->
+    <update id="updateClockOut" parameterType="map">
+        UPDATE tbl_attendance
+        SET
+            end_time = CAST(#{dto.endTime} AS TIME),
+            work_duration = TIMESTAMPDIFF(MINUTE, start_time, CAST(#{dto.endTime} AS TIME)),
+            state = CASE
+                        WHEN start_time IS NULL THEN '결근'
+                        WHEN start_time > '09:00:00' THEN '지각'
+                        WHEN CAST(#{dto.endTime} AS TIME) &lt; '18:00:00' THEN '조퇴'
+                        ELSE '정상'
+                END
+        WHERE employee_id = #{employeeId}
+          AND work_date = #{dto.workDate}
+          AND attendance_id = #{dto.attendanceId}
+    </update>
+
+    <!-- 4) 오늘 출퇴근 상태 조회 TimeClockMapper.selectTodayStatus(...) -->
+    <select id="selectTodayStatus" resultMap="ClockStatusMap" parameterType="map">
+        SELECT
+            att.attendance_id,
+            att.work_date,
+            att.start_time,
+            att.end_time,
+            att.state,
+            att.work_duration,
+            CASE WHEN att.start_time IS NOT NULL THEN TRUE ELSE FALSE END AS is_clocked_in,
+            CASE WHEN att.end_time IS NOT NULL THEN TRUE ELSE FALSE END AS is_clocked_out
+        FROM tbl_attendance att
+        WHERE att.employee_id = #{employeeId}
+          AND att.work_date = #{workDate}
+            LIMIT 1
+    </select>
+
+    <!-- 5) 이번 주 근무 통계 조회 (오늘 근무 중인 시간 포함) TimeClockMapper.selectWeeklyStats(...) -->
+    <select id="selectWeeklyStats" resultType="map" parameterType="map">
+        SELECT
+            COALESCE(SUM(att.work_duration), 0) AS total_work_minutes,
+            ROUND(COALESCE(SUM(att.work_duration), 0) / 60.0, 1) AS total_work_hours,
+            52 AS legal_weekly_hours,
+            ROUND((COALESCE(SUM(att.work_duration), 0) / 60.0) / 52 * 100, 1) AS achievement_rate,
+            CASE
+                WHEN TODAY.start_time IS NOT NULL AND TODAY.end_time IS NULL THEN TRUE
+                ELSE FALSE
+                END AS is_working_today,
+            CASE
+                WHEN TODAY.start_time IS NOT NULL AND TODAY.end_time IS NULL
+                    THEN TIMESTAMPDIFF(MINUTE, TODAY.start_time, NOW())
+                ELSE 0
+                END AS today_work_minutes
+        FROM (
+                 SELECT #{startDate} AS week_start, #{endDate} AS week_end
+             ) week_range
+                 LEFT JOIN tbl_attendance att
+                           ON att.employee_id = #{employeeId}
+                               AND att.work_date BETWEEN week_range.week_start AND week_range.week_end
+                               AND att.work_duration IS NOT NULL
+                 LEFT JOIN (
+            SELECT start_time, end_time
+            FROM tbl_attendance
+            WHERE employee_id = #{employeeId}
+              AND work_date = CURDATE()
+        ) TODAY ON 1=1
+    </select>
+
+    <!-- 6) 이번 달 요약 통계 조회 TimeClockMapper.selectMonthlySummary(...) -->
+    <select id="selectMonthlySummary" resultType="map" parameterType="map">
+        SELECT
+            COALESCE(COUNT(DISTINCT att.work_date), 0) AS work_days,
+            COALESCE(lv.remaining_days, 0) AS remaining_annual_leave,
+            COALESCE(SUM(CASE
+                             WHEN vlog.status = 'APPROVED'
+                                 THEN TIMESTAMPDIFF(DAY, vlog.start_date, vlog.end_date) + 1
+                             ELSE 0
+                END), 0) AS used_vacation_days
+        FROM (
+                 SELECT #{startDate} AS month_start, #{endDate} AS month_end
+             ) month_range
+                 LEFT JOIN tbl_attendance att
+                           ON att.employee_id = #{employeeId}
+                               AND att.work_date BETWEEN month_range.month_start AND month_range.month_end
+                               AND att.work_duration IS NOT NULL
+                 LEFT JOIN tbl_leave lv
+                           ON lv.employee_id = #{employeeId}
+                 LEFT JOIN tbl_vacation_log vlog
+                           ON vlog.employee_id = #{employeeId}
+                               AND vlog.start_date BETWEEN month_range.month_start AND month_range.month_end
+    </select>
+
+    <!-- 7) 출근 통계 조회 (이번 달) TimeClockMapper.selectAttendanceStats(...) -->
+    <select id="selectAttendanceStats" resultType="map" parameterType="map">
+        SELECT
+            COALESCE(SUM(CASE WHEN att.state = '정상' THEN 1 ELSE 0 END), 0) AS normal_days,
+            COALESCE(SUM(CASE WHEN att.state = '지각' THEN 1 ELSE 0 END), 0) AS late_days,
+            COALESCE(SUM(CASE WHEN att.state = '결근' THEN 1 ELSE 0 END), 0) AS absent_days,
+            COALESCE(SUM(CASE WHEN att.state = '조퇴' THEN 1 ELSE 0 END), 0) AS early_leave_days
+        FROM tbl_attendance att
+        WHERE att.employee_id = #{employeeId}
+          AND att.work_date BETWEEN #{startDate} AND #{endDate}
+    </select>
+
+    <!-- 8) 휴가 현황 조회 (이번 달) TimeClockMapper.selectVacationStats(...) -->
+    <select id="selectVacationStats" resultType="map" parameterType="map">
+        SELECT
+            SUM(
+                    CASE
+                        WHEN vt.vacation_type_name LIKE '%연차%'
+                            THEN TIMESTAMPDIFF(DAY, vlog.start_date, vlog.end_date) + 1
+                        ELSE 0
+                        END
+            ) AS annual_leave_days,
+            SUM(
+                    CASE
+                        WHEN vt.vacation_type_name LIKE '%반차%'
+                            THEN 0.5
+                        ELSE 0
+                        END
+            ) AS half_day_days,
+            SUM(
+                    CASE
+                        WHEN vt.vacation_type_name LIKE '%병가%'
+                            THEN TIMESTAMPDIFF(DAY, vlog.start_date, vlog.end_date) + 1
+                        ELSE 0
+                        END
+            ) AS sick_leave_days,
+            SUM(
+                    CASE
+                        WHEN vt.vacation_type_name NOT LIKE '%연차%'
+                            AND vt.vacation_type_name NOT LIKE '%반차%'
+                            AND vt.vacation_type_name NOT LIKE '%병가%'
+                            THEN TIMESTAMPDIFF(DAY, vlog.start_date, vlog.end_date) + 1
+                        ELSE 0
+                        END
+            ) AS other_leave_days
+        FROM tbl_vacation_log vlog
+                 LEFT JOIN tbl_vacation_type vt ON vlog.vacation_type_id = vt.vacation_type_id
+        WHERE vlog.employee_id = #{employeeId}
+          AND vlog.status = 'APPROVED'
+          AND vlog.start_date BETWEEN #{startDate} AND #{endDate}
+    </select>
+
+    <!-- 9) 결재 현황 조회 TimeClockMapper.selectApprovalStats(...) -->
+    <select id="selectApprovalStats" resultType="map" parameterType="map">
+        SELECT
+            COALESCE(SUM(CASE WHEN doc.doc_status = 'DRAFT' THEN 1 ELSE 0 END), 0) AS pending_count,
+            COALESCE(SUM(CASE WHEN doc.doc_status = 'APPROVED' THEN 1 ELSE 0 END), 0) AS approved_count,
+            COALESCE(SUM(CASE WHEN doc.doc_status = 'REJECTED' THEN 1 ELSE 0 END), 0) AS rejected_count
+        FROM tbl_approval_document doc
+        WHERE doc.drafter_id = #{employeeId}
+    </select>
+</mapper>
