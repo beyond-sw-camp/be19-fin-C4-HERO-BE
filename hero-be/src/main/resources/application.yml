@@ -1,3 +1,18 @@
 spring:
   profiles:
     active: dev
+
+    # 파일 한 개당 최대 크기 (예: 10MB)
+  servlet:
+    multipart:
+      max-file-size: 10MB
+
+    # 요청 하나당 최대 크기 (파일 여러 개 합친 크기)
+    servlet:
+      multipart:
+        max-request-size: 50MB
+
+# Mybatis 쿼리 날릴 때 콘솔창에 쿼리가 보이도록하는 설정
+#logging:
+#  level:
+#    com.c4.hero.domain.approval.mapper: DEBUG

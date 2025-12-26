@@ -2,7 +2,7 @@ package com.c4.hero.domain.settings.service;
 
 import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
-import com.c4.hero.domain.approval.entity.ApprovalFormTemplate;
+import com.c4.hero.domain.approval.entity.ApprovalTemplate;
 import com.c4.hero.domain.approval.repository.ApprovalTemplateRepository;
 import com.c4.hero.domain.employee.entity.Account;
 import com.c4.hero.domain.employee.entity.AccountRole;
@@ -387,7 +387,7 @@ public class SettingsCommandService {
     @Transactional
     public void applySettings(Integer templateId, SettingsApprovalRequestDTO settings) {
 
-        ApprovalFormTemplate template = templateRepository.findById(templateId)
+        ApprovalTemplate template = templateRepository.findById(templateId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND));
 
         settingsApprovalLineRepository.deleteAllByTemplate(template);
