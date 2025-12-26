@@ -153,4 +153,12 @@
         FROM tbl_notification_history
     </select>
 
+    <!-- 가장 많이 발송된 알림 타입 조회 -->
+    <select id="findMostSentType" resultType="String">
+        SELECT type
+        FROM tbl_notification_history
+        GROUP BY type
+        ORDER BY COUNT(*) DESC
+            LIMIT 1
+    </select>
 </mapper>

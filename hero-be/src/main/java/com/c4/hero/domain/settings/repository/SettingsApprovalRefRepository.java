@@ -1,7 +1,6 @@
 package com.c4.hero.domain.settings.repository;
 
-import com.c4.hero.domain.approval.entity.ApprovalFormTemplate;
-import com.c4.hero.domain.settings.dto.SettingsDefaultRefDTO;
+import com.c4.hero.domain.approval.entity.ApprovalTemplate;
 import com.c4.hero.domain.settings.entity.SettingsApprovalRef;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -36,5 +35,5 @@ public interface SettingsApprovalRefRepository extends JpaRepository<SettingsApp
      * @param template 
      * @return  
      */
-    void deleteAllByTemplate(ApprovalFormTemplate template);
+    void deleteAllByTemplate(ApprovalTemplate template);
 }

@@ -4,6 +4,104 @@
 
 <mapper namespace="com.c4.hero.domain.approval.mapper.ApprovalMapper">
 
-    <!-- 아직 쿼리 안 씀. 나중에 추가 -->
+    <resultMap id="approvalDefaultLineResultMap" type="com.c4.hero.domain.approval.dto.ApprovalDefaultLineDTO">
+        <result property="approverId"     column="approver_id"/>
+        <result property="approverName"   column="approver_name"/>
+        <result property="departmentId"   column="department_id"/>
+        <result property="departmentName" column="department_name"/>
+        <result property="gradeName"      column="grade_name"/>
+        <result property="jobTitleName"   column="job_title_name"/>
+        <result property="seq"            column="seq"/>
+    </resultMap>
+
+    <resultMap id="approvalDefaultRefResultMap" type="com.c4.hero.domain.approval.dto.ApprovalDefaultRefDTO">
+        <result property="referencerId"   column="referencer_id"/>
+        <result property="referencerName" column="referencer_name"/>
+        <result property="departmentId"   column="department_id"/>
+        <result property="departmentName" column="department_name"/>
+        <result property="gradeName"      column="grade_name"/>
+        <result property="jobTitleName"   column="job_title_name"/>
+    </resultMap>
+
+    <select id="selectDefaultLines" resultMap="approvalDefaultLineResultMap">
+        SELECT
+            M.employee_id      AS approver_id,
+            M.employee_name    AS approver_name,
+            D.department_id    AS department_id,
+            D.department_name  AS department_name,
+            G.grade            AS grade_name,
+            J.job_title        AS job_title_name,
+            L.seq              AS seq
+        FROM tbl_approval_default_line L
+
+                 -- 타겟 부서 결정
+                 INNER JOIN tbl_department D ON D.department_id = (
+            CASE
+                -- 특정 부서 지정
+                WHEN L.department_id > 0 THEN L.department_id
+
+                -- seq=2 (1차 결재): 기안자의 직속부서
+                WHEN L.seq = 2 THEN (
+                    SELECT department_id
+                    FROM tbl_employee
+                    WHERE employee_id = #{employeeId}
+                )
+
+                -- seq=3 (2차 결재): 1차 결재자의 상위 부서
+                WHEN L.seq = 3 THEN (
+                    SELECT PD.department_id
+                    FROM tbl_employee Me
+                             INNER JOIN tbl_department CD ON CD.department_id = Me.department_id
+                             INNER JOIN tbl_department PD ON PD.department_id = CD.parent_department_id
+                    WHERE Me.employee_id = #{employeeId}
+                )
+
+                -- seq=4 (3차 결재): 2차 결재자의 상위 부서
+                WHEN L.seq = 4 THEN (
+                    SELECT PPD.department_id
+                    FROM tbl_employee Me
+                             INNER JOIN tbl_department CD ON CD.department_id = Me.department_id
+                             INNER JOIN tbl_department PD ON PD.department_id = CD.parent_department_id
+                             INNER JOIN tbl_department PPD ON PPD.department_id = PD.parent_department_id
+                    WHERE Me.employee_id = #{employeeId}
+                )
+
+                ELSE NULL
+                END
+            )
+
+            -- 부서장 조인
+                 INNER JOIN tbl_employee M ON D.manager_id = M.employee_id
+
+            -- 직급/직책
+                 LEFT JOIN tbl_grade G ON M.grade_id = G.grade_id
+                 LEFT JOIN tbl_job_title J ON M.job_title_id = J.job_title_id
+
+        WHERE L.template_id = #{templateId}
+          AND L.seq > 1
+        ORDER BY L.seq ASC
+    </select>
+
+    <select id="selectDefaultReferences" resultMap="approvalDefaultRefResultMap">
+        SELECT
+            M.employee_id      AS referencer_id,
+            M.employee_name         AS referencer_name,
+            D.department_id    AS department_id,
+            D.department_name        AS department_name,
+            G.grade      AS grade_name,
+            J.job_title   AS job_title_name
+        FROM tbl_approval_default_reference R
+                 /* 기안자(Me) 정보 */
+                 LEFT JOIN tbl_employee Me ON Me.employee_id = #{employeeId}
+            /* 타겟 부서 결정 */
+                 INNER JOIN tbl_department D
+                            ON D.department_id = (CASE WHEN R.department_id = 0 THEN Me.department_id ELSE R.department_id END)
+            /* 부서장(Manager) 조인 (수신자) */
+                 INNER JOIN tbl_employee M ON D.manager_id = M.employee_id
+            /* 직급/직책 정보 */
+                 LEFT JOIN tbl_grade G ON M.grade_id = G.grade_id
+                 LEFT JOIN tbl_job_title J ON M.job_title_id = J.job_title_id
+        WHERE R.template_id = #{templateId}
+    </select>
 
 </mapper>

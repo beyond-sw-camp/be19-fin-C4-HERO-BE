@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class NotificationSettingsService {
+public class NotificationMySettingsService {
 
     private final NotificationSettingsMapper settingsMapper;
 

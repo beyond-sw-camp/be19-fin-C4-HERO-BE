@@ -8,10 +8,14 @@ import com.c4.hero.domain.employee.entity.Grade;
 import com.c4.hero.domain.employee.repository.EmployeeDepartmentRepository;
 import com.c4.hero.domain.employee.repository.EmployeeGradeRepository;
 import com.c4.hero.domain.employee.repository.EmployeeRepository;
+import com.c4.hero.domain.employee.service.EmployeeCommandService;
+import com.c4.hero.domain.employee.type.ChangeType;
 import com.c4.hero.domain.promotion.dto.PromotionDetailPlanDTO;
 import com.c4.hero.domain.promotion.dto.request.PromotionNominationRequestDTO;
 import com.c4.hero.domain.promotion.dto.request.PromotionPlanRequestDTO;
+import com.c4.hero.domain.promotion.dto.request.PromotionReviewRequestDTO;
 import com.c4.hero.domain.promotion.entity.PromotionCandidate;
+import com.c4.hero.domain.promotion.type.PromotionCandidateStatus;
 import com.c4.hero.domain.promotion.entity.PromotionDetail;
 import com.c4.hero.domain.promotion.entity.PromotionPlan;
 import com.c4.hero.domain.promotion.repotiroy.PromotionCandidateRepository;
@@ -37,15 +41,18 @@ import java.util.stream.Collectors;
  * History
  * 2025/12/19 (승건) 최초 작성
  * 2025/12/22 (승건) 후보자 추천 및 추천 취소 로직 추가
+ * 2025/12/24 (승건) 심사 로직 분리 및 최종 승인 시 직급 변경 로직 추가
  * </pre>
  *
  * @author 승건
- * @version 1.1
+ * @version 1.2
  */
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class PromotionCommandService {
+
+    private final EmployeeCommandService employeeCommandService;
 
     private final PromotionPlanRepository promotionPlanRepository;
     private final PromotionDetailRepository promotionDetailRepository;
@@ -221,6 +228,7 @@ public class PromotionCommandService {
                             .promotionDetail(promotionDetail)
                             .employee(employee)
                             .evaluationPoint(employee.getEvaluationPoint())
+                            .status(PromotionCandidateStatus.WAITING)
                             .build())
                     .collect(Collectors.toList());
             promotionCandidateRepository.saveAll(promotionCandidates);
@@ -248,4 +256,72 @@ public class PromotionCommandService {
 
         return allSubDepartments;
     }
+
+    /**
+     * 승진 후보자를 1차 심사합니다. (승인 또는 반려)
+     * 대기(WAITING) 상태인 후보자만 처리 가능합니다.
+     *
+     * @param request 심사 요청 정보
+     */
+    public void reviewCandidate(PromotionReviewRequestDTO request) {
+        // 1. 후보자 조회
+        PromotionCandidate candidate = promotionCandidateRepository.findById(request.getCandidateId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROMOTION_CANDIDATE_NOT_FOUND));
+
+        // 2. 상태 체크 (대기 상태가 아니면 예외 발생)
+        if (candidate.getStatus() != PromotionCandidateStatus.WAITING) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "이미 심사가 완료된 후보자입니다.");
+        }
+
+        // 3. 승인(심사 통과) 요청인 경우 TO 체크
+        if (Boolean.TRUE.equals(request.getIsPassed())) {
+            PromotionDetail detail = candidate.getPromotionDetail();
+
+            // 현재 통과된(심사 통과 + 최종 승인) 인원 수 조회
+            long passedCount = promotionCandidateRepository.countByPromotionDetailAndStatusIn(
+                    detail,
+                    List.of(PromotionCandidateStatus.REVIEW_PASSED, PromotionCandidateStatus.FINAL_APPROVED)
+            );
+
+            if (passedCount >= detail.getQuotaCount()) {
+                throw new BusinessException(ErrorCode.PROMOTION_QUOTA_EXCEEDED);
+            }
+        }
+
+        // 4. 심사 결과 반영
+        candidate.review(request.getIsPassed(), request.getComment());
+    }
+
+    /**
+     * 승진 후보자를 최종 승인합니다.
+     * 심사 통과(REVIEW_PASSED) 상태인 후보자만 처리 가능합니다.
+     * 최종 승인 시 해당 직원의 직급이 실제로 변경됩니다.
+     *
+     * @param request 심사 요청 정보
+     */
+    public void confirmFinalApproval(PromotionReviewRequestDTO request) {
+        // 1. 후보자 조회
+        PromotionCandidate candidate = promotionCandidateRepository.findById(request.getCandidateId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROMOTION_CANDIDATE_NOT_FOUND));
+
+        // 2. 상태 체크 (심사 통과 상태가 아니면 예외 발생)
+        if (candidate.getStatus() != PromotionCandidateStatus.REVIEW_PASSED) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "1차 심사를 통과한 후보자만 최종 승인할 수 있습니다.");
+        }
+
+        // 3. 최종 승인 또는 반려 처리 (상태 변경)
+        candidate.confirmFinalApproval(request.getIsPassed(), request.getComment());
+
+        // 4. 승인인 경우 실제 직급 변경
+        if (Boolean.TRUE.equals(request.getIsPassed())) {
+            Integer targetGradeId = candidate.getPromotionDetail().getGradeId();
+            Grade newGrade = gradeRepository.findById(targetGradeId)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.GRADE_NOT_FOUND));
+
+
+            candidate.getEmployee().changeGrade(newGrade);
+            employeeCommandService.addGradeHistory(candidate.getEmployee(), ChangeType.PROMOTION, candidate.getEmployee().getGrade().getGrade());
+        }
+    }
+
 }

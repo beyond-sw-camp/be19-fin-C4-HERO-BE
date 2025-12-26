@@ -24,7 +24,7 @@ import org.springframework.http.HttpStatus;
  * </pre>
  *
  * @author 혜원
- * @version 1.5
+ * @version 1.6
  */
 @Getter
 @RequiredArgsConstructor
@@ -222,7 +222,14 @@ public enum ErrorCode {
     /**
      * 자기 추천 불가
      */
-    PROMOTION_SELF_NOMINATION_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "PR006", "본인을 추천할 수 없습니다.");
+    PROMOTION_SELF_NOMINATION_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "PR006", "본인을 추천할 수 없습니다."),
+
+    /**
+     * 승진 TO 초과
+     */
+    PROMOTION_QUOTA_EXCEEDED(HttpStatus.CONFLICT, "PR007", "승진 TO를 초과할 수 없습니다."),
+
+    PROMOTION_DETAIL_NOT_FOUND(HttpStatus.BAD_REQUEST,"PR008", "해당 승진 상세 계획을 찾을 수 없습니다.");
 
 
     /** HTTP 상태 코드 */

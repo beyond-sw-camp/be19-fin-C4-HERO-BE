@@ -54,4 +54,11 @@ public class SettingsNotificationStatisticsResponseDTO {
      * 현재 WebSocket 연결 수
      */
     private Integer activeConnections;
+
+    /**
+     * 가장 많이 발송된 알림 타입
+     */
+    private String mostSentType;
+
 }
+

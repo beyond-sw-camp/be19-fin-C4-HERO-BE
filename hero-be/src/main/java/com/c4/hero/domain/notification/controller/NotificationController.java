@@ -170,7 +170,7 @@ public class NotificationController {
             @ApiResponse(responseCode = "401", description = "인증 실패", content = @Content),
             @ApiResponse(responseCode = "404", description = "알림을 찾을 수 없음", content = @Content)
     })
-    @DeleteMapping("/{notificationId}")
+    @PatchMapping("/{notificationId}")
     public ResponseEntity<Void> softRemoveNotification(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable Integer notificationId) {

@@ -33,4 +33,5 @@ public class PromotionPlanResponseDTO {
     private LocalDateTime createdAt;                    // 생성일
     private LocalDate nominationDeadlineAt;             // 추천 마감일
     private LocalDate appointmentAt;                    // 발령일
+
 }

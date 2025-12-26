@@ -1,6 +1,9 @@
 package com.c4.hero.domain.notification.config;
 
+import com.c4.hero.domain.notification.handler.StompHandler;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
@@ -14,14 +17,18 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
  *
  * History
  * 2025/12/11 (혜원) 최초 작성
+ * 2025/12/25 (혜원) StompHandler 인터셉터 추가
  * </pre>
  *
  * @author 혜원
- * @version 1.0
+ * @version 1.1
  */
 @Configuration
 @EnableWebSocketMessageBroker
+@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    private final StompHandler stompHandler;
 
     /**
      * 메시지 브로커 설정
@@ -49,5 +56,16 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.addEndpoint("/ws/notifications")  // WebSocket 연결 엔드포인트
                 .setAllowedOriginPatterns("*")
                 .withSockJS();  // WebSocket 미지원 브라우저 대응
+    }
+
+    /**
+     * 클라이언트 인바운드 채널 설정
+     * STOMP 메시지 인터셉터 등록 (JWT 인증 처리)
+     *
+     * @param registration ChannelRegistration 채널 등록 객체
+     */
+    @Override
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        registration.interceptors(stompHandler);  // StompHandler 등록
     }
 }

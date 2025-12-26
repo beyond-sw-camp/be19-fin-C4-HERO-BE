@@ -2,7 +2,7 @@ package com.c4.hero.domain.notification.controller;
 
 import com.c4.hero.domain.auth.security.CustomUserDetails;
 import com.c4.hero.domain.notification.dto.NotificationSettingsDTO;
-import com.c4.hero.domain.notification.service.NotificationSettingsService;
+import com.c4.hero.domain.notification.service.NotificationMySettingsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -34,9 +34,9 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/notifications/settings")
 @RequiredArgsConstructor
 @Tag(name = "알림 설정 API", description = "알림 설정 조회 및 수정")
-public class NotificationSettingsController {
+public class NotificationMySettingsController {
 
-    private final NotificationSettingsService settingsService;
+    private final NotificationMySettingsService settingsService;
 
     /**
      * 알림 설정 조회

@@ -73,4 +73,9 @@ public interface SettingsMapper {
      * @return 알림 발송 통계
      */
     SettingsNotificationStatisticsResponseDTO selectNotificationStatistics();
+
+    /**
+     * 가장 많이 발송된 알림 타입 조회
+     */
+    String findMostSentType();
 }

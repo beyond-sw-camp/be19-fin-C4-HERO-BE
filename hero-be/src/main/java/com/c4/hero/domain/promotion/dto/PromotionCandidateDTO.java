@@ -1,5 +1,6 @@
 package com.c4.hero.domain.promotion.dto;
 
+import com.c4.hero.domain.promotion.type.PromotionCandidateStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,7 +18,7 @@ import lombok.ToString;
  * </pre>
  *
  * @author 승건
- * @version 1.0
+ * @version 1.1
  */
 
 @Builder
@@ -34,7 +35,7 @@ public class PromotionCandidateDTO {
     private String grade;               // 승진 후보자 직급
     private String nominatorName;       // 추천인 이름
     private String nominationReason;    // 추천 사유
-    private Boolean isApproved;         // 승인 여부
+    private PromotionCandidateStatus status; // 승인 여부
     private String rejectionReason;     // 반려 사유
     private Integer evaluationPoint;    // 평가 포인트
 }

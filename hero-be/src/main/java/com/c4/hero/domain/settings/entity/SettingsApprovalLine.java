@@ -1,6 +1,6 @@
 package com.c4.hero.domain.settings.entity;
 
-import com.c4.hero.domain.approval.entity.ApprovalFormTemplate;
+import com.c4.hero.domain.approval.entity.ApprovalTemplate;
 import jakarta.persistence.*;
 
 import lombok.AccessLevel;
@@ -8,11 +8,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDateTime;
 /**
  * <pre>
  * Class Name: SettingsApprovalLine
@@ -42,12 +39,12 @@ public class SettingsApprovalLine {
 
     @JoinColumn(name = "template_id")
     @ManyToOne(fetch = FetchType.LAZY)
-    private ApprovalFormTemplate template;
+    private ApprovalTemplate template;
 
     @Column
     private Integer seq;
 
-    @Column
+    @Column(name = "department_id")
     private Integer departmentId;
 
 //    @CreatedDate

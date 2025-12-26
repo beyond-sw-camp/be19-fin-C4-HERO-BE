@@ -182,6 +182,7 @@ public class Employee {
 
     public void changeGrade(Grade newGrade) {
         this.grade = newGrade;
+        this.evaluationPoint = 0;
     }
     public void changeJobTitle(JobTitle newJobTitle) {
         this.jobTitle = newJobTitle;
