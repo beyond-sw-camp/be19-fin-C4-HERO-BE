@@ -46,4 +46,6 @@ public interface ApprovalTemplateRepository
     List<SettingsDocumentTemplateResponseDTO> findByTemplateWithStepsCount();
 
     ApprovalTemplate findByTemplateId(Integer templateId);
+
+    ApprovalTemplate findByTemplateKey(String formType);
 }

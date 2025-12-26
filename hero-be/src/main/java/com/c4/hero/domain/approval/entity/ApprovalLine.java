@@ -39,8 +39,8 @@ public class ApprovalLine {
     private int seq;
 
     // 중요: 결재(APPROVER)인지 합의(AGREEMENT)인지 구분
-    @Column(name = "type")
-    private String type;
+//    @Column(name = "type")
+//    private String type;
 
     @Column(name = "line_status")
     private String lineStatus; // PENDING, APPROVED, REJECTED
