@@ -1,6 +1,6 @@
 package com.c4.hero.domain.settings.service;
 
-import com.c4.hero.domain.approval.entity.ApprovalFormTemplate;
+import com.c4.hero.domain.approval.entity.ApprovalTemplate;
 import com.c4.hero.domain.approval.repository.ApprovalTemplateRepository;
 import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
@@ -50,7 +50,7 @@ class SettingsCommandServiceTest {
     void applySettings_success() {
         // Given
         Integer templateId = 1;
-        ApprovalFormTemplate mockTemplate = ApprovalFormTemplate.builder().templateId(templateId).build();
+        ApprovalTemplate mockTemplate = ApprovalTemplate.builder().templateId(templateId).build();
 
         // 요청 데이터: 결재선 1개, 참조선 1개
         SettingsDefaultLineDTO lineDto = SettingsDefaultLineDTO.builder()
@@ -105,7 +105,7 @@ class SettingsCommandServiceTest {
     void applySettings_filterInvalidTypes() {
         // Given
         Integer templateId = 1;
-        ApprovalFormTemplate mockTemplate = ApprovalFormTemplate.builder().templateId(templateId).build();
+        ApprovalTemplate mockTemplate = ApprovalTemplate.builder().templateId(templateId).build();
 
         // INVALID_TYPE 이라는 이상한 타입이 들어왔다고 가정
         SettingsDefaultLineDTO invalidLine = SettingsDefaultLineDTO.builder()

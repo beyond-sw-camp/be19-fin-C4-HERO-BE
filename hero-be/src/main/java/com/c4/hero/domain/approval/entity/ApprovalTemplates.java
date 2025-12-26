@@ -6,7 +6,7 @@ import lombok.Data;
 @Data
 @Entity
 @Table(name = "tbl_document_templates")
-public class DocumentTemplates {
+public class ApprovalTemplates {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;

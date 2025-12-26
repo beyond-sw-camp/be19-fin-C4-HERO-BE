@@ -1,11 +1,8 @@
 package com.c4.hero.domain.settings.repository;
 
-import com.c4.hero.domain.approval.entity.ApprovalFormTemplate;
-import com.c4.hero.domain.settings.dto.SettingsDefaultLineDTO;
-import com.c4.hero.domain.settings.dto.response.SettingsDocumentTemplateResponseDTO;
+import com.c4.hero.domain.approval.entity.ApprovalTemplate;
 import com.c4.hero.domain.settings.entity.SettingsApprovalLine;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
 
@@ -25,5 +22,5 @@ import java.util.List;
 public interface SettingsApprovalLineRepository extends JpaRepository<SettingsApprovalLine, Integer> {
     List<SettingsApprovalLine> findByTemplate_TemplateId(Integer templateId);
 
-    void deleteAllByTemplate(ApprovalFormTemplate template);
+    void deleteAllByTemplate(ApprovalTemplate template);
 }

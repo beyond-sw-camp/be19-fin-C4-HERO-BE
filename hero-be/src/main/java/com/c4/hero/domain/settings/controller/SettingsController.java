@@ -20,6 +20,7 @@ import com.c4.hero.domain.settings.service.SettingsCommandService;
 import com.c4.hero.domain.settings.service.SettingsNotificationCommandService;
 import com.c4.hero.domain.settings.service.SettingsNotificationQueryService;
 import com.c4.hero.domain.settings.service.SettingsQueryService;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
@@ -206,6 +207,7 @@ public class SettingsController {
      *
      * @return List<SettingsDocumentTemplateResponseDTO> 서식 목록 조회
      */
+    @Operation(summary = "결재 서식 목록 조회", description = "결재 관리 설정에서 사용할 수 있는 모든 문서 서식의 목록을 조회합니다.")
     @GetMapping("/approvals/templates")
     public ResponseEntity<List<SettingsDocumentTemplateResponseDTO>> getTemplates() {
 
@@ -219,6 +221,7 @@ public class SettingsController {
      * @param
      * @return List<DepartmentResponseDTO> 부서 목록
      */
+    @Operation(summary = "결재 부서 목록 조회", description = "결재선 지정 및 관리를 위해 조직 내의 모든 부서 목록을 조회합니다.")
     @GetMapping("/approvals/departments")
     public ResponseEntity<List<DepartmentResponseDTO>> getApprovalDepartments() {
         List<DepartmentResponseDTO> list = settingsQueryService.getApprovalDepartments();
@@ -231,6 +234,7 @@ public class SettingsController {
      * @param templateId 서식 ID
      * @return settings 서식이 가지는 기본 결재선/참조목록 설정
      */
+    @Operation(summary = "서식별 결재 설정 상세 조회", description = "특정 서식(templateId)에 설정된 기본 결재선 및 참조자 목록 정보를 조회합니다.")
     @GetMapping("/approvals/templates/{templateId}")
     public ResponseEntity<SettingsApprovalResponseDTO> getApprovalSettings(
             @PathVariable Integer templateId) {
@@ -245,6 +249,7 @@ public class SettingsController {
      * @param   settings 설정값들
      * @return ResponseEntity<String>
      */
+    @Operation(summary = "서식별 기본 결재선 설정 저장", description = "특정 서식에 적용될 기본 결재선 및 참조 설정을 수정(저장)합니다.")
     @PutMapping("/approvals/templates/{templateId}")
     public ResponseEntity<Void> registDefaultLine(
             @PathVariable Integer templateId,
