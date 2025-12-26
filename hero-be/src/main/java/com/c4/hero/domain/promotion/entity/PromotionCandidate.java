@@ -126,6 +126,7 @@ public class PromotionCandidate {
         } else {
             this.status = PromotionCandidateStatus.REJECTED;
         }
+
         this.rejectionReason = rejectionReason;
     }
 
