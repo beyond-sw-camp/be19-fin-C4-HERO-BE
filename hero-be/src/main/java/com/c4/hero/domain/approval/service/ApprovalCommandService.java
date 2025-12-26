@@ -2,17 +2,22 @@ package com.c4.hero.domain.approval.service;
 
 import com.c4.hero.domain.approval.dto.ApprovalLineDTO;
 import com.c4.hero.domain.approval.dto.ApprovalReferenceDTO;
+import com.c4.hero.domain.approval.dto.request.ApprovalActionRequestDTO;
 import com.c4.hero.domain.approval.dto.request.ApprovalRequestDTO;
+import com.c4.hero.domain.approval.dto.response.ApprovalActionResponseDTO;
 import com.c4.hero.domain.approval.entity.*;
+import com.c4.hero.domain.approval.event.ApprovalCompletedEvent;
 import com.c4.hero.domain.approval.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -41,6 +46,7 @@ public class ApprovalCommandService {
     private final ApprovalReferenceRepository referenceRepository;
     private final ApprovalBookmarkRepository bookmarkRepository;
     private final ApprovalTemplateRepository templateRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     private final String UPLOAD_DIR = "C:/hero_uploads/";
 
@@ -146,25 +152,34 @@ public class ApprovalCommandService {
     /* ========================================== */
 
     /**
-     * 결재선 저장
+     * 결재선 저장 (기안자 자동 승인)
+     * - seq=1 (기안자): APPROVED 상태로 저장, processDate 자동 설정
+     * - seq>1 (결재자들): PENDING 상태로 저장
      *
-     * @param docId        문서 ID
-     * @param lines        결재선 DTO 목록
+     * @param docId 문서 ID
+     * @param lines 결재선 DTO 목록
      */
     private void saveApprovalLines(Integer docId, List<ApprovalLineDTO> lines) {
         for (ApprovalLineDTO lineDTO : lines) {
-            ApprovalLine line = ApprovalLine.builder()
+            // seq=1 (기안자)는 자동 승인 처리
+            String initialStatus = (lineDTO.getSeq() == 1) ? "APPROVED" : "PENDING";
+
+            ApprovalLine.ApprovalLineBuilder builder = ApprovalLine.builder()
                     .docId(docId)
                     .approverId(lineDTO.getApproverId())
                     .seq(lineDTO.getSeq())
-//                    .type("APPROVER")           // 기본값: 결재자
-                    .lineStatus("PENDING")      // 초기 상태: 대기
-                    .build();
+                    .lineStatus(initialStatus);
 
+            // seq=1 (기안자)는 processDate 설정
+            if (lineDTO.getSeq() == 1) {
+                builder.processDate(LocalDateTime.now());
+            }
+
+            ApprovalLine line = builder.build();
             lineRepository.save(line);
 
-            log.debug("📌 결재선 저장 - seq: {}, approverId: {}, approverName: {}",
-                    lineDTO.getSeq(), lineDTO.getApproverId(), lineDTO.getApproverName());
+            log.debug("📌 결재선 저장 - seq: {}, approverId: {}, status: {}",
+                    lineDTO.getSeq(), lineDTO.getApproverId(), initialStatus);
         }
     }
 
@@ -239,6 +254,121 @@ public class ApprovalCommandService {
                 log.error("❌ 파일 저장 실패: {}", originalName, e);
                 throw new RuntimeException("파일 업로드 중 오류가 발생했습니다.");
             }
+        }
+    }
+
+    /**
+     * 결재 처리 (승인/반려)
+     *
+     * @param request 결재 처리 요청
+     * @param employeeId 결재자 ID
+     * @return 처리 결과
+     */
+    @Transactional
+    public ApprovalActionResponseDTO processApproval(
+            ApprovalActionRequestDTO request,
+            Integer employeeId
+    ) {
+        // 1. 유효성 검증
+        validateApprovalAction(request);
+
+        // 2. 결재선 조회 및 권한 확인
+        ApprovalLine line = lineRepository.findById(request.getLineId())
+                .orElseThrow(() -> new IllegalArgumentException("결재선을 찾을 수 없음"));
+
+        if (!line.getApproverId().equals(employeeId)) {
+            throw new IllegalArgumentException("결재 권한 없음");
+        }
+
+        if (!"PENDING".equals(line.getLineStatus())) {
+            throw new IllegalArgumentException("이미 처리된 결재임");
+        }
+
+        // 3. 문서 조회 및 상태 확인
+        ApprovalDocument document = documentRepository.findById(request.getDocId())
+                .orElseThrow(() -> new IllegalArgumentException("문서를 찾을 수 없음"));
+
+        if (!"INPROGRESS".equals(document.getDocStatus())) {
+            throw new IllegalArgumentException("진행중인 문서가 아님");
+        }
+
+        // 4. 결재 처리
+        if ("REJECT".equals(request.getAction())) {
+            // 반려 처리
+            line.reject(request.getComment());
+            document.reject();
+
+            return ApprovalActionResponseDTO.builder()
+                    .success(true)
+                    .message("반려 처리 완료")
+                    .docStatus("REJECTED")
+                    .build();
+        } else {
+            // 승인 처리
+            line.approve();
+
+            // 5. 모든 결재자 승인 확인
+            List<ApprovalLine> allLines = lineRepository.findByDocIdOrderBySeqAsc(request.getDocId());
+            boolean allApproved = allLines.stream()
+                    .filter(l -> l.getSeq() > 1)  // seq=1(기안자) 제외
+                    .allMatch(l -> "APPROVED".equals(l.getLineStatus()));
+
+            if (allApproved) {
+                // 최종 승인 완료
+                document.complete();
+
+                // 🎉 이벤트 발행 - 다른 도메인에서 후속 처리
+                publishApprovalCompletedEvent(document);
+
+                return ApprovalActionResponseDTO.builder()
+                        .success(true)
+                        .message("최종 승인 완료")
+                        .docStatus("APPROVED")
+                        .build();
+            } else {
+                // 아직 대기중인 결재자 있음
+                document.changeStatus("INPROGRESS");
+
+                return ApprovalActionResponseDTO.builder()
+                        .success(true)
+                        .message("승인 처리 완료")
+                        .docStatus("INPROGRESS")
+                        .build();
+            }
+        }
+    }
+
+    /**
+     * 결재 완료 이벤트 발행
+     * - 다른 도메인에서 이 이벤트를 수신하여 후속 처리
+     *
+     * @param document 승인 완료된 문서
+     */
+    private void publishApprovalCompletedEvent(ApprovalDocument document) {
+        ApprovalTemplate template = templateRepository.findByTemplateId(document.getTemplateId());
+        ApprovalCompletedEvent event = new ApprovalCompletedEvent(
+
+                document.getDocId(),
+                template.getTemplateKey(),     // vacation, overtime, resign 등
+                document.getDetails(),          // JSON 데이터
+                document.getDrafterId(),
+                document.getTitle()
+        );
+
+        log.info("🎉 결재 완료 이벤트 발행 - docId: {}, templateKey: {}",
+                document.getDocId(), template.getTemplateKey());
+
+        eventPublisher.publishEvent(event);
+    }
+
+    private void validateApprovalAction(ApprovalActionRequestDTO request) {
+        if (!"APPROVE".equals(request.getAction()) && !"REJECT".equals(request.getAction())) {
+            throw new IllegalArgumentException("유효하지 않은 결재 액션");
+        }
+
+        if ("REJECT".equals(request.getAction()) &&
+                (request.getComment() == null || request.getComment().trim().isEmpty())) {
+            throw new IllegalArgumentException("반려 시 반려 사유 필수");
         }
     }
 }

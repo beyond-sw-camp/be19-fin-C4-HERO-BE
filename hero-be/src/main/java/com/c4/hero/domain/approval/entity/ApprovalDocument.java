@@ -6,6 +6,19 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
+/**
+ * <pre>
+ * Class Name: ApprovalDocument
+ * Description: 결재 문서 엔티티
+ *
+ * History
+ * 2025/12/26 (민철) 문서 완료 시간 설정 편의 메서드 추가
+ *
+ * </pre>
+ *
+ * @author 민철
+ * @version 2.0
+ */
 @Entity
 @Table(name = "tbl_approval_document")
 @Getter
@@ -32,7 +45,10 @@ public class ApprovalDocument {
     private String details;
 
     @Column(name = "doc_status")
-    private String docStatus; // DRAFT, PENDING, APPROVED...
+    private String docStatus; // DRAFT, INPROGRESS, APPROVED, REJECTED
+
+    @Column(name = "end_date")
+    private LocalDateTime completedAt;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -42,8 +58,30 @@ public class ApprovalDocument {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // 상태 변경 편의 메서드
+    /* ========================================== */
+    /* 편의 메서드 */
+    /* ========================================== */
+
+    /**
+     * 문서 상태 변경
+     * @param status 변경할 상태
+     */
     public void changeStatus(String status) {
         this.docStatus = status;
+    }
+
+    /**
+     * 문서 승인 완료 처리
+     */
+    public void complete() {
+        this.docStatus = "APPROVED";
+        this.completedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 문서 반려 처리
+     */
+    public void reject() {
+        this.docStatus = "REJECTED";
     }
 }

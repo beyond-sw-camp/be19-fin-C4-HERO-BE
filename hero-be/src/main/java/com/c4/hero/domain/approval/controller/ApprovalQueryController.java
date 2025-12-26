@@ -1,6 +1,8 @@
 package com.c4.hero.domain.approval.controller;
 
+import com.c4.hero.common.response.PageResponse;
 import com.c4.hero.domain.approval.dto.ApprovalTemplateResponseDTO;
+import com.c4.hero.domain.approval.dto.response.ApprovalDocumentDetailResponseDTO;
 import com.c4.hero.domain.approval.dto.response.ApprovalDocumentsResponseDTO;
 import com.c4.hero.domain.approval.dto.response.ApprovalTemplateDetailResponseDTO;
 import com.c4.hero.domain.approval.dto.organization.*;
@@ -12,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,11 +34,12 @@ import java.util.List;
  * 2025/12/17 (민철) 문서함 조회 api
  * 2025/12/25 (민철) 작성화면 조회 api 및 CQRS 패턴 적용
  * 2025/12/26 (민철) 조직도 조회 api 추가
+ * 2025/12/26 (민철) 문서함 목록 조회 구현 (PageResponse 사용)
  *
  * </pre>
  *
  * @author 민철
- * @version 2.1
+ * @version 2.2
  */
 @Slf4j
 @RestController
@@ -91,33 +96,67 @@ public class ApprovalQueryController {
 
 
     /**
-     * 문서 목록 조회
+     * 문서함 문서 목록 조회 (탭별 필터링)
      *
-     * @param page      페이지 번호
+     * @param page      페이지 번호 (1부터 시작)
      * @param size      페이지 크기
-     * @param condition 필터 조건 (문서번호/문서분류/문서서식/문서제목/상신자부서/상신자)
+     * @param tab       탭 구분 (all/que/request/reject/ref/end/draft)
      * @param fromDate  시작일
      * @param toDate    종료일
-     * @param sortBy    정렬 기준 (날짜/문서번호)
-     * @return ResponseEntity<List < ApprovalDocumentsResponseDTO>> 문서 목록
+     * @param sortBy    정렬 기준
+     * @param condition 검색 조건
+     * @param userDetails 인증된 사용자 정보
+     * @return ResponseEntity<PageResponse<ApprovalDocumentsResponseDTO>> 문서 목록 (페이지 정보 포함)
      */
     @Operation(
-            summary = "나의 결재 문서 목록 조회",
-            description = "로그인한 사용자와 관련된 결재 문서 목록을 조회함. 날짜 범위, 검색 조건(condition), 정렬 기준(sortBy)을 적용하여 페이징된 결과를 반환함"
+            summary = "문서함 문서 목록 조회",
+            description = "로그인한 사용자의 문서함을 탭별로 필터링하여 조회함. " +
+                    "탭: all(전체), que(대기), request(요청), reject(반려), ref(참조), end(승인), draft(임시저장)"
     )
-    @GetMapping("/documents/my-list")
-    public ResponseEntity<List<ApprovalDocumentsResponseDTO>> getAllDocuments(
+    @GetMapping("/inbox/documents")
+    public ResponseEntity<PageResponse<ApprovalDocumentsResponseDTO>> getInboxDocuments(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "all") String tab,
             @RequestParam(required = false) String fromDate,
             @RequestParam(required = false) String toDate,
             @RequestParam(required = false) String sortBy,
-            @RequestParam(required = false) String condition
+            @RequestParam(required = false) String condition,
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        List<ApprovalDocumentsResponseDTO> response = approvalQueryService.getDocuments(
-                page, size, fromDate, toDate, sortBy, condition
+        Integer employeeId = userDetails.getEmployeeId();
+        log.info("📬 문서함 조회 요청 - employeeId: {}, tab: {}, page: {}", employeeId, tab, page);
+
+        PageResponse<ApprovalDocumentsResponseDTO> response = approvalQueryService.getInboxDocuments(
+                page, size, tab, fromDate, toDate, sortBy, condition, employeeId
         );
 
+        log.info("✅ 문서함 조회 완료 - 결과: {}건", response.getTotalElements());
+        return ResponseEntity.ok().body(response);
+    }
+
+    /**
+     * 문서 상세 조회
+     *
+     * @param docId       문서 ID
+     * @param userDetails 인증된 사용자 정보
+     * @return ResponseEntity<ApprovalDocumentDetailResponseDTO> 문서 상세 정보
+     */
+    @Operation(
+            summary = "문서 상세 조회",
+            description = "문서 ID로 결재 문서의 상세 정보를 조회함. 문서 기본 정보, 결재선, 참조자, 첨부파일 정보 포함"
+    )
+    @GetMapping("/documents/{docId}")
+    public ResponseEntity<ApprovalDocumentDetailResponseDTO> getDocumentDetail(
+            @PathVariable Integer docId,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Integer employeeId = userDetails.getEmployeeId();
+        log.info("📄 문서 상세 조회 요청 - docId: {}, employeeId: {}", docId, employeeId);
+
+        ApprovalDocumentDetailResponseDTO response = approvalQueryService.getDocumentDetail(docId, employeeId);
+
+        log.info("✅ 문서 상세 조회 완료 - docNo: {}", response.getDocNo());
         return ResponseEntity.ok().body(response);
     }
 

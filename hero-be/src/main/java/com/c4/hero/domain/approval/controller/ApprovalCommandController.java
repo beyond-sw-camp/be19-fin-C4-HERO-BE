@@ -1,6 +1,8 @@
 package com.c4.hero.domain.approval.controller;
 
+import com.c4.hero.domain.approval.dto.request.ApprovalActionRequestDTO;
 import com.c4.hero.domain.approval.dto.request.ApprovalRequestDTO;
+import com.c4.hero.domain.approval.dto.response.ApprovalActionResponseDTO;
 import com.c4.hero.domain.approval.service.ApprovalCommandService;
 import com.c4.hero.domain.auth.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
@@ -105,9 +107,38 @@ public class ApprovalCommandController {
 
 
         Integer employeeId = userDetails.getEmployeeId();
-        Integer docId = approvalCommandService.createDocument(employeeId, dto, files, "PENDING");
+        Integer docId = approvalCommandService.createDocument(employeeId, dto, files, "INPROGRESS");
 
         return ResponseEntity.ok().body("상신 완료. ID: " + docId);
+    }
+
+    /**
+     * 결재 승인/반려 처리
+     *
+     * @param request     결재 처리 요청 DTO
+     * @param userDetails 인증된 사용자 정보
+     * @return ResponseEntity<ApprovalActionResponseDTO> 처리 결과
+     */
+    @Operation(
+            summary = "결재 승인/반려 처리",
+            description = "결재자가 문서를 승인하거나 반려함. 반려 시 comment 필수"
+    )
+    @PostMapping("/process")
+    public ResponseEntity<ApprovalActionResponseDTO> processApproval(
+            @RequestBody ApprovalActionRequestDTO request,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Integer employeeId = userDetails.getEmployeeId();
+        log.info("🔄 결재 처리 요청 - docId: {}, lineId: {}, action: {}, employeeId: {}",
+                request.getDocId(), request.getLineId(), request.getAction(), employeeId);
+
+        ApprovalActionResponseDTO response = approvalCommandService.processApproval(
+                request, employeeId
+        );
+
+        log.info("✅ 결재 처리 완료 - success: {}, docStatus: {}",
+                response.isSuccess(), response.getDocStatus());
+        return ResponseEntity.ok().body(response);
     }
 
 }

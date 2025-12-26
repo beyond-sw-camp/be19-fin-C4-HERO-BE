@@ -4,18 +4,19 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
+
 /**
  * <pre>
- * Class Name: 
- * Description: 
+ * Class Name: ApprovalLine
+ * Description: 결재선 엔티티
  *
  * History
- * 2025/12/ (민철) 
- * 
+ * 2025/12/26 (민철) 결재 처리 편의 메서드 추가
+ *
  * </pre>
  *
  * @author 민철
- * @version 
+ * @version 2.0
  */
 @Entity
 @Table(name = "tbl_approval_line")
@@ -49,4 +50,26 @@ public class ApprovalLine {
 
     @Column(name = "process_date")
     private LocalDateTime processDate;
+
+    /* ========================================== */
+    /* 편의 메서드 */
+    /* ========================================== */
+
+    /**
+     * 승인 처리
+     */
+    public void approve() {
+        this.lineStatus = "APPROVED";
+        this.processDate = LocalDateTime.now();
+    }
+
+    /**
+     * 반려 처리
+     * @param rejectComment 반려 사유
+     */
+    public void reject(String rejectComment) {
+        this.lineStatus = "REJECTED";
+        this.processDate = LocalDateTime.now();
+        this.comment = rejectComment;
+    }
 }
