@@ -40,7 +40,7 @@ import java.time.LocalTime;
 @Tag(name = "홈 대시보드", description = "대시보드 통계 API")
 @Slf4j
 @RestController
-@RequestMapping("/api/timeclock")
+@RequestMapping("/api/dashboard")
 @RequiredArgsConstructor
 public class DashboardController {
 
@@ -48,7 +48,7 @@ public class DashboardController {
 
     /**
      * 출근 처리
-     * POST /api/timeclock/clock-in
+     * POST /api/dashboard/clock-in
      *
      * @param userDetails 인증된 사용자 정보
      * @return 성공 응답
@@ -82,7 +82,7 @@ public class DashboardController {
 
     /**
      * 퇴근 처리
-     * POST /api/timeclock/clock-out
+     * POST /api/dashboard/clock-out
      *
      * @param userDetails 인증된 사용자 정보
      * @return 성공 응답
@@ -114,7 +114,7 @@ public class DashboardController {
 
     /**
      * 오늘 출퇴근 상태 조회
-     * GET /api/timeclock/status
+     * GET /api/dashboard/status
      *
      * @param userDetails 인증된 사용자 정보
      * @return 출퇴근 상태 정보
@@ -140,7 +140,7 @@ public class DashboardController {
 
     /**
      * 이번 주 근무 통계 조회 (실시간 근무 중 시간 포함)
-     * GET /api/timeclock/weekly-stats
+     * GET /api/dashboard/weekly-stats
      *
      * @param userDetails 인증된 사용자 정보
      * @return 주간 근무 통계
@@ -166,7 +166,7 @@ public class DashboardController {
 
     /**
      * 이번 달 요약 통계 조회
-     * GET /api/timeclock/monthly-summary
+     * GET /api/dashboard/monthly-summary
      *
      * @param userDetails 인증된 사용자 정보
      * @return 월간 요약 통계
@@ -191,7 +191,7 @@ public class DashboardController {
 
     /**
      * 출근 통계 조회 (이번 달)
-     * GET /api/timeclock/attendance-stats
+     * GET /api/dashboard/attendance-stats
      *
      * @param userDetails 인증된 사용자 정보
      * @return 출근 통계
@@ -216,7 +216,7 @@ public class DashboardController {
 
     /**
      * 휴가 현황 조회 (이번 달)
-     * GET /api/timeclock/vacation-stats
+     * GET /api/dashboard/vacation-stats
      *
      * @param userDetails 인증된 사용자 정보
      * @return 휴가 현황 통계
@@ -241,7 +241,7 @@ public class DashboardController {
 
     /**
      * 결재 현황 조회
-     * GET /api/timeclock/approval-stats
+     * GET /api/dashboard/approval-stats
      *
      * @param userDetails 인증된 사용자 정보
      * @return 결재 현황 통계
