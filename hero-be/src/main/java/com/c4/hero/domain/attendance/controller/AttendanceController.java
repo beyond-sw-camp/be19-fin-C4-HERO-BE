@@ -20,8 +20,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
 import java.time.LocalDate;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 /**
  * <pre>
@@ -44,6 +45,7 @@ import java.time.LocalDate;
  * @author 이지윤
  * @version 1.2
  */
+@Tag( name = "근태 API", description = "개인/부서 근태 조회, 근태 점수 대시보드, 직원 반기 대시보드 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/attendance")
@@ -88,6 +90,9 @@ public class AttendanceController {
      * @param endDate   조회 종료일(yyyy-MM-dd), null/미전달 시 기본값 사용
      * @return 개인 근태 요약 DTO
      */
+    @Operation(summary = "개인 근태 요약 조회",
+               description = "근태 관리 상단 탭"
+    )
     @GetMapping("/personal/summary")
     public AttSummaryDTO getPersonalSummary(
             HttpServletRequest request,
@@ -112,6 +117,9 @@ public class AttendanceController {
      * @param endDate   조회 종료일(yyyy-MM-dd), null인 경우 기간 필터 미적용
      * @return 개인 근태 기록 페이지 응답 DTO
      */
+    @Operation( summary = "개인 근태 기록 목록 조회",
+            description = "로그인한 사용자의 근태 이력을 조회"
+    )
     @GetMapping("/personal")
     public PageResponse<PersonalDTO> getPersonalList(
             HttpServletRequest request,
@@ -135,6 +143,9 @@ public class AttendanceController {
      * @param endDate   조회 종료일(yyyy-MM-dd), null인 경우 기간 필터 미적용
      * @return 초과 근무 이력 페이지 응답 DTO
      */
+    @Operation( summary = "개인 초과 근무 이력 조회",
+            description = "개인 초과 근무(연장 근무) 이력(페이지)을 조회"
+    )
     @GetMapping("/overtime")
     public PageResponse<OvertimeDTO> getOvertimeList(
             HttpServletRequest request,
@@ -158,6 +169,10 @@ public class AttendanceController {
      * @param endDate   조회 종료일(yyyy-MM-dd), null인 경우 기간 필터 미적용
      * @return 근태 정정 이력 페이지 응답 DTO
      */
+    @Operation(
+            summary = "개인 근태 정정 요청 이력 조회",
+            description = "개인 근태 정정 요청 이력(페이지)을 조회"
+    )
     @GetMapping("/correction")
     public PageResponse<CorrectionDTO> getCorrectionList(
             HttpServletRequest request,
@@ -181,6 +196,10 @@ public class AttendanceController {
      * @param endDate   조회 종료일(yyyy-MM-dd), null인 경우 기간 필터 미적용
      * @return 근무제 변경 이력 페이지 응답 DTO
      */
+    @Operation(
+            summary = "개인 근무제 변경 이력 조회",
+            description = "개인 근무제 변경이력(페이지)을 조회"
+    )
     @GetMapping("/changelog")
     public PageResponse<ChangeLogDTO> getChangeLogList(
             HttpServletRequest request,
@@ -211,6 +230,10 @@ public class AttendanceController {
      * @param size         페이지 크기 (기본값 10)
      * @return 부서 근태 현황 페이지 응답 DTO
      */
+    @Operation(
+            summary = "부서 근태 현황 조회",
+            description = "부서 근태 현황(당일 기준)을 조회"
+    )
     @GetMapping("/deptworksystem")
     public PageResponse<DeptWorkSystemDTO> getDeptWorkSystemList(
             HttpServletRequest request,
@@ -249,6 +272,10 @@ public class AttendanceController {
      * @param size         페이지 크기 (기본값 10)
      * @return 근태 점수 대시보드 페이지 응답 DTO
      */
+    @Operation(
+            summary = "근태 점수 대시보드 조회",
+            description = "근태 점수 대시보드(직원별 점수 리스트)를 조회"
+    )
     @GetMapping("/dashboard")
     public PageResponse<AttendanceDashboardDTO> getAttendanceDashboardList(
             @RequestParam(name = "departmentId", required = false) Integer departmentId,
@@ -278,6 +305,10 @@ public class AttendanceController {
      * @param month        조회 월("YYYY-MM"), null인 경우 서비스에서 기본값 처리
      * @return 근태 대시보드 요약 DTO
      */
+    @Operation(
+            summary = "근태 점수 대시보드 요약 조회",
+            description = "근태 점수 대시보드 상단 요약(전체/우수/위험 직원 수)을 조회"
+    )
     @GetMapping("/dashboard/summary")
     public AttendanceDashboardSummaryDTO getAttendanceDashboardSummary(
             @RequestParam(name = "departmentId", required = false) Integer departmentId,
@@ -306,6 +337,10 @@ public class AttendanceController {
      * @param half       반기 타입(H1/H2, 옵션)
      * @return 직원 반기 근태 대시보드 DTO
      */
+    @Operation(
+            summary = "직원 반기 근태 대시보드 조회",
+            description = "직원 1명의 반기(상/하반기) 근태 대시보드(차트 Drawer)를 조회"
+    )
     @GetMapping("/dashboard/employee")
     public AttendanceEmployeeHalfDashboardDTO getEmployeeHalfDashboard(
             @RequestParam Integer employeeId,

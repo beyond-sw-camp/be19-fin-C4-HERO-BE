@@ -6,6 +6,8 @@ import com.c4.hero.domain.vacation.dto.DepartmentVacationDTO;
 import com.c4.hero.domain.vacation.dto.VacationHistoryDTO;
 import com.c4.hero.domain.vacation.dto.VacationSummaryDTO;
 import com.c4.hero.domain.vacation.service.VacationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -31,6 +33,10 @@ import java.util.List;
  * @author 이지윤
  * @version 1.1
  */
+@Tag(
+        name = "휴가 API",
+        description = "개인 휴가 이력/요약, 부서 휴가 캘린더, Google Calendar 동기화 API"
+)
 @RestController
 @RequestMapping("/api/vacation")
 @RequiredArgsConstructor
@@ -48,6 +54,10 @@ public class VacationController {
     /**
      * 개인 휴가 이력을 페이지 단위로 조회합니다.
      */
+    @Operation(
+            summary = "개인 휴가 이력 조회",
+            description = "개인 휴가 이력을 페이지 단위로 조회"
+    )
     @GetMapping("/history")
     public PageResponse<VacationHistoryDTO> getVacationHistory(
             HttpServletRequest request,
@@ -72,6 +82,10 @@ public class VacationController {
     /**
      * 부서 휴가 캘린더(월 단위)를 조회합니다.
      */
+    @Operation(
+            summary = "부서 휴가 캘린더 조회",
+            description = "부서 휴가 캘린더(월 단위)를 조회"
+    )
     @GetMapping("/department/calendar")
     public List<DepartmentVacationDTO> getDepartmentVacationCalendar(
             HttpServletRequest request,
@@ -85,6 +99,10 @@ public class VacationController {
     /**
      * 로그인한 사용자의 휴가 요약 정보를 조회합니다.
      */
+    @Operation(
+            summary = "개인 휴가 요약 조회",
+            description = "로그인한 사용자의 휴가 요약 정보를 조회"
+    )
     @GetMapping("/summary")
     public VacationSummaryDTO getVacationSummary(HttpServletRequest request) {
         Integer employeeId = getEmployeeIdFromToken(request);
@@ -109,6 +127,10 @@ public class VacationController {
      * @param month   동기화 대상 월 1~12 (필수)
      * @return inserted/updated/failed/total
      */
+    @Operation(
+            summary = "Google Calendar 휴가 동기화",
+            description = "특정 월의 휴가 로그를 Google Calendar에 동기화"
+    )
     @PostMapping("/google-calendar/sync")
     public VacationService.SyncResult syncGoogleCalendar(
             HttpServletRequest request,
