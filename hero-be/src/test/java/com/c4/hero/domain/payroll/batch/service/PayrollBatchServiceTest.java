@@ -130,7 +130,10 @@ class PayrollBatchServiceTest {
                 .isInstanceOf(BusinessException.class);
 
         // FAILED 있으면 lock 걸면 안됨
-        verify(payrollRepository, never()).updateStatusByBatchId(anyInt());
+        // 실행 시 오류가 발생 아래 코드로 임시로 고쳤습니다.(2025-12-26 easy가 올림)
+//        verify(payrollRepository, never()).updateStatusByBatchId(anyInt());
+        verify(payrollRepository, never())
+                .updateStatusByBatchId(anyInt(), any(PayrollStatus.class));
     }
 
     @Test
