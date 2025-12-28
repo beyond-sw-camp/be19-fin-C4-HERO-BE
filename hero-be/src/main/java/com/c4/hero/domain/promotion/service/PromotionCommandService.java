@@ -32,6 +32,7 @@ import com.c4.hero.domain.promotion.repository.PromotionPlanRepository;
 import com.c4.hero.domain.settings.entity.SettingsApprovalLine;
 import com.c4.hero.domain.settings.repository.SettingsApprovalLineRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import lombok.extern.slf4j.Slf4j;
 import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
@@ -67,6 +68,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class PromotionCommandService {
 
     private final EmployeeCommandService employeeCommandService;
@@ -330,6 +332,11 @@ public class PromotionCommandService {
         PromotionPlan plan = candidate.getPromotionDetail().getPromotionPlan();
         Employee employee = candidate.getEmployee();
 
+        if(employee.getEmployeeId() == 1) {
+            log.info("관리자의 직급은 변경 불가능 합니다.");
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "관리자의 직급은 변경 불가능 합니다.");
+        }
+
         Integer targetGradeId = candidate.getPromotionDetail().getGradeId();
         Grade newGrade = gradeRepository.findById(targetGradeId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.GRADE_NOT_FOUND));
@@ -386,6 +393,12 @@ public class PromotionCommandService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.EMPLOYEE_NOT_FOUND));
         Grade newGrade = gradeRepository.findById(request.getTargetGradeId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.GRADE_NOT_FOUND));
+
+        if(employee.getEmployeeId() == 1) {
+            log.info("관리자의 직급은 변경 불가능 합니다.");
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "관리자의 직급은 변경 불가능 합니다.");
+        }
+
         // 결재선 설정
         List<ApprovalLineDTO> approvalLines = createApprovalLines(userDetails);
         // 상세 정보(details) JSON 생성

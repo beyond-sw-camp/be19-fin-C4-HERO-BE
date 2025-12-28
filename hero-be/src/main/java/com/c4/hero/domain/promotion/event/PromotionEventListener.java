@@ -37,8 +37,8 @@ public class PromotionEventListener {
 
             if ("SPECIAL".equals(promotionType)) {
                 // 특별 승진 처리
-                Integer employeeId = (Integer) details.get("employeeId");
-                Integer targetGradeId = (Integer) details.get("gradeAfter");
+                Integer employeeId = details.get("employeeId") != null ? ((Number) details.get("employeeId")).intValue() : null;
+                Integer targetGradeId = details.get("targetGradeId") != null ? ((Number) details.get("targetGradeId")).intValue() : null;
                 String reason = (String) details.get("reason");
 
                 if (employeeId == null || targetGradeId == null) {
@@ -51,7 +51,7 @@ public class PromotionEventListener {
 
             } else {
                 // 정기 승진 처리 (REGULAR 또는 null)
-                Integer candidateId = (Integer) details.get("candidateId");
+                Integer candidateId = details.get("candidateId") != null ? ((Number) details.get("candidateId")).intValue() : null;
                 if (candidateId == null) {
                     log.error("❌ 정기 승진 처리 실패 - candidateId를 찾을 수 없음. docId: {}", event.getDocId());
                     return;
@@ -90,7 +90,7 @@ public class PromotionEventListener {
                 log.info("ℹ️ 특별 승진 결재 반려됨 - 별도 처리 없음");
             } else {
                 // 정기 승진 반려 - 후보자 상태 변경 필요
-                Integer candidateId = (Integer) details.get("candidateId");
+                Integer candidateId = details.get("candidateId") != null ? ((Number) details.get("candidateId")).intValue() : null;
                 if (candidateId != null) {
                     PromotionReviewRequestDTO requestDTO = PromotionReviewRequestDTO.builder()
                             .candidateId(candidateId)
