@@ -2,23 +2,25 @@ package com.c4.hero.domain.approval.controller;
 
 import com.c4.hero.common.response.PageResponse;
 import com.c4.hero.domain.approval.dto.ApprovalTemplateResponseDTO;
+import com.c4.hero.domain.approval.dto.response.VacationTypeResponseDTO;
 import com.c4.hero.domain.approval.dto.response.ApprovalDocumentDetailResponseDTO;
 import com.c4.hero.domain.approval.dto.response.ApprovalDocumentsResponseDTO;
 import com.c4.hero.domain.approval.dto.response.ApprovalTemplateDetailResponseDTO;
 import com.c4.hero.domain.approval.dto.organization.*;
+import com.c4.hero.domain.approval.repository.ApprovalVacationTypeRepository;
 import com.c4.hero.domain.approval.service.ApprovalQueryService;
 import com.c4.hero.domain.approval.service.OrganizationService;
 import com.c4.hero.domain.auth.security.CustomUserDetails;
+import com.c4.hero.domain.vacation.entity.VacationType;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * <pre>
@@ -49,6 +51,7 @@ public class ApprovalQueryController {
 
     private final ApprovalQueryService approvalQueryService;
     private final OrganizationService organizationService;
+    private final ApprovalVacationTypeRepository approvalVacationTypeRepository;
 
 
     /**
@@ -242,5 +245,24 @@ public class ApprovalQueryController {
 
         log.info("✅ 부서별 직원 조회 완료 - 결과: {}명", employees.size());
         return ResponseEntity.ok().body(employees);
+    }
+    
+    /**
+     * 
+     *
+     * @param  
+     * @return  
+     */
+    @GetMapping("/vacation-types")
+    public ResponseEntity<List<VacationTypeResponseDTO>> getVacationTypes() {
+        
+        List<VacationType> typeEntity = approvalVacationTypeRepository.findAll();
+
+        List<VacationTypeResponseDTO> response = typeEntity.stream()
+                .map(type -> VacationTypeResponseDTO.builder()
+                        .vacationTypeId(type.getVacationTypeId())
+                        .vacationTypeName(type.getVacationTypeName())
+                        .build()).collect(Collectors.toList());;
+        return ResponseEntity.ok().body(response);
     }
 }
