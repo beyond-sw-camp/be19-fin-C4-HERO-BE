@@ -2,6 +2,13 @@ package com.c4.hero.domain.promotion.service;
 
 import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
+import com.c4.hero.common.util.DateUtil;
+import com.c4.hero.domain.approval.dto.ApprovalLineDTO;
+import com.c4.hero.domain.approval.dto.request.ApprovalRequestDTO;
+import com.c4.hero.domain.approval.entity.ApprovalTemplate;
+import com.c4.hero.domain.approval.repository.ApprovalTemplateRepository;
+import com.c4.hero.domain.approval.service.ApprovalCommandService;
+import com.c4.hero.domain.auth.security.CustomUserDetails;
 import com.c4.hero.domain.employee.entity.Employee;
 import com.c4.hero.domain.employee.entity.EmployeeDepartment;
 import com.c4.hero.domain.employee.entity.Grade;
@@ -11,6 +18,7 @@ import com.c4.hero.domain.employee.repository.EmployeeRepository;
 import com.c4.hero.domain.employee.service.EmployeeCommandService;
 import com.c4.hero.domain.employee.type.ChangeType;
 import com.c4.hero.domain.promotion.dto.PromotionDetailPlanDTO;
+import com.c4.hero.domain.promotion.dto.request.DirectPromotionRequestDTO;
 import com.c4.hero.domain.promotion.dto.request.PromotionNominationRequestDTO;
 import com.c4.hero.domain.promotion.dto.request.PromotionPlanRequestDTO;
 import com.c4.hero.domain.promotion.dto.request.PromotionReviewRequestDTO;
@@ -18,19 +26,26 @@ import com.c4.hero.domain.promotion.entity.PromotionCandidate;
 import com.c4.hero.domain.promotion.type.PromotionCandidateStatus;
 import com.c4.hero.domain.promotion.entity.PromotionDetail;
 import com.c4.hero.domain.promotion.entity.PromotionPlan;
-import com.c4.hero.domain.promotion.repotiroy.PromotionCandidateRepository;
-import com.c4.hero.domain.promotion.repotiroy.PromotionDetailRepository;
-import com.c4.hero.domain.promotion.repotiroy.PromotionPlanRepository;
+import com.c4.hero.domain.promotion.repository.PromotionCandidateRepository;
+import com.c4.hero.domain.promotion.repository.PromotionDetailRepository;
+import com.c4.hero.domain.promotion.repository.PromotionPlanRepository;
+import com.c4.hero.domain.settings.entity.SettingsApprovalLine;
+import com.c4.hero.domain.settings.repository.SettingsApprovalLineRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -42,10 +57,12 @@ import java.util.stream.Collectors;
  * 2025/12/19 (승건) 최초 작성
  * 2025/12/22 (승건) 후보자 추천 및 추천 취소 로직 추가
  * 2025/12/24 (승건) 심사 로직 분리 및 최종 승인 시 직급 변경 로직 추가
+ * 2025/12/27 (승건) 1차 심사 통과 시 결재 상신 로직 추가 (기본 결재선 적용)
+ * 2025/12/28 (승건) 즉시 승진 로직 추가
  * </pre>
  *
  * @author 승건
- * @version 1.2
+ * @version 1.4
  */
 @Service
 @RequiredArgsConstructor
@@ -53,15 +70,16 @@ import java.util.stream.Collectors;
 public class PromotionCommandService {
 
     private final EmployeeCommandService employeeCommandService;
-
     private final PromotionPlanRepository promotionPlanRepository;
     private final PromotionDetailRepository promotionDetailRepository;
     private final PromotionCandidateRepository promotionCandidateRepository;
     private final EmployeeRepository employeeRepository;
     private final EmployeeGradeRepository gradeRepository;
     private final EmployeeDepartmentRepository departmentRepository;
-
-    private final ModelMapper modelMapper;
+    private final ApprovalCommandService approvalCommandService;
+    private final ObjectMapper objectMapper;
+    private final ApprovalTemplateRepository templateRepository;
+    private final SettingsApprovalLineRepository settingsApprovalLineRepository;
 
     /**
      * 새로운 승진 계획을 등록하고, 조건에 맞는 후보자를 자동으로 등록합니다.
@@ -261,9 +279,10 @@ public class PromotionCommandService {
      * 승진 후보자를 1차 심사합니다. (승인 또는 반려)
      * 대기(WAITING) 상태인 후보자만 처리 가능합니다.
      *
+     * @param userDetails 현재 로그인한 사용자 정보
      * @param request 심사 요청 정보
      */
-    public void reviewCandidate(PromotionReviewRequestDTO request) {
+    public void reviewCandidate(CustomUserDetails userDetails, PromotionReviewRequestDTO request) {
         // 1. 후보자 조회
         PromotionCandidate candidate = promotionCandidateRepository.findById(request.getCandidateId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROMOTION_CANDIDATE_NOT_FOUND));
@@ -273,8 +292,9 @@ public class PromotionCommandService {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE, "이미 심사가 완료된 후보자입니다.");
         }
 
-        // 3. 승인(심사 통과) 요청인 경우 TO 체크
+        // 3. 승인(심사 통과) 요청인 경우
         if (Boolean.TRUE.equals(request.getIsPassed())) {
+            // 3-1. TO 체크
             PromotionDetail detail = candidate.getPromotionDetail();
 
             // 현재 통과된(심사 통과 + 최종 승인) 인원 수 조회
@@ -282,9 +302,15 @@ public class PromotionCommandService {
                     detail,
                     List.of(PromotionCandidateStatus.REVIEW_PASSED, PromotionCandidateStatus.FINAL_APPROVED)
             );
-
             if (passedCount >= detail.getQuotaCount()) {
                 throw new BusinessException(ErrorCode.PROMOTION_QUOTA_EXCEEDED);
+            }
+
+            // 3-2. 결재 상신
+            try {
+                createRegularPromotionApproval(userDetails, candidate);
+            } catch (JsonProcessingException e) {
+                throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "결재 상신 데이터 생성에 실패했습니다.");
             }
         }
 
@@ -293,9 +319,151 @@ public class PromotionCommandService {
     }
 
     /**
-     * 승진 후보자를 최종 승인합니다.
-     * 심사 통과(REVIEW_PASSED) 상태인 후보자만 처리 가능합니다.
-     * 최종 승인 시 해당 직원의 직급이 실제로 변경됩니다.
+     * 정기 승진 심사를 위한 결재 문서를 생성합니다.
+     *
+     * @param userDetails 기안자 정보
+     * @param candidate 승진 후보자 정보
+     * @throws JsonProcessingException JSON 변환 실패 시
+     */
+    private void createRegularPromotionApproval(CustomUserDetails userDetails, PromotionCandidate candidate) throws JsonProcessingException {
+        LocalDateTime now = LocalDateTime.now();
+        PromotionPlan plan = candidate.getPromotionDetail().getPromotionPlan();
+        Employee employee = candidate.getEmployee();
+
+        Integer targetGradeId = candidate.getPromotionDetail().getGradeId();
+        Grade newGrade = gradeRepository.findById(targetGradeId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GRADE_NOT_FOUND));
+
+        // 결재선 설정
+        List<ApprovalLineDTO> approvalLines = createApprovalLines(userDetails);
+
+        // 상세 정보(details) JSON 생성
+        Map<String, Object> detailsMap = new HashMap<>();
+        detailsMap.put("promotionType", "REGULAR");
+        detailsMap.put("candidateId", candidate.getCandidateId());
+        detailsMap.put("changeType", "승진");
+        detailsMap.put("employeeId", employee.getEmployeeId());
+        detailsMap.put("employeeName", employee.getEmployeeName());
+        detailsMap.put("effectiveDate", plan.getAppointmentAt().toString());
+        detailsMap.put("auditTrail", now.format(DateUtil.YYYY_MM_DD));
+        detailsMap.put("departmentBefore", employee.getEmployeeDepartment().getDepartmentName());
+        detailsMap.put("departmentAfter", employee.getEmployeeDepartment().getDepartmentName());
+        detailsMap.put("gradeBefore", employee.getGrade().getGrade());
+        detailsMap.put("gradeAfter", newGrade.getGrade());
+        detailsMap.put("jobtitleBefore", employee.getJobTitle().getJobTitle());
+        detailsMap.put("jobtitleAfter", employee.getJobTitle().getJobTitle());
+        detailsMap.put("status", "재직");
+        detailsMap.put("reason", candidate.getRejectionReason());
+        String detailsJson = objectMapper.writeValueAsString(detailsMap);
+
+        // 결재 요청 DTO 생성
+        ApprovalRequestDTO approvalRequest = ApprovalRequestDTO.builder()
+                .formType("personnelappointment")
+                .documentType("인사")
+                .title(plan.getPlanName() + " - " + employee.getEmployeeName())
+                .drafter(userDetails.getEmployeeName())
+                .department(userDetails.getDepartmentName())
+                .grade(userDetails.getGradeName())
+                .draftDate(now.format(DateUtil.YYYY_MM_DD))
+                .submittedAt(now.format(DateUtil.YYYY_MM_DD_HH_MM_SS))
+                .details(detailsJson)
+                .lines(approvalLines)
+                .build();
+
+        // 결재 문서 생성 호출
+        approvalCommandService.createDocument(userDetails.getEmployeeId(), approvalRequest, null, "DRAFT");
+    }
+
+    /**
+     * 특정 직원을 즉시 승진시키기 위한 결재를 상신합니다.
+     *
+     * @param userDetails 기안자 정보
+     * @param request 즉시 승진 요청 정보
+     */
+    public void promoteDirectly(CustomUserDetails userDetails, DirectPromotionRequestDTO request) {
+        LocalDateTime now = LocalDateTime.now();
+        Employee employee = employeeRepository.findById(request.getEmployeeId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.EMPLOYEE_NOT_FOUND));
+        Grade newGrade = gradeRepository.findById(request.getTargetGradeId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.GRADE_NOT_FOUND));
+        // 결재선 설정
+        List<ApprovalLineDTO> approvalLines = createApprovalLines(userDetails);
+        // 상세 정보(details) JSON 생성
+        Map<String, Object> detailsMap = new HashMap<>();
+        detailsMap.put("promotionType", "SPECIAL");
+        detailsMap.put("changeType", "특별승진");
+        detailsMap.put("employeeId", employee.getEmployeeId());
+        detailsMap.put("employeeName", employee.getEmployeeName());
+        detailsMap.put("effectiveDate", now.toLocalDate().toString()); // 발령일은 즉시
+        detailsMap.put("auditTrail", now.format(DateUtil.YYYY_MM_DD));
+        detailsMap.put("departmentBefore", employee.getEmployeeDepartment().getDepartmentName());
+        detailsMap.put("departmentAfter", employee.getEmployeeDepartment().getDepartmentName());
+        detailsMap.put("gradeBefore", employee.getGrade().getGrade());
+        detailsMap.put("gradeAfter", newGrade.getGrade());
+        detailsMap.put("jobtitleBefore", employee.getJobTitle().getJobTitle());
+        detailsMap.put("jobtitleAfter", employee.getJobTitle().getJobTitle());
+        detailsMap.put("status", "재직");
+        detailsMap.put("reason", request.getReason()); // 특별 승진 사유
+        String detailsJson = objectMapper.writeValueAsString(detailsMap);
+        // 결재 요청 DTO 생성
+        ApprovalRequestDTO approvalRequest = ApprovalRequestDTO.builder()
+                .formType("personnelappointment")
+                .documentType("인사")
+                .title("[특별승진] " + employee.getEmployeeName() + " " + newGrade.getGrade() + " 승진 건")
+                .drafter(userDetails.getEmployeeName())
+                .department(userDetails.getDepartmentName())
+                .grade(userDetails.getGradeName())
+                .draftDate(now.format(DateUtil.YYYY_MM_DD))
+                .submittedAt(now.format(DateUtil.YYYY_MM_DD_HH_MM_SS))
+                .details(detailsJson)
+                .lines(approvalLines)
+                .build();
+        // 결재 문서 생성 호출
+        approvalCommandService.createDocument(userDetails.getEmployeeId(), approvalRequest, null, "DRAFT");
+    }
+
+    /**
+     * 결재선을 생성합니다. (기본 결재선 우선)
+     *
+     * @param userDetails 기안자 정보
+     * @return 생성된 결재선 목록
+     */
+    private List<ApprovalLineDTO> createApprovalLines(CustomUserDetails userDetails) {
+        List<ApprovalLineDTO> approvalLines = new ArrayList<>();
+        approvalLines.add(ApprovalLineDTO.builder().seq(1).approverId(userDetails.getEmployeeId()).build()); // 기안자
+
+        ApprovalTemplate template = templateRepository.findByTemplateKey("personnelappointment");
+        if (template != null) {
+            List<SettingsApprovalLine> defaultLines = settingsApprovalLineRepository.findByTemplate_TemplateId(template.getTemplateId());
+            defaultLines.sort(Comparator.comparing(SettingsApprovalLine::getSeq));
+
+            if (!defaultLines.isEmpty()) {
+                for (SettingsApprovalLine line : defaultLines) {
+                    if (line.getSeq() > 1) {
+                        Integer approverId = departmentRepository.findById(line.getDepartmentId())
+                                .map(EmployeeDepartment::getManagerId)
+                                .orElseThrow(() -> new BusinessException(ErrorCode.DEPARTMENT_NOT_FOUND, "기본 결재선의 부서 또는 부서장을 찾을 수 없습니다."));
+                        approvalLines.add(ApprovalLineDTO.builder().seq(line.getSeq()).approverId(approverId).build());
+                    }
+                }
+                return approvalLines;
+            }
+        }
+
+        // 기본 결재선이 없으면 기안자의 부서장으로 설정
+        Integer approverId = 1; // 기본값 (인사팀장)
+        if (userDetails.getDepartmentId() != null) {
+            EmployeeDepartment department = departmentRepository.findById(userDetails.getDepartmentId()).orElse(null);
+            if (department != null && department.getManagerId() != null && !department.getManagerId().equals(userDetails.getEmployeeId())) {
+                approverId = department.getManagerId();
+            }
+        }
+        approvalLines.add(ApprovalLineDTO.builder().seq(2).approverId(approverId).build());
+        return approvalLines;
+    }
+
+    /**
+     * 승진 후보자를 최종 승인합니다. (정기 승진)
      *
      * @param request 심사 요청 정보
      */
@@ -318,10 +486,25 @@ public class PromotionCommandService {
             Grade newGrade = gradeRepository.findById(targetGradeId)
                     .orElseThrow(() -> new BusinessException(ErrorCode.GRADE_NOT_FOUND));
 
-
             candidate.getEmployee().changeGrade(newGrade);
             employeeCommandService.addGradeHistory(candidate.getEmployee(), ChangeType.PROMOTION, candidate.getEmployee().getGrade().getGrade());
         }
     }
 
+    /**
+     * 특별 승진을 최종 확정합니다.
+     *
+     * @param employeeId 승진 대상 직원 ID
+     * @param targetGradeId 목표 직급 ID
+     * @param reason 승진 사유
+     */
+    public void confirmDirectPromotion(Integer employeeId, Integer targetGradeId, String reason) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.EMPLOYEE_NOT_FOUND));
+        Grade newGrade = gradeRepository.findById(targetGradeId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.GRADE_NOT_FOUND));
+
+        employee.changeGrade(newGrade);
+        employeeCommandService.addGradeHistory(employee, ChangeType.PROMOTION, newGrade.getGrade());
+    }
 }

@@ -112,7 +112,7 @@ public class EmployeeController {
     /**
      * 직원 상세 정보 조회(단건)
      *
-     * @param 직원 번호(db 인조키)
+     * @param employeeId 번호(db 인조키)
      * @return 직원의 상세 정보
      */
     @GetMapping("/{employeeId}")
