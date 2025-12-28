@@ -417,7 +417,12 @@ public class PromotionCommandService {
         detailsMap.put("jobtitleAfter", employee.getJobTitle().getJobTitle());
         detailsMap.put("status", "재직");
         detailsMap.put("reason", request.getReason()); // 특별 승진 사유
-        String detailsJson = objectMapper.writeValueAsString(detailsMap);
+        String detailsJson;
+        try {
+            detailsJson = objectMapper.writeValueAsString(detailsMap);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to serialize promotion details to JSON", e);
+        }
         // 결재 요청 DTO 생성
         ApprovalRequestDTO approvalRequest = ApprovalRequestDTO.builder()
                 .formType("personnelappointment")
