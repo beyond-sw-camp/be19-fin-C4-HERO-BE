@@ -2,7 +2,11 @@ package com.c4.hero.domain.employee.controller;
 
 import com.c4.hero.common.response.CustomResponse;
 import com.c4.hero.common.response.PageResponse;
+import com.c4.hero.domain.auth.security.CustomUserDetails;
 import com.c4.hero.domain.auth.security.JwtUtil;
+import com.c4.hero.domain.employee.dto.request.ContactUpdateRequestDTO;
+import com.c4.hero.domain.employee.dto.request.SealTextUpdateRequestDTO;
+import com.c4.hero.domain.employee.dto.response.EmployeeProfileResponseDTO;
 import com.c4.hero.domain.employee.dto.response.EmployeeSearchOptionsResponseDTO;
 import com.c4.hero.domain.employee.dto.request.PasswordChangeRequestDTO;
 import com.c4.hero.domain.employee.dto.response.DepartmentHistoryResponseDTO;
@@ -17,11 +21,16 @@ import com.c4.hero.domain.employee.dto.request.SignupRequestDTO;
 import com.c4.hero.domain.employee.dto.response.MyInfoResponseDTO;
 import com.c4.hero.domain.employee.service.EmployeePasswordService;
 import com.c4.hero.domain.employee.service.EmployeeCommandService;
+import com.c4.hero.domain.employee.service.EmployeeProfileQueryService;
 import com.c4.hero.domain.employee.service.EmployeeQueryService;
+import com.c4.hero.domain.employee.service.EmployeeSealService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -30,7 +39,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -40,13 +51,14 @@ import java.util.List;
  * Description: 직원 관련 API를 처리하는 컨트롤러
  *
  * History
- * 2025/12/09 이승건 최초 작성 (사원 추가 기능 개발)
+ * 2025/12/09 (승건) 최초 작성 (사원 추가 기능 개발)
+ * 2025/12/28 (혜원) 프로필 관련 API 추가
  * </pre>
  *
  * @author 이승건
- * @version 1.0
+ * @version 2.0
  */
-
+@Slf4j
 @RestController
 @RequestMapping("/api/employee")
 @RequiredArgsConstructor
@@ -55,6 +67,9 @@ public class EmployeeController {
     private final EmployeeCommandService employeeCommandService;
     private final EmployeePasswordService employeePasswordService;
     private final EmployeeQueryService employeeQueryService;
+    private final EmployeeProfileQueryService employeeProfileQueryService;
+    private final EmployeeSealService employeeSealService;
+
 
     private final JwtUtil jwtUtil;
     /**
@@ -212,6 +227,150 @@ public class EmployeeController {
     @PostMapping("/change-password")
     public ResponseEntity<CustomResponse<Void>> changePassword(@Valid @RequestBody PasswordChangeRequestDTO request) {
         // passwordChangeService.changePassword(request);
+        return ResponseEntity.ok(CustomResponse.success());
+    }
+
+    /**
+     * 직원 프로필 관련
+     * @author 혜원
+     * @since 2025/12/28 */
+
+    /**
+     * 현재 로그인한 사용자의 프로필 조회
+     *
+     * @param userDetails Security Context에서 자동 주입
+     * @return 본인 프로필 정보
+     */
+    @Operation(summary = "내 프로필 조회", description = "현재 로그인한 사용자의 프로필 정보 조회 (직인 Presigned URL 포함)")
+    @GetMapping("/profile")
+    public ResponseEntity<CustomResponse<EmployeeProfileResponseDTO>> getMyProfile(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        Integer employeeId = userDetails.getEmployeeId();
+        log.info("프로필 조회 - employeeId: {}", employeeId);
+
+        EmployeeProfileResponseDTO profile = employeeProfileQueryService.getProfileByEmployeeId(employeeId);
+        return ResponseEntity.ok(CustomResponse.success(profile));
+    }
+
+    /**
+     * 사원번호로 프로필 조회
+     *
+     * @param employeeNumber 사원번호 (예: EMP005)
+     * @return 직원 프로필 정보
+     */
+    @Operation(summary = "사원번호로 프로필 조회", description = "사원번호를 통한 직원 프로필 조회")
+    @GetMapping("/number/{employeeNumber}")
+    public ResponseEntity<CustomResponse<EmployeeProfileResponseDTO>> getEmployeeProfileByNumber(
+            @PathVariable String employeeNumber) {
+
+        log.info("사원번호로 프로필 조회 - employeeNumber: {}", employeeNumber);
+
+        EmployeeProfileResponseDTO profile = employeeProfileQueryService.getProfileByEmployeeNumber(employeeNumber);
+        return ResponseEntity.ok(CustomResponse.success(profile));
+    }
+
+    // ==================== 연락처 정보 ====================
+
+    /**
+     * 연락처 정보 수정
+     *
+     * @param userDetails Security Context에서 자동 주입
+     * @param requestDTO 수정할 연락처 정보
+     * @return 성공 응답
+     */
+    @Operation(summary = "연락처 정보 수정", description = "현재 로그인한 사용자의 연락처 정보 수정 (AES 암호화)")
+    @PutMapping("/contact")
+    public ResponseEntity<CustomResponse<Void>> updateContactInfo(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody ContactUpdateRequestDTO requestDTO) {
+
+        Integer employeeId = userDetails.getEmployeeId();
+        log.info("연락처 정보 수정 - employeeId: {}", employeeId);
+
+        employeeProfileQueryService.updateContactInfo(employeeId, requestDTO);
+        return ResponseEntity.ok(CustomResponse.success());
+    }
+
+    // ==================== 비밀번호 ====================
+
+    /**
+     * 비밀번호 변경
+     *
+     * @param userDetails Security Context에서 자동 주입
+     * @param requestDTO 비밀번호 변경 정보
+     * @return 성공 응답
+     */
+    @Operation(summary = "비밀번호 변경", description = "현재 비밀번호 확인 후 새 비밀번호로 변경 (BCrypt 암호화)")
+    @PutMapping("/password")
+    public ResponseEntity<CustomResponse<Void>> changePassword(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody PasswordChangeRequestDTO requestDTO) {
+
+        Integer employeeId = userDetails.getEmployeeId();
+        log.info("비밀번호 변경 - employeeId: {}", employeeId);
+
+        employeePasswordService.changePassword(employeeId, requestDTO);
+        return ResponseEntity.ok(CustomResponse.success());
+    }
+
+    // ==================== 직인 관리 ====================
+
+    /**
+     * 텍스트 직인 업데이트
+     *
+     * @param userDetails Security Context에서 자동 주입
+     * @param requestDTO 텍스트 직인 정보
+     * @return 성공 응답
+     */
+    @Operation(summary = "텍스트 직인 저장", description = "텍스트를 이미지로 생성하여 S3에 업로드")
+    @PutMapping("/seal/text")
+    public ResponseEntity<CustomResponse<Void>> updateSealText(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody SealTextUpdateRequestDTO requestDTO) {
+
+        Integer employeeId = userDetails.getEmployeeId();
+        log.info("텍스트 직인 업데이트 - employeeId: {}, text: {}", employeeId, requestDTO.getSealText());
+
+        employeeSealService.updateSealText(employeeId, requestDTO);
+        return ResponseEntity.ok(CustomResponse.success());
+    }
+
+    /**
+     * 이미지 직인 업로드
+     *
+     * @param userDetails Security Context에서 자동 주입
+     * @param file 직인 이미지 파일 (PNG, JPG, 5MB 이하)
+     * @return 성공 응답
+     */
+    @Operation(summary = "이미지 직인 업로드", description = "직인 이미지를 S3에 업로드 (기존 직인 삭제)")
+    @PostMapping("/seal/image")
+    public ResponseEntity<CustomResponse<Void>> uploadSealImage(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestParam("file") MultipartFile file) {
+
+        Integer employeeId = userDetails.getEmployeeId();
+        log.info("이미지 직인 업로드 - employeeId: {}, filename: {}", employeeId, file.getOriginalFilename());
+
+        employeeSealService.uploadSealImage(employeeId, file);
+        return ResponseEntity.ok(CustomResponse.success());
+    }
+
+    /**
+     * 직인 삭제
+     *
+     * @param userDetails Security Context에서 자동 주입
+     * @return 성공 응답
+     */
+    @Operation(summary = "직인 삭제", description = "S3 파일 및 DB 레코드 삭제")
+    @DeleteMapping("/seal")
+    public ResponseEntity<CustomResponse<Void>> deleteSeal(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        Integer employeeId = userDetails.getEmployeeId();
+        log.info("직인 삭제 - employeeId: {}", employeeId);
+
+        employeeSealService.deleteSeal(employeeId);
         return ResponseEntity.ok(CustomResponse.success());
     }
 }
