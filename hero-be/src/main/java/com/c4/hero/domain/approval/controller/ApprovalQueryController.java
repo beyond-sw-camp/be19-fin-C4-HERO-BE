@@ -2,15 +2,24 @@ package com.c4.hero.domain.approval.controller;
 
 import com.c4.hero.common.response.PageResponse;
 import com.c4.hero.domain.approval.dto.ApprovalTemplateResponseDTO;
+import com.c4.hero.domain.approval.dto.BeforePayrollResponseDTO;
+import com.c4.hero.domain.approval.dto.ResignTypeResponseDTO;
+import com.c4.hero.domain.approval.dto.WorkSystemTypeResponseDTO;
 import com.c4.hero.domain.approval.dto.response.VacationTypeResponseDTO;
 import com.c4.hero.domain.approval.dto.response.ApprovalDocumentDetailResponseDTO;
 import com.c4.hero.domain.approval.dto.response.ApprovalDocumentsResponseDTO;
 import com.c4.hero.domain.approval.dto.response.ApprovalTemplateDetailResponseDTO;
 import com.c4.hero.domain.approval.dto.organization.*;
+import com.c4.hero.domain.approval.entity.ApprovalResignType;
+import com.c4.hero.domain.approval.repository.ApprovalEmployeeRepository;
+import com.c4.hero.domain.approval.repository.ApprovalResignTypeRepository;
 import com.c4.hero.domain.approval.repository.ApprovalVacationTypeRepository;
+import com.c4.hero.domain.approval.repository.ApprovalWorkSystemTypeRepository;
 import com.c4.hero.domain.approval.service.ApprovalQueryService;
 import com.c4.hero.domain.approval.service.OrganizationService;
+import com.c4.hero.domain.attendance.entity.WorkSystemType;
 import com.c4.hero.domain.auth.security.CustomUserDetails;
+import com.c4.hero.domain.employee.entity.Employee;
 import com.c4.hero.domain.vacation.entity.VacationType;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +46,7 @@ import java.util.stream.Collectors;
  * 2025/12/25 (민철) 작성화면 조회 api 및 CQRS 패턴 적용
  * 2025/12/26 (민철) 조직도 조회 api 추가
  * 2025/12/26 (민철) 문서함 목록 조회 구현 (PageResponse 사용)
+ * 2025/12/28 (민철) 작성화면 UI 에 필요한 렌더링용 데이터 조회 api
  *
  * </pre>
  *
@@ -52,6 +62,9 @@ public class ApprovalQueryController {
     private final ApprovalQueryService approvalQueryService;
     private final OrganizationService organizationService;
     private final ApprovalVacationTypeRepository approvalVacationTypeRepository;
+    private final ApprovalWorkSystemTypeRepository approvalWorkSystemTypeRepository;
+    private final ApprovalResignTypeRepository approvalResignTypeRepository;
+    private final ApprovalEmployeeRepository approvalEmployeeRepository;
 
 
     /**
@@ -246,23 +259,87 @@ public class ApprovalQueryController {
         log.info("✅ 부서별 직원 조회 완료 - 결과: {}명", employees.size());
         return ResponseEntity.ok().body(employees);
     }
-    
+
     /**
-     * 
+     * 휴가 종류 목록 조회
      *
-     * @param  
-     * @return  
+     * 휴가신청서 작성 시 드롭다운에 표시할 휴가 종류 목록을 반환합니다.
+     * (예: 연차, 반차(오전), 반차(오후), 병가, 공가, 경조사)
+     *
+     * @return List<VacationTypeResponseDTO> 휴가 종류 목록
      */
     @GetMapping("/vacation-types")
     public ResponseEntity<List<VacationTypeResponseDTO>> getVacationTypes() {
-        
+
         List<VacationType> typeEntity = approvalVacationTypeRepository.findAll();
 
         List<VacationTypeResponseDTO> response = typeEntity.stream()
                 .map(type -> VacationTypeResponseDTO.builder()
                         .vacationTypeId(type.getVacationTypeId())
                         .vacationTypeName(type.getVacationTypeName())
-                        .build()).collect(Collectors.toList());;
+                        .build()).collect(Collectors.toList());
+        return ResponseEntity.ok().body(response);
+    }
+
+    /**
+     * 근무제 템플릿 목록 조회
+     *
+     * 근무변경신청서 작성 시 드롭다운에 표시할 근무제 템플릿 목록을 반환합니다.
+     * (예: 표준 근무제, 탄력 근무제, 선택적 근무제)
+     *
+     * @return List<WorkSystemTypeResponseDTO> 근무제 템플릿 목록
+     */
+    @GetMapping("/work-system-types")
+    public ResponseEntity<List<WorkSystemTypeResponseDTO>> getWorkSystemTypes() {
+        List<WorkSystemType> typeEntity = approvalWorkSystemTypeRepository.findAll();
+
+        List<WorkSystemTypeResponseDTO> response = typeEntity.stream()
+                .map(type -> WorkSystemTypeResponseDTO.builder()
+                        .workSystemTypeId(type.getWorkSystemTypeId())
+                        .workSystemTypeName(type.getWorkSystemName())
+                        .build()).collect(Collectors.toList());
+        return ResponseEntity.ok().body(response);
+    }
+
+    /**
+     * 퇴직 사유 목록 조회
+     *
+     * 사직서 작성 시 드롭다운에 표시할 퇴직 사유 목록을 반환합니다.
+     * (예: 개인 사정, 이직, 건강, 가족 사정, 기타)
+     *
+     * @return List<ResignTypeResponseDTO> 퇴직 사유 목록
+     */
+    @GetMapping("/resign-types")
+    public ResponseEntity<List<ResignTypeResponseDTO>> getResignTypes() {
+        List<ApprovalResignType> typeEntities = approvalResignTypeRepository.findAll();
+
+        List<ResignTypeResponseDTO> response = typeEntities.stream()
+                .map(type -> ResignTypeResponseDTO.builder()
+                        .resignTypeId(type.getResignTypeId())
+                        .resignTypeName(type.getResignTypeName())
+                        .build()).collect(Collectors.toList());
+        return ResponseEntity.ok().body(response);
+    }
+
+    /**
+     * 현재 로그인한 사용자의 기본급 조회
+     *
+     * 급여인상신청서 작성 시 "기존 기본급" 필드에 표시할 현재 기본급 정보를 반환합니다.
+     * 인증된 사용자의 직원 정보에서 기본급(baseSalary)을 조회합니다.
+     *
+     * @param userDetails 인증된 사용자 정보 (Spring Security)
+     * @return BeforePayrollResponseDTO 현재 기본급 정보
+     */
+    @GetMapping("/payroll")
+    public ResponseEntity<BeforePayrollResponseDTO> getPayroll(
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        Employee entity = approvalEmployeeRepository.findByEmployeeId(userDetails.getEmployeeId());
+
+        BeforePayrollResponseDTO response = BeforePayrollResponseDTO.builder()
+                .beforePayroll(entity.getBaseSalary())
+                .build();
+
         return ResponseEntity.ok().body(response);
     }
 }

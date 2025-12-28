@@ -117,6 +117,13 @@ public class ApprovalQueryService {
         List<ApprovalDocumentsResponseDTO> documents = approvalMapper.selectInboxDocuments(
                 employeeId, tab, offset, size, fromDate, toDate, sortBy, condition
         );
+        documents.forEach(doc -> {
+            if ("INPROGRESS".equals(doc.getDocStatus())) {
+                doc.setDocStatus("진행중");
+            } else if ("APPROVED".equals(doc.getDocStatus())) {
+                doc.setDocStatus("승인완료");
+            }
+        });
 
         // 전체 문서 개수 조회 (탭별 필터링 포함)
         int totalElements = approvalMapper.countInboxDocuments(
