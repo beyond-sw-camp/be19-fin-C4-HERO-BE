@@ -139,9 +139,10 @@ public interface EmployeeMapper {
                            @Param("sealImageUrl") String sealImageUrl);
 
     /**
-     * 직인이 없는 직원 목록 조회
+     * 직원 ID로 이름 조회
      *
-     * @return 직원 ID와 이름 목록
+     * @param employeeId 직원 ID
+     * @return 직원 이름
      */
-    List<Map<String, Object>> findEmployeesWithoutSeal();
+    String findEmployeeNameById(Integer employeeId);
 }

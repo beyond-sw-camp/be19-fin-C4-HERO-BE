@@ -18,7 +18,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -101,33 +103,66 @@ public class ApprovalCommandService {
             List<MultipartFile> files,
             String status
     ) {
-        log.info("📝 문서 생성 시작 - employeeId: {}, status: {}", employeeId, status);
+        log.info("문서 생성 시작 - employeeId: {}, status: {}", employeeId, status);
 
         // 1. 문서 본문 저장
         ApprovalDocument document = createApprovalDocument(employeeId, dto, status);
-        ApprovalDocument savedDoc = documentRepository.save(document);
-        log.info("✅ 문서 저장 완료 - docId: {}", savedDoc.getDocId());
 
-        // 2. 결재선 저장 (✅ 필드명 수정: approvalLine → lines)
+        // [추가됨] 상신(PENDING) 상태인 경우에만 문서 번호 생성
+        if (!"DRAFT".equals(status)) {
+            String docNo = generateDocNo(); // 문서 번호 생성 로직 호출
+            document.assignDocNo(docNo);      // Setter 혹은 Builder에서 설정
+            log.info("문서 번호 생성됨: {}", docNo);
+        }
+        ApprovalDocument savedDoc = documentRepository.save(document);
+        log.info("문서 저장 완료 - docId: {}", savedDoc.getDocId());
+
+        // 2. 결재선 저장 (필드명 수정: approvalLine → lines)
         if (dto.getLines() != null && !dto.getLines().isEmpty()) {
             saveApprovalLines(savedDoc.getDocId(), dto.getLines());
-            log.info("✅ 결재선 저장 완료 - 결재자 수: {}", dto.getLines().size());
+            log.info("결재선 저장 완료 - 결재자 수: {}", dto.getLines().size());
         }
 
         // 3. 참조자 저장
         if (dto.getReferences() != null && !dto.getReferences().isEmpty()) {
             saveReferences(savedDoc.getDocId(), dto.getReferences());
-            log.info("✅ 참조자 저장 완료 - 참조자 수: {}", dto.getReferences().size());
+            log.info("참조자 저장 완료 - 참조자 수: {}", dto.getReferences().size());
         }
 
         // 4. 첨부파일 저장
         if (files != null && !files.isEmpty()) {
             saveFiles(files, savedDoc);
-            log.info("✅ 첨부파일 저장 완료 - 파일 수: {}", files.size());
+            log.info("첨부파일 저장 완료 - 파일 수: {}", files.size());
         }
 
-        log.info("🎉 문서 생성 완료 - docId: {}", savedDoc.getDocId());
+        log.info("문서 생성 완료 - docId: {}", savedDoc.getDocId());
         return savedDoc.getDocId();
+    }
+
+    /**
+     * 문서 번호 생성 (Format: HERO-yyyy-00001)
+     * 동시성 제어를 위해 synchronized 사용 혹은 DB Lock 사용 권장
+     */
+    private synchronized String generateDocNo() {
+        // 1. 현재 년도 구하기
+        String currentYear = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy"));
+        String prefix = "HERO-" + currentYear + "-"; // 예: HERO-2025-
+
+        // 2. 해당 년도의 마지막 문서 번호 조회 (Repository 필요)
+        // 예: HERO-2025-00014
+        String lastDocNo = documentRepository.findLastDocNoLike(prefix + "%");
+
+        int nextSeq = 1;
+        if (lastDocNo != null) {
+            // 3. 마지막 번호에서 일련번호 파싱 후 +1
+            // HERO-2025-00014 -> "00014" -> 14 -> 15
+            String seqStr = lastDocNo.substring(lastDocNo.lastIndexOf("-") + 1);
+            nextSeq = Integer.parseInt(seqStr) + 1;
+        }
+
+        // 4. 자리수 맞춤 (5자리 0 채움)
+        // 15 -> HERO-2025-00015
+        return prefix + String.format("%05d", nextSeq);
     }
 
     /**
@@ -141,11 +176,11 @@ public class ApprovalCommandService {
         ApprovalTemplate templateEntity = templateRepository.findByTemplateKey(dto.getFormType());
 
         return ApprovalDocument.builder()
-                .templateId(templateEntity.getTemplateId())              // TODO: dto.getFormType()으로 템플릿 ID 조회 로직 필요
-                .drafterId(employeeId)      // ✅ 현재 로그인한 사용자 ID
+                .templateId(templateEntity.getTemplateId())
+                .drafterId(employeeId)      // 현재 로그인한 사용자 ID
                 .title(dto.getTitle())
                 .details(dto.getDetails())  // JSON String 그대로 저장
-                .docStatus(status)          // DRAFT or PENDING
+                .docStatus(status)          // DRAFT or INPROGRESS
                 .build();
     }
 
@@ -180,7 +215,7 @@ public class ApprovalCommandService {
             ApprovalLine line = builder.build();
             lineRepository.save(line);
 
-            log.debug("📌 결재선 저장 - seq: {}, approverId: {}, status: {}",
+            log.debug("결재선 저장 - seq: {}, approverId: {}, status: {}",
                     lineDTO.getSeq(), lineDTO.getApproverId(), initialStatus);
         }
     }
@@ -204,7 +239,7 @@ public class ApprovalCommandService {
 
             referenceRepository.save(reference);
 
-            log.debug("📌 참조자 저장 - referencerId: {}, referencerName: {}",
+            log.debug("참조자 저장 - referencerId: {}, referencerName: {}",
                     refDTO.getReferencerId(), refDTO.getReferencerName());
         }
     }
@@ -249,11 +284,11 @@ public class ApprovalCommandService {
 
                 attachmentRepository.save(attachment);
 
-                log.debug("📌 첨부파일 저장 - originName: {}, size: {} bytes",
+                log.debug("첨부파일 저장 - originName: {}, size: {} bytes",
                         originalName, file.getSize());
 
             } catch (IOException e) {
-                log.error("❌ 파일 저장 실패: {}", originalName, e);
+                log.error("파일 저장 실패: {}", originalName, e);
                 throw new RuntimeException("파일 업로드 중 오류가 발생했습니다.");
             }
         }
@@ -360,7 +395,7 @@ public class ApprovalCommandService {
                 document.getTitle()
         );
 
-        log.info("🎉 결재 완료 이벤트 발행 - docId: {}, templateKey: {}",
+        log.info("결재 완료 이벤트 발행 - docId: {}, templateKey: {}",
                 document.getDocId(), template.getTemplateKey());
 
         eventPublisher.publishEvent(event);

@@ -1,19 +1,19 @@
 package com.c4.hero.domain.employee.service;
 
+import com.c4.hero.domain.employee.dto.request.PasswordChangeRequestDTO;
+import com.c4.hero.domain.employee.mapper.EmployeeMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
 import com.c4.hero.common.util.EncryptionUtil;
 import com.c4.hero.domain.auth.security.JwtUtil;
-import com.c4.hero.domain.employee.dto.request.PasswordChangeRequestDTO;
 import com.c4.hero.domain.employee.entity.Account;
 import com.c4.hero.domain.employee.entity.Employee;
-import com.c4.hero.domain.employee.mapper.EmployeeMapper;
 import com.c4.hero.domain.employee.repository.EmployeeAccountRepository;
 import com.c4.hero.domain.employee.repository.EmployeeRepository;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -40,10 +40,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class EmployeePasswordService {
 
-    private final EmployeeRepository employeeRepository;
-    private final EmployeeAccountRepository accountRepository;
     private final EmployeeMapper employeeMapper;
     private final PasswordEncoder passwordEncoder;
+    private final EmployeeRepository employeeRepository;
+    private final EmployeeAccountRepository accountRepository;
     private final JwtUtil jwtUtil;
     private final JavaMailSender mailSender;
     private final EncryptionUtil encryptionUtil;
@@ -69,6 +69,7 @@ public class EmployeePasswordService {
             log.error("계정 정보를 찾을 수 없음 - employeeId: {}", employeeId);
             throw new IllegalArgumentException("계정 정보를 찾을 수 없습니다.");
         }
+
         // 현재 비밀번호 일치 여부 확인
         if (!passwordEncoder.matches(requestDTO.getCurrentPassword(), currentEncodedPassword)) {
             log.error("현재 비밀번호 불일치 - employeeId: {}", employeeId);
@@ -164,5 +165,4 @@ public class EmployeePasswordService {
             throw new BusinessException(ErrorCode.EMAIL_SEND_FAILED);
         }
     }
-
 }

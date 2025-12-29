@@ -1,5 +1,6 @@
 package com.c4.hero.domain.employee.service;
 
+import com.c4.hero.common.util.SealImageUtil;
 import com.c4.hero.domain.employee.dto.request.SealTextUpdateRequestDTO;
 import com.c4.hero.domain.employee.mapper.EmployeeMapper;
 import com.c4.hero.common.s3.S3Service;
@@ -9,9 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
-import java.util.Map;
-
 /**
  * <pre>
  * Class Name: EmployeeSealService
@@ -19,6 +17,10 @@ import java.util.Map;
  *
  * History
  * 2025/12/28 (혜원) 최초 작성
+ * 2025/12/29 (혜원) 텍스트 직인 이미지 자동 생성 추가
+ *
+ * @author 혜원
+ * @version 1.2
  * </pre>
  *
  * @author 혜원
@@ -36,6 +38,7 @@ public class EmployeeSealService {
 
     /**
      * 텍스트 직인 업데이트
+     * 직원 이름으로 직인 이미지를 생성하여 S3에 업로드하고 DB에 저장
      *
      * @param employeeId 직원 ID
      * @param requestDTO 텍스트 직인 정보
@@ -51,6 +54,67 @@ public class EmployeeSealService {
             log.info("기존 이미지 직인 삭제 - employeeId: {}", employeeId);
         }
 
+        try {
+            // 텍스트 직인 이미지 생성 (Util 사용)
+            byte[] sealImageBytes = SealImageUtil.generateSealImage(requestDTO.getSealText());
+
+            // ByteArray를 MultipartFile로 변환 (Util 사용)
+            String filename = "seal_" + employeeId + "_" + System.currentTimeMillis() + ".png";
+            MultipartFile sealFile = SealImageUtil.toMultipartFile(sealImageBytes, filename, "image/png");
+
+            // S3에 업로드
+            String s3Key = s3Service.uploadFile(sealFile, SEAL_DIRECTORY);
+
+            // DB에 S3 키 저장
+            int updated = employeeMapper.updateSealImageUrl(employeeId, s3Key);
+
+            if (updated == 0) {
+                s3Service.deleteFile(s3Key);
+                log.error("텍스트 직인 업데이트 실패 - employeeId: {}", employeeId);
+                throw new RuntimeException("텍스트 직인 업데이트에 실패했습니다.");
+            }
+
+            log.info("텍스트 직인 업데이트 성공 - employeeId: {}, S3 Key: {}", employeeId, s3Key);
+
+        } catch (Exception e) {
+            log.error("텍스트 직인 이미지 생성 실패 - employeeId: {}", employeeId, e);
+            throw new RuntimeException("텍스트 직인 생성에 실패했습니다.", e);
+        }
+    }
+
+    /**
+     * 특정 직원의 직인 자동 생성
+     * 직인이 없을 때 직원 이름으로 직인을 자동 생성
+     *
+     * @param employeeId 직원 ID
+     * @throws RuntimeException 직원 정보를 찾을 수 없거나 직인 생성 실패 시
+     */
+    @Transactional
+    public void generateSealForEmployee(Integer employeeId) {
+        log.info("직인 자동 생성 요청 - employeeId: {}", employeeId);
+
+        // 이미 직인이 있으면 skip
+        String existingSealUrl = employeeMapper.findSealImageUrlByEmployeeId(employeeId);
+        if (existingSealUrl != null && !existingSealUrl.isEmpty()) {
+            log.info("직인이 이미 존재합니다 - employeeId: {}", employeeId);
+            return;
+        }
+
+        // 직원 이름 조회
+        String employeeName = employeeMapper.findEmployeeNameById(employeeId);
+        if (employeeName == null || employeeName.isEmpty()) {
+            log.error("직원 정보를 찾을 수 없습니다 - employeeId: {}", employeeId);
+            throw new RuntimeException("직원 정보를 찾을 수 없습니다.");
+        }
+
+        // 직인 생성
+        SealTextUpdateRequestDTO sealDTO = SealTextUpdateRequestDTO.builder()
+                .sealText(employeeName)
+                .build();
+
+        updateSealText(employeeId, sealDTO);
+        log.info("직인 자동 생성 완료 - employeeId: {}, name: {}", employeeId, employeeName);
+
         // seal_image_url을 null로 설정 (텍스트 직인은 프론트에서 생성)
         int updated = employeeMapper.updateSealImageUrl(employeeId, null);
 
@@ -64,9 +128,12 @@ public class EmployeeSealService {
 
     /**
      * 이미지 직인 업로드
+     * 사용자가 직접 업로드한 이미지 파일을 S3에 저장
      *
      * @param employeeId 직원 ID
      * @param file 직인 이미지 파일
+     * @throws IllegalArgumentException 파일이 비어있거나 크기 초과 시
+     * @throws RuntimeException 이미지 업로드 실패 시
      */
     @Transactional
     public void uploadSealImage(Integer employeeId, MultipartFile file) {
@@ -107,8 +174,10 @@ public class EmployeeSealService {
 
     /**
      * 직인 삭제
+     * S3에서 파일 삭제 후 DB의 직인 URL을 NULL로 설정
      *
      * @param employeeId 직원 ID
+     * @throws RuntimeException 직인 삭제 실패 시
      */
     @Transactional
     public void deleteSeal(Integer employeeId) {
@@ -132,44 +201,29 @@ public class EmployeeSealService {
     }
 
     /**
-     * 직인이 없는 모든 직원에게 이름으로 직인 자동 생성
-     * 관리자가 일괄적으로 직인을 생성할 때 사용
+     * 직원 직인 이미지 URL 조회
+     * S3 키를 Presigned URL로 변환하여 반환
+     *
+     * @param employeeId 직원 ID
+     * @return 직인 이미지 Presigned URL (없으면 null)
      */
-    @Transactional
-    public void generateSealsForEmployeesWithoutSeal() {
-        log.info("직인 일괄 자동 생성 시작");
+    @Transactional(readOnly = true)
+    public String getEmployeeSealUrl(Integer employeeId) {
+        log.info("직인 이미지 URL 조회 - employeeId: {}", employeeId);
 
-        // 직인이 없는 직원 목록 조회
-        List<Map<String, Object>> employeesWithoutSeal = employeeMapper.findEmployeesWithoutSeal();
+        // DB에서 S3 키 조회
+        String s3Key = employeeMapper.findSealImageUrlByEmployeeId(employeeId);
 
-        if (employeesWithoutSeal.isEmpty()) {
-            log.info("직인이 없는 직원이 없습니다.");
-            return;
+        // 직인이 없으면 null 반환
+        if (s3Key == null || s3Key.isEmpty()) {
+            log.info("직인이 없습니다 - employeeId: {}", employeeId);
+            return null;
         }
 
-        int successCount = 0;
-        int failCount = 0;
+        // S3 Presigned URL 생성 (7일 유효)
+        String presignedUrl = s3Service.generatePresignedUrl(s3Key);
+        log.info("직인 Presigned URL 생성 완료 - employeeId: {}", employeeId);
 
-        for (Map<String, Object> employee : employeesWithoutSeal) {
-            Integer employeeId = (Integer) employee.get("employee_id");
-            String employeeName = (String) employee.get("employee_name");
-
-            try {
-                SealTextUpdateRequestDTO sealDTO = SealTextUpdateRequestDTO.builder()
-                        .sealText(employeeName)
-                        .build();
-
-                updateSealText(employeeId, sealDTO);
-                successCount++;
-                log.info("직인 자동 생성 성공 - employeeId: {}, name: {}", employeeId, employeeName);
-
-            } catch (Exception e) {
-                failCount++;
-                log.warn("직인 자동 생성 실패 - employeeId: {}, name: {}", employeeId, employeeName, e);
-            }
-        }
-
-        log.info("직인 일괄 자동 생성 완료 - 성공: {}, 실패: {}, 총: {}",
-                successCount, failCount, employeesWithoutSeal.size());
+        return presignedUrl;
     }
 }
