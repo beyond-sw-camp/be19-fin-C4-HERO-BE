@@ -871,14 +871,10 @@ public class EvaluationService {
         Integer evaluationId = form.getEvaluationId();
         Integer employeeId = form.getEmployeeId();
 
-        /** ===============================
-         *  평가서 총평 입력
-         * =============================== */
+        /** 평가서 총평 입력 */
         form.setTotal(updateDTO.getEvaluationFormTotal());
 
-        /** ===============================
-         *  평가서 항목 + 점수 수정
-         * =============================== */
+        /** 평가서 항목 점수 채점 */
         if (updateDTO.getFormItems() != null) {
             for (FormItemUpdateDTO itemDTO : updateDTO.getFormItems()) {
 
@@ -906,10 +902,7 @@ public class EvaluationService {
             }
         }
 
-        /** ===============================
-         *  가중치 반영 평균 점수 계산
-         *  (⚠ Rank는 아직 확정하지 않음)
-         * =============================== */
+        /** 가중치 반영 평가서 점수 계산 */
         List<FormItem> formItems = formItemRepository.findByFormId(form.getFormId());
 
         double weightedSum = 0.0;
@@ -928,12 +921,11 @@ public class EvaluationService {
         float totalScore = weightTotal > 0 ? (float) (weightedSum / weightTotal) : 0f;
 
         form.setTotalScore(totalScore);
-        // ⚠ 상대평가 전이므로 totalRank는 여기서 설정하지 않음
+
+        /** 상대평가 전이므로 totalRank는 여기서 설정하지 않음 */
         formRepository.save(form);
 
-        /** ===============================
-         *  피평가자 상태 → 2 (채점 완료)
-         * =============================== */
+        /** 피평가자 상태 변경 */
         Evaluatee evaluatee =
                 evaluateeRepository.findByEvaluationIdAndEmployeeId(evaluationId, employeeId);
 
@@ -942,27 +934,20 @@ public class EvaluationService {
             evaluateeRepository.save(evaluatee);
         }
 
-        /** ===============================
-         *  모든 피평가자 완료 여부 확인
-         * =============================== */
+
+        /** 모든 피평자가 완료 여부 확인 */
         Long remainingEvaluatee =
                 evaluateeRepository.countByEvaluationIdAndStatusNot(evaluationId, 2);
 
         if (remainingEvaluatee == 0) {
 
-            /** ===============================
-             *  모든 평가서 조회
-             * =============================== */
+            /** 모든 평가서 조회 */
             List<EvaluationForm> forms =
                     formRepository.findByEvaluationId(evaluationId);
 
             if (!forms.isEmpty()) {
 
-                /** ===============================
-                 *  상대평가 Rank 계산 (S/A/B/C/F)
-                 * =============================== */
-
-                // 점수 기준 내림차순 정렬
+                /** 상대평가 등급 계산 (S/A/B/C/F) */
                 forms.sort((a, b) -> Float.compare(
                         b.getTotalScore(), a.getTotalScore()
                 ));
@@ -988,9 +973,8 @@ public class EvaluationService {
                     index++;
                 }
 
-                /** ===============================
-                 *  Evaluation 집계
-                 * =============================== */
+
+                /** 평가 최종 점수 계산 */
                 float evaluationAvgScore =
                         (float) forms.stream()
                                 .map(EvaluationForm::getTotalScore)
@@ -999,24 +983,10 @@ public class EvaluationService {
                                 .average()
                                 .orElse(0.0);
 
-//                String evaluationRank =
-//                        forms.stream()
-//                                .map(EvaluationForm::getTotalRank)
-//                                .collect(java.util.stream.Collectors.groupingBy(
-//                                        r -> r,
-//                                        java.util.stream.Collectors.counting()
-//                                ))
-//                                .entrySet()
-//                                .stream()
-//                                .max(java.util.Map.Entry.comparingByValue())
-//                                .map(java.util.Map.Entry::getKey)
-//                                .orElse(null);
-
                 Evaluation evaluation =
                         evaluationRepository.findById(evaluationId).orElseThrow();
 
                 evaluation.setTotalScore(evaluationAvgScore);
-//                evaluation.setTotalRank(evaluationRank);
                 evaluation.setStatus(2);
                 evaluation.setEndedAt(LocalDateTime.now());
 
@@ -1045,14 +1015,14 @@ public class EvaluationService {
         List<Evaluation> evaluations =
                 evaluationRepository.findByTemplateId(templateId);
 
-        // 모든 부서 평가가 완료된 경우만
+        /** 모든 부서 평가가 완료된 경우만 */
         boolean allCompleted =
                 evaluations.stream()
                         .allMatch(e -> e.getStatus() != null && e.getStatus() == 2);
 
         if (!allCompleted) return;
 
-        // 이미 확정된 평가 제외
+        /** 이미 확정된 평가 제외 */
         boolean alreadyFinalized =
                 evaluations.stream()
                         .allMatch(e -> e.getTotalRank() != null);

@@ -28,23 +28,15 @@ public class EvaluationScheduler {
 
     /**
      * 매일 자정 평가 자동 확정
-     *
-     * 조건:
-     * 1. 평가 기간 종료
-     * 2. 해당 템플릿으로 생성된 모든 Evaluation.status = 2
-     *
-     * 동작:
-     * - 부서 간 상대평가 수행
-     * - Evaluation.totalRank 자동 확정
      */
-    @Scheduled(cron = "0 */3 * * * ?")
+    @Scheduled(cron = "0 0 0 * * ?")
     public void autoFinalizeEvaluation() {
 
-        // 모든 평가 템플릿 ID 조회
+        /** 모든 평가 템플릿 ID 조회 */
         List<Integer> templateIds =
                 templateRepository.findAllTemplateIds();
 
-        // 템플릿 단위로 자동 확정 시도
+        /** 템플릿 단위로 자동 확정 시도 */
         for (Integer templateId : templateIds) {
             evaluationService.finalizeEvaluationByTemplate(templateId);
         }
