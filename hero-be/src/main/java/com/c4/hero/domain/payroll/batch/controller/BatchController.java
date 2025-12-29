@@ -2,10 +2,10 @@ package com.c4.hero.domain.payroll.batch.controller;
 
 
 import com.c4.hero.common.response.CustomResponse;
-import com.c4.hero.domain.payroll.batch.dto.PayrollBatchDetailResponse;
-import com.c4.hero.domain.payroll.batch.dto.PayrollBatchListResponse;
-import com.c4.hero.domain.payroll.batch.dto.PayrollBatchTargetEmployeeResponse;
-import com.c4.hero.domain.payroll.batch.dto.PayrollEmployeeResultResponse;
+import com.c4.hero.domain.payroll.batch.dto.PayrollBatchDetailResponseDTO;
+import com.c4.hero.domain.payroll.batch.dto.PayrollBatchListResponseDTO;
+import com.c4.hero.domain.payroll.batch.dto.PayrollBatchTargetEmployeeResponseDTO;
+import com.c4.hero.domain.payroll.batch.dto.PayrollEmployeeResultResponseDTO;
 import com.c4.hero.domain.payroll.batch.mapper.PayrollBatchQueryMapper;
 import com.c4.hero.domain.payroll.batch.service.PayrollBatchService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -120,11 +120,11 @@ public class BatchController {
     @Operation(summary = "급여 배치 목록 조회", description = "급여 배치 목록을 조회합니다. month/status는 선택 조건입니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공",
-                    content = @Content(schema = @Schema(implementation = PayrollBatchListResponse.class))),
+                    content = @Content(schema = @Schema(implementation = PayrollBatchListResponseDTO.class))),
             @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content)
     })
     @GetMapping
-    public List<PayrollBatchListResponse> list(
+    public List<PayrollBatchListResponseDTO> list(
             @RequestParam(required = false) String month,
             @RequestParam(required = false) String status
     ) {
@@ -140,12 +140,12 @@ public class BatchController {
     @Operation(summary = "급여 배치 상세 조회", description = "특정 급여 배치의 상세 정보 및 처리 현황을 조회합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공",
-                    content = @Content(schema = @Schema(implementation = PayrollBatchDetailResponse.class))),
+                    content = @Content(schema = @Schema(implementation = PayrollBatchDetailResponseDTO.class))),
             @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content),
             @ApiResponse(responseCode = "404", description = "배치를 찾을 수 없음", content = @Content)
     })
     @GetMapping("/{batchId}")
-    public PayrollBatchDetailResponse detail(@PathVariable Integer batchId) {
+    public PayrollBatchDetailResponseDTO detail(@PathVariable Integer batchId) {
         return batchQueryMapper.selectBatchDetail(batchId);
     }
 
@@ -158,12 +158,12 @@ public class BatchController {
     @Operation(summary = "배치별 사원 급여 결과 조회", description = "특정 배치에 포함된 사원들의 급여 계산 결과 목록을 조회합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공",
-                    content = @Content(schema = @Schema(implementation = PayrollEmployeeResultResponse.class))),
+                    content = @Content(schema = @Schema(implementation = PayrollEmployeeResultResponseDTO.class))),
             @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content),
             @ApiResponse(responseCode = "404", description = "배치를 찾을 수 없음", content = @Content)
     })
     @GetMapping("/{batchId}/employees")
-    public List<PayrollEmployeeResultResponse> employees(@PathVariable Integer batchId) {
+    public List<PayrollEmployeeResultResponseDTO> employees(@PathVariable Integer batchId) {
         return batchQueryMapper.selectPayrollEmployees(batchId);
     }
 
@@ -175,11 +175,11 @@ public class BatchController {
     @Operation(summary = "급여 배치 대상 사원 조회", description = "급여 배치 계산 대상 사원 목록을 조회합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공",
-                    content = @Content(schema = @Schema(implementation = PayrollBatchTargetEmployeeResponse.class))),
+                    content = @Content(schema = @Schema(implementation = PayrollBatchTargetEmployeeResponseDTO.class))),
             @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content)
     })
     @GetMapping("/targets")
-    public List<PayrollBatchTargetEmployeeResponse> targets() {
+    public List<PayrollBatchTargetEmployeeResponseDTO> targets() {
         return batchQueryMapper.selectBatchTargetEmployees();
     }
 

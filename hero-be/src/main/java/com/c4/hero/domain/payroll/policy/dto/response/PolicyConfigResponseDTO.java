@@ -12,7 +12,7 @@ package com.c4.hero.domain.payroll.policy.dto.response;
  * @author 동근
  * @version 1.0
  */
-public record PolicyConfigResponse(
+public record PolicyConfigResponseDTO(
 
         /** 설정 키 (예: TAX_RATE, INSURANCE_APPLY_YN 등) */
         String configKey,

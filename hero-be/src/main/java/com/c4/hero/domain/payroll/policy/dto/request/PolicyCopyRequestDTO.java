@@ -12,7 +12,7 @@ package com.c4.hero.domain.payroll.policy.dto.request;
  * @author 동근
  * @version 1.0
  */
-public record PolicyCopyRequest(
+public record PolicyCopyRequestDTO(
         /** 신규 정책명 (null이면 원본명 기반 기본값 사용) */
         String policyName,
 

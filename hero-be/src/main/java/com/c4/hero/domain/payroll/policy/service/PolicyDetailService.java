@@ -1,12 +1,12 @@
 package com.c4.hero.domain.payroll.policy.service;
 
 import com.c4.hero.domain.payroll.common.type.ItemType;
-import com.c4.hero.domain.payroll.policy.dto.response.ItemPolicyResponse;
-import com.c4.hero.domain.payroll.policy.dto.response.ItemPolicyTargetResponse;
-import com.c4.hero.domain.payroll.policy.dto.response.ItemPolicyWithTargetsResponse;
-import com.c4.hero.domain.payroll.policy.dto.response.PolicyConfigResponse;
-import com.c4.hero.domain.payroll.policy.dto.response.PolicyDetailResponse;
-import com.c4.hero.domain.payroll.policy.dto.response.PolicyResponse;
+import com.c4.hero.domain.payroll.policy.dto.response.ItemPolicyResponseDTO;
+import com.c4.hero.domain.payroll.policy.dto.response.ItemPolicyTargetResponseDTO;
+import com.c4.hero.domain.payroll.policy.dto.response.ItemPolicyWithTargetsResponseDTO;
+import com.c4.hero.domain.payroll.policy.dto.response.PolicyConfigResponseDTO;
+import com.c4.hero.domain.payroll.policy.dto.response.PolicyDetailResponseDTO;
+import com.c4.hero.domain.payroll.policy.dto.response.PolicyResponseDTO;
 import com.c4.hero.domain.payroll.policy.entity.PayrollItemPolicy;
 import com.c4.hero.domain.payroll.policy.entity.PayrollItemPolicyTarget;
 import com.c4.hero.domain.payroll.policy.entity.PayrollPolicy;
@@ -50,22 +50,22 @@ public class PolicyDetailService {
      * @param policyId 급여 정책 ID
      * @return 정책 상세 응답 DTO
      */
-    public PolicyDetailResponse getDetail(Integer policyId) {
+    public PolicyDetailResponseDTO getDetail(Integer policyId) {
         PayrollPolicy p = policyRepository.findById(policyId)
                 .orElseThrow(() -> new IllegalArgumentException("정책이 존재하지 않습니다. policyId=" + policyId));
 
-        PolicyResponse policy = new PolicyResponse(
+        PolicyResponseDTO policy = new PolicyResponseDTO(
                 p.getPolicyId(), p.getPolicyName(), p.getStatus(),
                 p.getSalaryMonthFrom(), p.getSalaryMonthTo(), p.getActiveYn()
         );
 
-        List<PolicyConfigResponse> configs = configService.getConfigs(policyId);
+        List<PolicyConfigResponseDTO> configs = configService.getConfigs(policyId);
 
-        Map<ItemType, List<ItemPolicyWithTargetsResponse>> items = new EnumMap<>(ItemType.class);
+        Map<ItemType, List<ItemPolicyWithTargetsResponseDTO>> items = new EnumMap<>(ItemType.class);
         items.put(ItemType.ALLOWANCE, loadItemsWithTargets(policyId, ItemType.ALLOWANCE));
         items.put(ItemType.DEDUCTION, loadItemsWithTargets(policyId, ItemType.DEDUCTION));
 
-        return new PolicyDetailResponse(policy, configs, items);
+        return new PolicyDetailResponseDTO(policy, configs, items);
     }
 
     /**
@@ -76,12 +76,12 @@ public class PolicyDetailService {
      * @param type 항목 유형(수당/공제)
      * @return 항목 + 대상 목록 응답 DTO
      */
-    private List<ItemPolicyWithTargetsResponse> loadItemsWithTargets(Integer policyId, ItemType type) {
+    private List<ItemPolicyWithTargetsResponseDTO> loadItemsWithTargets(Integer policyId, ItemType type) {
         List<PayrollItemPolicy> itemEntities = itemPolicyRepository.findAllByPolicyIdAndItemType(policyId, type);
 
         return itemEntities.stream()
                 .map(i -> {
-                    ItemPolicyResponse item = new ItemPolicyResponse(
+                    ItemPolicyResponseDTO item = new ItemPolicyResponseDTO(
                             i.getItemPolicyId(), i.getPolicyId(),
                             i.getItemType(), i.getItemCode(), i.getCalcMethod(),
                             i.getFixedAmount(), i.getRate(),
@@ -90,12 +90,12 @@ public class PolicyDetailService {
                             i.getPriority(), i.getActiveYn()
                     );
 
-                    List<ItemPolicyTargetResponse> targets = targetRepository.findAllByItemPolicyId(i.getItemPolicyId())
+                    List<ItemPolicyTargetResponseDTO> targets = targetRepository.findAllByItemPolicyId(i.getItemPolicyId())
                             .stream()
                             .map(this::toTargetResponse)
                             .toList();
 
-                    return new ItemPolicyWithTargetsResponse(item, targets);
+                    return new ItemPolicyWithTargetsResponseDTO(item, targets);
                 })
                 .toList();
     }
@@ -103,7 +103,7 @@ public class PolicyDetailService {
     /**
      * 대상 엔티티 → 응답 DTO 변환
      */
-    private ItemPolicyTargetResponse toTargetResponse(PayrollItemPolicyTarget t) {
-        return new ItemPolicyTargetResponse(t.getPayrollTargetType(), t.getTargetValue());
+    private ItemPolicyTargetResponseDTO toTargetResponse(PayrollItemPolicyTarget t) {
+        return new ItemPolicyTargetResponseDTO(t.getPayrollTargetType(), t.getTargetValue());
     }
 }

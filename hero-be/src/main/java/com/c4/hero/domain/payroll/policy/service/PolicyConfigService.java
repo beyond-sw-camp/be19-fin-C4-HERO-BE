@@ -1,8 +1,8 @@
 package com.c4.hero.domain.payroll.policy.service;
 
 import com.c4.hero.domain.payroll.common.type.PayrollConfigKey;
-import com.c4.hero.domain.payroll.policy.dto.response.PolicyConfigResponse;
-import com.c4.hero.domain.payroll.policy.dto.request.PolicyConfigUpsertRequest;
+import com.c4.hero.domain.payroll.policy.dto.response.PolicyConfigResponseDTO;
+import com.c4.hero.domain.payroll.policy.dto.request.PolicyConfigUpsertRequestDTO;
 import com.c4.hero.domain.payroll.policy.entity.PolicyConfig;
 import com.c4.hero.domain.payroll.policy.repository.PolicyConfigRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,9 +36,9 @@ public class PolicyConfigService {
      * @param policyId 급여 정책 ID
      * @return 정책에 속한 공통 설정 목록(응답 DTO)
      */
-    public List<PolicyConfigResponse> getConfigs(Integer policyId) {
+    public List<PolicyConfigResponseDTO> getConfigs(Integer policyId) {
         return configRepository.findAllByPolicyId(policyId).stream()
-                .map(c -> new PolicyConfigResponse(
+                .map(c -> new PolicyConfigResponseDTO(
                         c.getConfigKey(),
                         c.getValueType(),
                         c.getConfigValue(),
@@ -57,10 +57,10 @@ public class PolicyConfigService {
      * @param reqs 설정 생성/수정 요청 목록
      */
     @Transactional
-    public void upsertConfigs(Integer policyId, List<PolicyConfigUpsertRequest> reqs) {
+    public void upsertConfigs(Integer policyId, List<PolicyConfigUpsertRequestDTO> reqs) {
         if (reqs == null) return;
 
-        for (PolicyConfigUpsertRequest req : reqs) {
+        for (PolicyConfigUpsertRequestDTO req : reqs) {
 
             if (req.configKey() == null || req.configKey().isBlank())
                 throw new IllegalArgumentException("configKey는 필수입니다.");

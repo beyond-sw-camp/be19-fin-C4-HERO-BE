@@ -19,7 +19,7 @@ import java.math.BigDecimal;
  * @author 동근
  * @version 1.0
  */
-public record ItemPolicyResponse(
+public record ItemPolicyResponseDTO(
 
         /** 아이템 정책 식별자 */
         Integer itemPolicyId,

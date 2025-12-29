@@ -1,9 +1,9 @@
 package com.c4.hero.domain.payroll.policy.service;
 
 import com.c4.hero.domain.payroll.common.type.PolicyStatus;
-import com.c4.hero.domain.payroll.policy.dto.request.PolicyCreateRequest;
-import com.c4.hero.domain.payroll.policy.dto.request.PolicyUpdateRequest;
-import com.c4.hero.domain.payroll.policy.dto.response.PolicyResponse;
+import com.c4.hero.domain.payroll.policy.dto.request.PolicyCreateRequestDTO;
+import com.c4.hero.domain.payroll.policy.dto.request.PolicyUpdateRequestDTO;
+import com.c4.hero.domain.payroll.policy.dto.response.PolicyResponseDTO;
 import com.c4.hero.domain.payroll.policy.entity.PayrollItemPolicy;
 import com.c4.hero.domain.payroll.policy.entity.PayrollPolicy;
 import com.c4.hero.domain.payroll.policy.repository.PayrollItemPolicyRepository;
@@ -51,7 +51,7 @@ public class PayrollPolicyService {
      * @return 생성된 정책 응답 DTO
      */
     @Transactional
-    public PolicyResponse createPolicy(PolicyCreateRequest req) {
+    public PolicyResponseDTO createPolicy(PolicyCreateRequestDTO req) {
         if (req.policyName() == null || req.policyName().isBlank())
             throw new IllegalArgumentException("policyName은 필수입니다.");
         validatePeriod(req.salaryMonthFrom(), req.salaryMonthTo());
@@ -64,7 +64,7 @@ public class PayrollPolicyService {
                 .activeYn("Y")
                 .build());
 
-        return new PolicyResponse(
+        return new PolicyResponseDTO(
                 saved.getPolicyId(),
                 saved.getPolicyName(),
                 saved.getStatus(),
@@ -79,9 +79,9 @@ public class PayrollPolicyService {
      *
      * @return 정책 목록(응답 DTO)
      */
-    public List<PolicyResponse> getPolicies() {
+    public List<PolicyResponseDTO> getPolicies() {
         return policyRepository.findAll().stream()
-                .map(p -> new PolicyResponse(
+                .map(p -> new PolicyResponseDTO(
                         p.getPolicyId(),
                         p.getPolicyName(),
                         p.getStatus(),
@@ -97,11 +97,11 @@ public class PayrollPolicyService {
      *
      * @return 활성 정책(응답 DTO)
      */
-    public PolicyResponse getActivePolicy() {
+    public PolicyResponseDTO getActivePolicy() {
         PayrollPolicy p = policyRepository.findTop1ByStatusOrderByPolicyIdDesc(PolicyStatus.ACTIVE)
                 .orElseThrow(() -> new IllegalStateException("ACTIVE 정책이 없습니다."));
 
-        return new PolicyResponse(
+        return new PolicyResponseDTO(
                 p.getPolicyId(),
                 p.getPolicyName(),
                 p.getStatus(),
@@ -138,7 +138,7 @@ public class PayrollPolicyService {
      *  급여 정책 수정
      */
     @Transactional
-    public PolicyResponse updatePolicy(Integer policyId, PolicyUpdateRequest req) {
+    public PolicyResponseDTO updatePolicy(Integer policyId, PolicyUpdateRequestDTO req) {
         PayrollPolicy p = policyRepository.findById(policyId)
                 .orElseThrow(() -> new IllegalArgumentException("정책이 존재하지 않습니다."));
 
@@ -167,7 +167,7 @@ public class PayrollPolicyService {
         }
         PayrollPolicy saved = policyRepository.save(p);
 
-        return new PolicyResponse(
+        return new PolicyResponseDTO(
                 saved.getPolicyId(),
                 saved.getPolicyName(),
                 saved.getStatus(),
@@ -214,7 +214,7 @@ public class PayrollPolicyService {
      *   만료되면 급여 계산에 더 이상 사용되지 않음
      */
     @Transactional
-    public PolicyResponse expirePolicy(Integer policyId) {
+    public PolicyResponseDTO expirePolicy(Integer policyId) {
         PayrollPolicy p = policyRepository.findById(policyId)
                 .orElseThrow(() -> new IllegalArgumentException("정책이 존재하지 않습니다."));
 
@@ -225,7 +225,7 @@ public class PayrollPolicyService {
         p.expire();
         PayrollPolicy saved = policyRepository.save(p);
 
-        return new PolicyResponse(
+        return new PolicyResponseDTO(
                 saved.getPolicyId(),
                 saved.getPolicyName(),
                 saved.getStatus(),

@@ -14,7 +14,7 @@ import com.c4.hero.domain.payroll.common.type.PayrollTargetType;
  * @author 동근
  * @version 1.0
  */
-public record ItemPolicyTargetRequest(
+public record ItemPolicyTargetRequestDTO(
 
         /** 적용 대상 유형 (사원, 부서, 직급 등) */
         PayrollTargetType payrollTargetType,

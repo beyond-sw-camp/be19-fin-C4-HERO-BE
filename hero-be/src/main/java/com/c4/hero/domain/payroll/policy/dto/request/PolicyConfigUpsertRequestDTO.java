@@ -12,7 +12,7 @@ package com.c4.hero.domain.payroll.policy.dto.request;
  * @author 동근
  * @version 1.0
  */
-public record PolicyConfigUpsertRequest(
+public record PolicyConfigUpsertRequestDTO(
 
         /** 설정 키 */
         String configKey,

@@ -21,13 +21,13 @@ import java.util.Map;
  * @author 동근
  * @version 1.0
  */
-public record PolicyDetailResponse(
+public record PolicyDetailResponseDTO(
         /** 급여 정책 기본 정보 */
-        PolicyResponse policy,
+        PolicyResponseDTO policy,
 
         /** 정책 공통 설정 목록 */
-        List<PolicyConfigResponse> configs,
+        List<PolicyConfigResponseDTO> configs,
 
         /** 항목 정책 목록 (수당/공제별 그룹) */
-        Map<ItemType, List<ItemPolicyWithTargetsResponse>> items
+        Map<ItemType, List<ItemPolicyWithTargetsResponseDTO>> items
 ) {}

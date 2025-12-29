@@ -3,9 +3,9 @@ package com.c4.hero.domain.payroll.policy.service;
 import com.c4.hero.domain.payroll.common.type.BaseAmountType;
 import com.c4.hero.domain.payroll.common.type.ItemType;
 import com.c4.hero.domain.payroll.common.type.RoundingModeType;
-import com.c4.hero.domain.payroll.policy.dto.response.ItemPolicyResponse;
-import com.c4.hero.domain.payroll.policy.dto.request.ItemPolicyTargetRequest;
-import com.c4.hero.domain.payroll.policy.dto.request.ItemPolicyUpsertRequest;
+import com.c4.hero.domain.payroll.policy.dto.response.ItemPolicyResponseDTO;
+import com.c4.hero.domain.payroll.policy.dto.request.ItemPolicyTargetRequestDTO;
+import com.c4.hero.domain.payroll.policy.dto.request.ItemPolicyUpsertRequestDTO;
 import com.c4.hero.domain.payroll.policy.entity.PayrollItemPolicy;
 import com.c4.hero.domain.payroll.policy.entity.PayrollItemPolicyTarget;
 import com.c4.hero.domain.payroll.policy.repository.PayrollItemPolicyRepository;
@@ -49,7 +49,7 @@ public class ItemPolicyService {
      * @param type 항목 유형(수당/공제 등)
      * @return 항목 정책 목록(응답 DTO)
      */
-    public List<ItemPolicyResponse> getItems(Integer policyId, ItemType type) {
+    public List<ItemPolicyResponseDTO> getItems(Integer policyId, ItemType type) {
         return itemPolicyRepository.findAllByPolicyIdAndItemType(policyId, type).stream()
                 .map(this::toResponse)
                 .toList();
@@ -64,7 +64,7 @@ public class ItemPolicyService {
      * @return 생성된 항목 정책(응답 DTO)
      */
     @Transactional
-    public ItemPolicyResponse createItem(Integer policyId, ItemPolicyUpsertRequest req) {
+    public ItemPolicyResponseDTO createItem(Integer policyId, ItemPolicyUpsertRequestDTO req) {
         validate(req);
 
         PayrollItemPolicy entity = PayrollItemPolicy.builder()
@@ -96,7 +96,7 @@ public class ItemPolicyService {
      * @param req 항목 정책 생성/수정 요청 DTO
      */
     @Transactional
-    public void updateItem(Integer itemPolicyId, ItemPolicyUpsertRequest req) {
+    public void updateItem(Integer itemPolicyId, ItemPolicyUpsertRequestDTO req) {
         validate(req);
 
         PayrollItemPolicy item = itemPolicyRepository.findById(itemPolicyId)
@@ -124,11 +124,11 @@ public class ItemPolicyService {
      * @param targets 적용 대상 요청 목록(null이면 빈 목록으로 처리)
      */
     @Transactional
-    public void replaceTargets(Integer itemPolicyId, List<ItemPolicyTargetRequest> targets) {
+    public void replaceTargets(Integer itemPolicyId, List<ItemPolicyTargetRequestDTO> targets) {
         if (targets == null) targets = List.of();
         targetRepository.deleteAllByItemPolicyId(itemPolicyId);
 
-        for (ItemPolicyTargetRequest t : targets) {
+        for (ItemPolicyTargetRequestDTO t : targets) {
             if (t.payrollTargetType() == null) throw new IllegalArgumentException("targetType은 필수입니다.");
             if (t.payrollTargetType().name().equals("ALL") == false) {
                 if (t.targetValue() == null || t.targetValue().isBlank()) {
@@ -146,8 +146,8 @@ public class ItemPolicyService {
     /**
      * 엔티티 -> 응답 DTO 변환
      */
-    private ItemPolicyResponse toResponse(PayrollItemPolicy i) {
-        return new ItemPolicyResponse(
+    private ItemPolicyResponseDTO toResponse(PayrollItemPolicy i) {
+        return new ItemPolicyResponseDTO(
                 i.getItemPolicyId(),
                 i.getPolicyId(),
                 i.getItemType(),
@@ -169,7 +169,7 @@ public class ItemPolicyService {
      * 항목 정책 생성/수정 요청값 검증
      *  - calcMethod에 따른 필수값 및 값 범위를 검증하여 도메인 정합성을 보장
      */
-    private void validate(ItemPolicyUpsertRequest req) {
+    private void validate(ItemPolicyUpsertRequestDTO req) {
         if (req.itemType() == null) throw new IllegalArgumentException("itemType은 필수입니다.");
         if (req.itemCode() == null || req.itemCode().isBlank()) throw new IllegalArgumentException("itemCode는 필수입니다.");
         if (req.calcMethod() == null) throw new IllegalArgumentException("calcMethod는 필수입니다.");
@@ -223,7 +223,7 @@ public class ItemPolicyService {
     }
 
     @Transactional
-    public void upsertItems(Integer policyId, ItemType type, List<ItemPolicyUpsertRequest> reqs) {
+    public void upsertItems(Integer policyId, ItemType type, List<ItemPolicyUpsertRequestDTO> reqs) {
 
         List<PayrollItemPolicy> existing =
                 itemPolicyRepository.findAllByPolicyIdAndItemType(policyId, type);
@@ -233,7 +233,7 @@ public class ItemPolicyService {
 
         Set<Integer> survivedIds = new HashSet<>();
 
-        for (ItemPolicyUpsertRequest req : reqs) {
+        for (ItemPolicyUpsertRequestDTO req : reqs) {
 
             PayrollItemPolicy item;
 
@@ -273,7 +273,7 @@ public class ItemPolicyService {
             survivedIds.add(item.getItemPolicyId());
             targetRepository.deleteAllByItemPolicyId(item.getItemPolicyId());
             if (req.targets() != null) {
-                for (ItemPolicyUpsertRequest.ItemPolicyTargetRequest t : req.targets()) {
+                for (ItemPolicyUpsertRequestDTO.ItemPolicyTargetRequest t : req.targets()) {
                     targetRepository.save(
                             PayrollItemPolicyTarget.builder()
                                     .itemPolicyId(item.getItemPolicyId())

@@ -21,7 +21,7 @@ import java.util.List;
  * @author 동근
  * @version 1.0
  */
-public record ItemPolicyUpsertRequest(
+public record ItemPolicyUpsertRequestDTO(
 
         /** 수정 시 사용되는 항목 정책 ID (신규 생성 시 null) */
         Integer itemPolicyId,

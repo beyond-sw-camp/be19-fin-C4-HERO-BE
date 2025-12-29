@@ -2,7 +2,7 @@ package com.c4.hero.domain.payroll.batch.service;
 
 import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
-import com.c4.hero.domain.payroll.batch.dto.PayrollBatchTargetEmployeeResponse;
+import com.c4.hero.domain.payroll.batch.dto.PayrollBatchTargetEmployeeResponseDTO;
 import com.c4.hero.domain.payroll.batch.entity.Payroll;
 import com.c4.hero.domain.payroll.batch.entity.PayrollBatch;
 import com.c4.hero.domain.payroll.batch.mapper.PayrollBatchQueryMapper;
@@ -90,7 +90,7 @@ public class PayrollBatchService {
         if (employeeIds == null || employeeIds.isEmpty()) {
             targets = batchQueryMapper.selectBatchTargetEmployees()
                     .stream()
-                    .map(PayrollBatchTargetEmployeeResponse::employeeId)
+                    .map(PayrollBatchTargetEmployeeResponseDTO::employeeId)
                     .toList();
         } else {
             targets = employeeIds;

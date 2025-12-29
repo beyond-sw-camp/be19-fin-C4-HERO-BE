@@ -16,7 +16,7 @@ package com.c4.hero.domain.payroll.batch.dto;
  * @param employeeName   사원 이름
  * @param departmentName 부서명 (없을 경우 null)
  */
-public record PayrollBatchTargetEmployeeResponse(
+public record PayrollBatchTargetEmployeeResponseDTO(
         Integer employeeId,
         String employeeName,
         String departmentName

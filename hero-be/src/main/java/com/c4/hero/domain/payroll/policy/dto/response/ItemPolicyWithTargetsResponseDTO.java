@@ -14,10 +14,10 @@ import java.util.List;
  * @author 동근
  * @version 1.0
  */
-public record ItemPolicyWithTargetsResponse(
+public record ItemPolicyWithTargetsResponseDTO(
         /** 항목 정책 정보 */
-        ItemPolicyResponse item,
+        ItemPolicyResponseDTO item,
 
         /** 항목 정책에 연결된 적용 대상 목록 */
-        List<ItemPolicyTargetResponse> targets
+        List<ItemPolicyTargetResponseDTO> targets
 ) {}

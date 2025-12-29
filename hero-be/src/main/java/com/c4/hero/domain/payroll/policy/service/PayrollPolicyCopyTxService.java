@@ -1,8 +1,8 @@
 package com.c4.hero.domain.payroll.policy.service;
 
 import com.c4.hero.domain.payroll.common.type.PolicyStatus;
-import com.c4.hero.domain.payroll.policy.dto.request.PolicyCopyRequest;
-import com.c4.hero.domain.payroll.policy.dto.response.PolicyResponse;
+import com.c4.hero.domain.payroll.policy.dto.request.PolicyCopyRequestDTO;
+import com.c4.hero.domain.payroll.policy.dto.response.PolicyResponseDTO;
 import com.c4.hero.domain.payroll.policy.entity.PayrollItemPolicy;
 import com.c4.hero.domain.payroll.policy.entity.PayrollItemPolicyTarget;
 import com.c4.hero.domain.payroll.policy.entity.PayrollPolicy;
@@ -45,7 +45,7 @@ public class PayrollPolicyCopyTxService {
      * @param req 정책 복사 옵션 요청 DTO (null 가능)
      * @return 복사된 신규 정책 정보
      */
-    public PolicyResponse copy(Integer sourcePolicyId, PolicyCopyRequest req) {
+    public PolicyResponseDTO copy(Integer sourcePolicyId, PolicyCopyRequestDTO req) {
 
         PayrollPolicy src = policyRepository.findById(sourcePolicyId)
                 .orElseThrow(() -> new IllegalArgumentException("원본 정책이 존재하지 않습니다."));
@@ -113,7 +113,7 @@ public class PayrollPolicyCopyTxService {
             }
         }
 
-        return new PolicyResponse(
+        return new PolicyResponseDTO(
                 copied.getPolicyId(),
                 copied.getPolicyName(),
                 copied.getStatus(),

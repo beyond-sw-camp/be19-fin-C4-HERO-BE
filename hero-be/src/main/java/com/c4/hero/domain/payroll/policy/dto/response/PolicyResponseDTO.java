@@ -14,7 +14,7 @@ import com.c4.hero.domain.payroll.common.type.PolicyStatus;
  * @author 동근
  * @version 1.0
  */
-public record PolicyResponse(
+public record PolicyResponseDTO(
 
         /** 급여 정책 식별자 */
         Integer policyId,

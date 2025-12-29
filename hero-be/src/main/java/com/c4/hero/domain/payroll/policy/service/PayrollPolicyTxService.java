@@ -1,8 +1,8 @@
 package com.c4.hero.domain.payroll.policy.service;
 
 import com.c4.hero.domain.payroll.common.type.PolicyStatus;
-import com.c4.hero.domain.payroll.policy.dto.request.PolicyActivateRequest;
-import com.c4.hero.domain.payroll.policy.dto.response.PolicyResponse;
+import com.c4.hero.domain.payroll.policy.dto.request.PolicyActivateRequestDTO;
+import com.c4.hero.domain.payroll.policy.dto.response.PolicyResponseDTO;
 import com.c4.hero.domain.payroll.policy.entity.PayrollPolicy;
 import com.c4.hero.domain.payroll.policy.entity.PolicyConfig;
 import com.c4.hero.domain.payroll.policy.repository.PayrollPolicyRepository;
@@ -45,7 +45,7 @@ public class PayrollPolicyTxService {
      * @return 활성화된 정책 응답 DTO
      */
     @Transactional
-    public PolicyResponse activate(Integer policyId, PolicyActivateRequest req) {
+    public PolicyResponseDTO activate(Integer policyId, PolicyActivateRequestDTO req) {
         validatePeriod(req.salaryMonthFrom(), req.salaryMonthTo());
 
         List<PolicyConfig> configs = configRepository.findAllByPolicyId(policyId);
@@ -73,7 +73,7 @@ public class PayrollPolicyTxService {
 
         PayrollPolicy saved = policyRepository.save(target);
 
-        return new PolicyResponse(
+        return new PolicyResponseDTO(
                 saved.getPolicyId(),
                 saved.getPolicyName(),
                 saved.getStatus(),
