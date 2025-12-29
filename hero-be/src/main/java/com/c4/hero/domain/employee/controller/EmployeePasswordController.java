@@ -47,9 +47,7 @@ public class EmployeePasswordController {
             @Valid @RequestBody PasswordChangeRequestDTO requestDTO
     ) {
         employeePasswordService.changePassword(
-                userDetails.getEmployeeId(),
-                requestDTO.getCurrentPassword(),
-                requestDTO.getNewPassword()
+                userDetails.getEmployeeId(), requestDTO
         );
 
         return ResponseEntity.ok(CustomResponse.success());
