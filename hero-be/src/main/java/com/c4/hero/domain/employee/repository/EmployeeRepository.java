@@ -19,12 +19,21 @@ import java.util.Optional;
  * 2025/12/09 (승건) 최초 작성
  * 2025/12/19 (승건) 승진 후보자 조회 추가
  * 2025/12/22 (혜원) 알림 관련 필요한 엔티티 조회 기능 추가
+ * 2025/12/28 (승건) 사번으로 직원 조회 기능 추가
  * </pre>
  *
  * @author 이승건
- * @version 2.0
+ * @version 2.1
  */
 public interface EmployeeRepository extends JpaRepository<Employee, Integer> {
+
+    /**
+     * 사번으로 직원을 조회합니다.
+     *
+     * @param employeeNumber 사번
+     * @return Optional<Employee>
+     */
+    Optional<Employee> findByEmployeeNumber(String employeeNumber);
 
     /**
      * 사번, 이메일, 또는 전화번호 중 하나라도 일치하는 직원 엔티티를 조회

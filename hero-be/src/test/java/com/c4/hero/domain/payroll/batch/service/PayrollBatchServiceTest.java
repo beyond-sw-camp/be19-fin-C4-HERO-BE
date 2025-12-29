@@ -1,12 +1,11 @@
 package com.c4.hero.domain.payroll.batch.service;
 
 import com.c4.hero.common.exception.BusinessException;
-import com.c4.hero.domain.payroll.batch.dto.PayrollBatchTargetEmployeeResponse;
+import com.c4.hero.domain.payroll.batch.dto.PayrollBatchTargetEmployeeResponseDTO;
 import com.c4.hero.domain.payroll.batch.entity.PayrollBatch;
 import com.c4.hero.domain.payroll.batch.mapper.PayrollBatchQueryMapper;
 import com.c4.hero.domain.payroll.batch.repository.BatchRepository;
 import com.c4.hero.domain.payroll.batch.repository.PayrollRepository;
-import com.c4.hero.domain.payroll.common.type.PayrollBatchStatus;
 import com.c4.hero.domain.payroll.common.type.PayrollStatus;
 import com.c4.hero.domain.payroll.payment.repository.PaymentHistoryRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -68,8 +67,8 @@ class PayrollBatchServiceTest {
 
         when(batchRepository.findById(1)).thenReturn(Optional.of(batch));
         when(batchQueryMapper.selectBatchTargetEmployees()).thenReturn(List.of(
-                new PayrollBatchTargetEmployeeResponse(10, "DEV", "사원A"),
-                new PayrollBatchTargetEmployeeResponse(11, "DEV", "사원B")
+                new PayrollBatchTargetEmployeeResponseDTO(10, "DEV", "사원A"),
+                new PayrollBatchTargetEmployeeResponseDTO(11, "DEV", "사원B")
         ));
 
         // when

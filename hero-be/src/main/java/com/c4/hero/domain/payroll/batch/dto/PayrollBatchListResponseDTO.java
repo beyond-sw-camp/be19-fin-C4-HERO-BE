@@ -20,12 +20,18 @@ import java.time.LocalDateTime;
  * @param createdAt  배치 생성 시각
  * @param updatedAt  배치 상태 변경 시각
  * @param closedAt   배치 종료(지급 완료) 시각
+ * @param totalGrossPay  총급여
+ * @param totalDeduction  총공제
+ * @param totalNetPay  실지급액
  */
-public record PayrollBatchListResponse(
+public record PayrollBatchListResponseDTO(
         Integer batchId,
         String salaryMonth,
         String status,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
-        LocalDateTime closedAt
+        LocalDateTime closedAt,
+        Integer totalGrossPay,
+        Integer totalDeduction,
+        Integer totalNetPay
 ) {}

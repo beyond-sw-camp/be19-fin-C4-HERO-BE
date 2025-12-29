@@ -1,9 +1,9 @@
 package com.c4.hero.domain.payroll.batch.mapper;
 
-import com.c4.hero.domain.payroll.batch.dto.PayrollBatchDetailResponse;
-import com.c4.hero.domain.payroll.batch.dto.PayrollBatchListResponse;
-import com.c4.hero.domain.payroll.batch.dto.PayrollBatchTargetEmployeeResponse;
-import com.c4.hero.domain.payroll.batch.dto.PayrollEmployeeResultResponse;
+import com.c4.hero.domain.payroll.batch.dto.PayrollBatchDetailResponseDTO;
+import com.c4.hero.domain.payroll.batch.dto.PayrollBatchListResponseDTO;
+import com.c4.hero.domain.payroll.batch.dto.PayrollBatchTargetEmployeeResponseDTO;
+import com.c4.hero.domain.payroll.batch.dto.PayrollEmployeeResultResponseDTO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -37,7 +37,7 @@ public interface PayrollBatchQueryMapper {
      * @param status 배치 상태 (READY / CALCULATED / CONFIRMED / PAID), 선택 조건
      * @return 급여 배치 목록
      */
-    List<PayrollBatchListResponse> selectBatchList(
+    List<PayrollBatchListResponseDTO> selectBatchList(
             @Param("month") String month,
             @Param("status") String status
     );
@@ -48,7 +48,7 @@ public interface PayrollBatchQueryMapper {
      * @param batchId 급여 배치 ID
      * @return 급여 배치 상세 정보 및 사원별 처리 상태 집계 결과
      */
-    PayrollBatchDetailResponse selectBatchDetail(
+    PayrollBatchDetailResponseDTO selectBatchDetail(
             @Param("batchId") Integer batchId
     );
 
@@ -58,7 +58,7 @@ public interface PayrollBatchQueryMapper {
      * @param batchId 급여 배치 ID
      * @return 배치에 포함된 사원 급여 계산 결과 목록
      */
-    List<PayrollEmployeeResultResponse> selectPayrollEmployees(
+    List<PayrollEmployeeResultResponseDTO> selectPayrollEmployees(
             @Param("batchId") Integer batchId
     );
 
@@ -67,6 +67,6 @@ public interface PayrollBatchQueryMapper {
      *
      * @return 급여 배치 대상 사원 목록
      */
-    List<PayrollBatchTargetEmployeeResponse> selectBatchTargetEmployees();
+    List<PayrollBatchTargetEmployeeResponseDTO> selectBatchTargetEmployees();
 }
 

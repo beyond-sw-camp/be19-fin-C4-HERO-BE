@@ -18,10 +18,13 @@ import org.springframework.web.multipart.MultipartFile;
  * History
  * 2025/12/28 (혜원) 최초 작성
  * 2025/12/29 (혜원) 텍스트 직인 이미지 자동 생성 추가
- * </pre>
  *
  * @author 혜원
  * @version 1.2
+ * </pre>
+ *
+ * @author 혜원
+ * @version 1.0
  */
 @Slf4j
 @Service
@@ -39,7 +42,6 @@ public class EmployeeSealService {
      *
      * @param employeeId 직원 ID
      * @param requestDTO 텍스트 직인 정보
-     * @throws RuntimeException 직인 이미지 생성 또는 업로드 실패 시
      */
     @Transactional
     public void updateSealText(Integer employeeId, SealTextUpdateRequestDTO requestDTO) {
@@ -112,6 +114,16 @@ public class EmployeeSealService {
 
         updateSealText(employeeId, sealDTO);
         log.info("직인 자동 생성 완료 - employeeId: {}, name: {}", employeeId, employeeName);
+
+        // seal_image_url을 null로 설정 (텍스트 직인은 프론트에서 생성)
+        int updated = employeeMapper.updateSealImageUrl(employeeId, null);
+
+        if (updated == 0) {
+            log.error("텍스트 직인 업데이트 실패 - employeeId: {}", employeeId);
+            throw new RuntimeException("텍스트 직인 업데이트에 실패했습니다.");
+        }
+
+        log.info("텍스트 직인 업데이트 성공 - employeeId: {}", employeeId);
     }
 
     /**
@@ -187,7 +199,6 @@ public class EmployeeSealService {
 
         log.info("직인 삭제 성공 - employeeId: {}", employeeId);
     }
-
 
     /**
      * 직원 직인 이미지 URL 조회

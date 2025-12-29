@@ -27,7 +27,7 @@ package com.c4.hero.domain.payroll.batch.dto;
  * @param totalPay       실지급액
  * @param errorMessage   계산 실패 사유 (FAILED 상태일 경우 내려오는 상세 메시지)
  */
-public record PayrollEmployeeResultResponse(
+public record PayrollEmployeeResultResponseDTO(
         Integer payrollId,
         Integer employeeId,
         String employeeName,

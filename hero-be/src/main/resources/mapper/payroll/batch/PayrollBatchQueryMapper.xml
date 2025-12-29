@@ -43,7 +43,7 @@
         *  - 관리자 -> 급여 배치 관리 -> 배치 목록
         -->
     <select id="selectBatchList"
-            resultType="com.c4.hero.domain.payroll.batch.dto.PayrollBatchListResponse">
+            resultType="com.c4.hero.domain.payroll.batch.dto.PayrollBatchListResponseDTO">
         SELECT
         b.batch_id     AS batchId,
         b.salary_month AS salaryMonth,
@@ -80,7 +80,7 @@
     *  - 관리자 -> 급여 배치 관리 -> 배치 상세
     -->
     <select id="selectBatchDetail"
-            resultType="com.c4.hero.domain.payroll.batch.dto.PayrollBatchDetailResponse">
+            resultType="com.c4.hero.domain.payroll.batch.dto.PayrollBatchDetailResponseDTO">
         SELECT
             b.batch_id     AS batchId,
             b.salary_month AS salaryMonth,
@@ -116,7 +116,7 @@
     *  - 관리자 -> 급여 배치 관리 -> 급여 계산 결과 탭
     -->
     <select id="selectPayrollEmployees"
-            resultType="com.c4.hero.domain.payroll.batch.dto.PayrollEmployeeResultResponse">
+            resultType="com.c4.hero.domain.payroll.batch.dto.PayrollEmployeeResultResponseDTO">
         SELECT
             p.payroll_id      AS payrollId,
             p.employee_id     AS employeeId,
@@ -150,7 +150,7 @@
       *  - 급여 계산 대상 사원 초기 세팅
       -->
     <select id="selectBatchTargetEmployees"
-            resultType="com.c4.hero.domain.payroll.batch.dto.PayrollBatchTargetEmployeeResponse">
+            resultType="com.c4.hero.domain.payroll.batch.dto.PayrollBatchTargetEmployeeResponseDTO">
         SELECT
             e.employee_id   AS employeeId,
             e.employee_name AS employeeName,

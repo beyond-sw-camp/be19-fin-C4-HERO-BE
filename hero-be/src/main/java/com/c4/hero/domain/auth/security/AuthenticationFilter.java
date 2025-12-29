@@ -1,6 +1,7 @@
 package com.c4.hero.domain.auth.security;
 
 import com.c4.hero.domain.auth.dto.RequestLoginDTO;
+import com.c4.hero.domain.auth.dto.response.LoginResponseDTO;
 import tools.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -23,12 +24,13 @@ import java.io.IOException;
  * Description: 사용자의 로그인 요청을 가로채 인증을 처리하는 필터
  *
  * History
- * 2025-12-09 (이승건) 최초 작성
- * 2025-12-10 (이승건) Refresh Token을 HttpOnly 쿠키로 전달하도록 수정
+ * 2025-12-09 (승건) 최초 작성
+ * 2025-12-10 (승건) Refresh Token을 HttpOnly 쿠키로 전달하도록 수정
+ * 2025-12-29 (승건) 로그인 응답에 passwordChangeRequired 추가
  * </pre>
  *
  * @author 이승건
- * @version 1.1
+ * @version 1.2
  */
 @Slf4j
 @RequiredArgsConstructor
@@ -45,7 +47,6 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
         try {
             // 1. 요청 본문(JSON)을 DTO로 변환
-//            ObjectMapper objectMapper = new ObjectMapper();
             RequestLoginDTO loginDTO = objectMapper.readValue(request.getInputStream(), RequestLoginDTO.class);
 
             log.info("로그인 시도: {}", loginDTO.getAccount());
@@ -80,9 +81,15 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
         response.addCookie(createRefreshTokenCookie(refreshToken));
 
         // 3. 응답 본문 작성
+        CustomUserDetails userDetails = (CustomUserDetails) authResult.getPrincipal();
+        LoginResponseDTO loginResponse = LoginResponseDTO.builder()
+                .message("로그인 성공")
+                .passwordChangeRequired(userDetails.isPasswordChangeRequired())
+                .build();
+
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
-        response.getWriter().write("{\"message\": \"로그인 성공\"}");
+        response.getWriter().write(objectMapper.writeValueAsString(loginResponse));
     }
 
     /**

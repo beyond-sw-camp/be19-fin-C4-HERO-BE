@@ -4,7 +4,9 @@ import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
 import com.c4.hero.common.response.CustomResponse;
 import com.c4.hero.common.response.PageResponse;
+import com.c4.hero.domain.auth.security.CustomUserDetails;
 import com.c4.hero.domain.auth.security.JwtUtil;
+import com.c4.hero.domain.promotion.dto.request.DirectPromotionRequestDTO;
 import com.c4.hero.domain.promotion.dto.request.PromotionNominationRequestDTO;
 import com.c4.hero.domain.promotion.dto.request.PromotionPlanRequestDTO;
 import com.c4.hero.domain.promotion.dto.request.PromotionReviewRequestDTO;
@@ -20,6 +22,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,10 +45,11 @@ import java.util.List;
  * 2025/12/22 (승건) 추천 관련 API 추가
  * 2025/12/23 (승건) 심사 관련 API 추가
  * 2025/12/24 (승건) 심사 목록 조회 API 추가
+ * 2025/12/28 (승건) 즉시 승진 API 추가
  * </pre>
  *
  * @author 승건
- * @version 1.3
+ * @version 1.4
  */
 @RestController
 @RequestMapping("/api/promotion")
@@ -230,9 +234,10 @@ public class PromotionController {
      */
     @PostMapping("/review")
     public ResponseEntity<CustomResponse<Void>> reviewCandidate(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody PromotionReviewRequestDTO request
     ) {
-        promotionCommandService.reviewCandidate(request);
+        promotionCommandService.reviewCandidate(userDetails, request);
         return ResponseEntity.ok(CustomResponse.success());
     }
 
@@ -246,8 +251,22 @@ public class PromotionController {
     public ResponseEntity<CustomResponse<Void>> confirmFinalApproval(
             @RequestBody PromotionReviewRequestDTO request
     ) {
-        // TODO: 전자결재 연동 및 최종 승인 로직 구현 필요
         promotionCommandService.confirmFinalApproval(request);
+        return ResponseEntity.ok(CustomResponse.success());
+    }
+
+    /**
+     * 특정 직원을 즉시 승진시킵니다. (특별 승진)
+     *
+     * @param request 즉시 승진 요청 정보
+     * @return 성공 응답
+     */
+    @PostMapping("/direct")
+    public ResponseEntity<CustomResponse<Void>> promoteDirectly(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @Valid @RequestBody DirectPromotionRequestDTO request
+    ) {
+        promotionCommandService.promoteDirectly(userDetails, request);
         return ResponseEntity.ok(CustomResponse.success());
     }
 

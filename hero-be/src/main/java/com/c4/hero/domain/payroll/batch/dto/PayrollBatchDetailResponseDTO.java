@@ -25,7 +25,7 @@ import java.time.LocalDateTime;
  * @param failedCount         급여 계산 실패(FAILED) 사원 수
  * @param confirmedCount      급여 확정(CONFIRMED) 사원 수
  */
-public record PayrollBatchDetailResponse(
+public record PayrollBatchDetailResponseDTO(
         Integer batchId,
         String salaryMonth,
         String status,

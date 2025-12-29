@@ -130,7 +130,7 @@ public class Employee {
     /**
      * 프로필 이미지 경로
      */
-    @Column(name = "image_path", nullable = false)
+    @Column(name = "image_path")
     private String imagePath;
 
     /**

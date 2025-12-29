@@ -334,6 +334,7 @@
         UPDATE tbl_account
         SET
             password_hash = #{newPasswordHash},
+            password_change_required = 0,
             password_changed_at = CURRENT_TIMESTAMP,
             updated_at = CURRENT_TIMESTAMP
         WHERE employee_id = #{employeeId}

@@ -1,4 +1,4 @@
-package com.c4.hero.domain.promotion.repotiroy;
+package com.c4.hero.domain.promotion.repository;
 
 import com.c4.hero.domain.promotion.entity.PromotionPlan;
 import org.springframework.data.jpa.repository.JpaRepository;

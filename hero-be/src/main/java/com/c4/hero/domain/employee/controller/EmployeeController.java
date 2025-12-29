@@ -29,6 +29,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -55,7 +56,7 @@ import java.util.List;
  * 2025/12/28 (혜원) 프로필 관련 API 추가
  * </pre>
  *
- * @author 이승건
+ * @author 승건
  * @version 2.0
  */
 @Slf4j
@@ -70,7 +71,6 @@ public class EmployeeController {
     private final EmployeeProfileQueryService employeeProfileQueryService;
     private final EmployeeSealService employeeSealService;
 
-
     private final JwtUtil jwtUtil;
     /**
      * 직원 회원가입
@@ -78,8 +78,10 @@ public class EmployeeController {
      * @param request 회원가입 요청 정보 DTO
      * @return 성공 시 ApiResponse<Void>
      */
-    @PostMapping("/signup")
-    public ResponseEntity<CustomResponse<Void>> signup(@Valid @RequestBody SignupRequestDTO request) {
+    @PostMapping(value = "/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<CustomResponse<Void>> signup(
+            @Valid @ModelAttribute SignupRequestDTO request
+    ) {
         employeeCommandService.signup(request);
         return ResponseEntity.ok(CustomResponse.success());
     }
@@ -112,7 +114,7 @@ public class EmployeeController {
     /**
      * 직원 상세 정보 조회(단건)
      *
-     * @param 직원 번호(db 인조키)
+     * @param employeeId 번호(db 인조키)
      * @return 직원의 상세 정보
      */
     @GetMapping("/{employeeId}")
