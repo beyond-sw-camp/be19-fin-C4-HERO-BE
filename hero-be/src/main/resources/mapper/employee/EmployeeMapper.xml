@@ -309,9 +309,15 @@
         SET
         email = AES_ENCRYPT(#{dto.email}, 'hero_secret_key'),
         phone = AES_ENCRYPT(#{dto.mobile}, 'hero_secret_key'),
-        <if test="dto.address != null and dto.address != ''">
-            address = AES_ENCRYPT(#{dto.address}, 'hero_secret_key'),
-        </if>
+        <!-- 빈 문자열도 업데이트 -->
+        <choose>
+            <when test="dto.address != null and dto.address != ''">
+                address = AES_ENCRYPT(#{dto.address}, 'hero_secret_key'),
+            </when>
+            <otherwise>
+                address = NULL,
+            </otherwise>
+        </choose>
         updated_at = CURRENT_TIMESTAMP
         WHERE employee_id = #{employeeId}
         AND status != 'R'
