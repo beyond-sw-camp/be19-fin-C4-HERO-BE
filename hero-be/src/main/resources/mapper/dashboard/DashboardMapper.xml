@@ -196,7 +196,7 @@
     <!-- 9) 결재 현황 조회 -->
     <select id="selectApprovalStats" resultType="com.c4.hero.domain.dashboard.dto.ApprovalStatsDTO" parameterType="map">
         SELECT
-            SUM(CASE WHEN doc.doc_status IN ('DRAFT', 'PENDING') THEN 1 ELSE 0 END) AS pendingCount,
+            SUM(CASE WHEN doc.doc_status IN ('INPROGRESSED', 'PENDING') THEN 1 ELSE 0 END) AS pendingCount,
             SUM(CASE WHEN doc.doc_status = 'APPROVED' THEN 1 ELSE 0 END) AS approvedCount,
             SUM(CASE WHEN doc.doc_status = 'REJECTED' THEN 1 ELSE 0 END) AS rejectedCount
         FROM tbl_approval_document doc
