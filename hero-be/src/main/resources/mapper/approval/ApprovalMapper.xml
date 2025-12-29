@@ -136,7 +136,7 @@
         <where>
             <!-- 탭별 필터링 -->
             <choose>
-                <!-- 전체: 기안자이거나 결재선/참조에 포함된 모든 문서 -->
+                <!-- 전체: 기안자이거나 결재선/참조에 포함된 모든 문서 (단, 남이 임시저장한 문서는 제외) -->
                 <when test="tab == 'all'">
                     (D.drafter_id = #{employeeId}
                     OR EXISTS (
@@ -147,6 +147,8 @@
                     SELECT 1 FROM tbl_approval_reference AR
                     WHERE AR.doc_id = D.doc_id AND AR.emp_id = #{employeeId}
                     ))
+                    <!-- 남이 임시저장한 문서는 제외 -->
+                    AND NOT (D.doc_status = 'DRAFT' AND D.drafter_id != #{employeeId})
                 </when>
 
                 <!-- 요청: 본인이 상신한 문서 -->
@@ -214,22 +216,22 @@
             <!-- 검색 조건 필터 -->
             <if test="condition != null and condition != ''">
                 <choose>
-                    <when test="condition == 'docNo'">
+                    <when test="sortBy == 'docNo'">
                         AND D.doc_no LIKE CONCAT('%', #{condition}, '%')
                     </when>
-                    <when test="condition == 'docType'">
+                    <when test="sortBy == 'docType'">
                         AND T.category LIKE CONCAT('%', #{condition}, '%')
                     </when>
-                    <when test="condition == 'name'">
+                    <when test="sortBy == 'name'">
                         AND T.template_name LIKE CONCAT('%', #{condition}, '%')
                     </when>
-                    <when test="condition == 'title'">
+                    <when test="sortBy == 'title'">
                         AND D.title LIKE CONCAT('%', #{condition}, '%')
                     </when>
-                    <when test="condition == 'dept'">
+                    <when test="sortBy == 'dept'">
                         AND DEPT.department_name LIKE CONCAT('%', #{condition}, '%')
                     </when>
-                    <when test="condition == 'drafter'">
+                    <when test="sortBy == 'drafter'">
                         AND E.employee_name LIKE CONCAT('%', #{condition}, '%')
                     </when>
                 </choose>
@@ -272,8 +274,14 @@
                     SELECT 1 FROM tbl_approval_reference AR
                     WHERE AR.doc_id = D.doc_id AND AR.emp_id = #{employeeId}
                     ))
+                    <!-- 남이 임시저장한 문서는 제외 -->
+                    AND NOT (D.doc_status = 'DRAFT' AND D.drafter_id != #{employeeId})
                 </when>
                 <when test="tab == 'que'">
+                    D.drafter_id = #{employeeId}
+                    AND D.doc_status != 'DRAFT'
+                </when>
+                <when test="tab == 'request'">
                     EXISTS (
                     SELECT 1 FROM tbl_approval_line AL
                     WHERE AL.doc_id = D.doc_id
@@ -281,10 +289,6 @@
                     AND AL.line_status = 'PENDING'
                     AND D.doc_status = 'INPROGRESS'
                     )
-                </when>
-                <when test="tab == 'request'">
-                    D.drafter_id = #{employeeId}
-                    AND D.doc_status != 'DRAFT'
                 </when>
                 <when test="tab == 'reject'">
                     (D.drafter_id = #{employeeId}
@@ -324,22 +328,22 @@
             </if>
             <if test="condition != null and condition != ''">
                 <choose>
-                    <when test="condition == 'docNo'">
+                    <when test="sortBy == 'docNo'">
                         AND D.doc_no LIKE CONCAT('%', #{condition}, '%')
                     </when>
-                    <when test="condition == 'docType'">
+                    <when test="sortBy == 'docType'">
                         AND T.category LIKE CONCAT('%', #{condition}, '%')
                     </when>
-                    <when test="condition == 'name'">
+                    <when test="sortBy == 'name'">
                         AND T.template_name LIKE CONCAT('%', #{condition}, '%')
                     </when>
-                    <when test="condition == 'title'">
+                    <when test="sortBy == 'title'">
                         AND D.title LIKE CONCAT('%', #{condition}, '%')
                     </when>
-                    <when test="condition == 'dept'">
+                    <when test="sortBy == 'dept'">
                         AND DEPT.department_name LIKE CONCAT('%', #{condition}, '%')
                     </when>
-                    <when test="condition == 'drafter'">
+                    <when test="sortBy == 'drafter'">
                         AND E.employee_name LIKE CONCAT('%', #{condition}, '%')
                     </when>
                 </choose>

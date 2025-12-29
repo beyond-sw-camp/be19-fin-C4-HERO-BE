@@ -122,6 +122,10 @@ public class ApprovalQueryService {
                 doc.setDocStatus("진행중");
             } else if ("APPROVED".equals(doc.getDocStatus())) {
                 doc.setDocStatus("승인완료");
+            } else if ("REJECTED".equals(doc.getDocStatus())) {
+                doc.setDocStatus("반려");
+            } else if ("DRAFT".equals(doc.getDocStatus())) {
+                doc.setDocStatus("임시저장");
             }
         });
 

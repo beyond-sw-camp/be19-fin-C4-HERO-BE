@@ -33,10 +33,13 @@ public class ApprovalDocument {
     private Integer docId;
 
     @Column(name = "template_id")
-    private Integer templateId; // 편의상 ID로 매핑 (연관관계 매핑 가능)
+    private Integer templateId;
 
     @Column(name = "drafter_id")
     private Integer drafterId;
+
+    @Column(name = "doc_no")
+    private String docNo;
 
     private String title;
 
@@ -83,5 +86,12 @@ public class ApprovalDocument {
      */
     public void reject() {
         this.docStatus = "REJECTED";
+    }
+
+    /**
+     * 문서 번호 할당
+     */
+    public void assignDocNo(String docNo) {
+        this.docNo = docNo;
     }
 }
