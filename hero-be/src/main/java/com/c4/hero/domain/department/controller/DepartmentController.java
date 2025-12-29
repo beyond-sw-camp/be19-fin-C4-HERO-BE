@@ -1,8 +1,10 @@
 package com.c4.hero.domain.department.controller;
 
 import com.c4.hero.domain.department.dto.DepartmentDTO;
+import com.c4.hero.domain.department.dto.OrganizationNodeDTO;
 import com.c4.hero.domain.department.service.DepartmentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -16,13 +18,14 @@ import java.util.List;
  *
  * History
  * 2025/12/24 (이지윤) 최초 작성 및 백엔드 코딩 컨벤션 적용
+ * 2025/01/08 (승건) 조직도 조회 API 추가
  * </pre>
  *
  * 공통으로 사용되는 부서 셀렉트 박스/필터(근태대시보드, 휴가 캘린더 등)를 위한
  * 부서 전체 목록 조회 API를 제공합니다.
  *
  * @author 이지윤
- * @version 1.0
+ * @version 1.1
  */
 @RestController
 @RequiredArgsConstructor
@@ -46,5 +49,22 @@ public class DepartmentController {
     @GetMapping("/departments")
     public List<DepartmentDTO> getDepartments() {
         return departmentService.getDepartments();
+    }
+
+    /**
+     * 조직도 트리 구조를 조회합니다.
+     *
+     * <p>특징</p>
+     * <ul>
+     *     <li>부서 계층 구조와 각 부서에 속한 직원 정보를 포함합니다.</li>
+     *     <li>퇴사한 직원은 제외됩니다.</li>
+     * </ul>
+     *
+     * @return 조직도 트리 노드 리스트
+     */
+    @GetMapping("/departments/organization-chart")
+    public ResponseEntity<List<OrganizationNodeDTO>> getOrganizationChart() {
+        List<OrganizationNodeDTO> organizationChart = departmentService.getOrganizationChart();
+        return ResponseEntity.ok(organizationChart);
     }
 }
