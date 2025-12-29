@@ -50,8 +50,36 @@
         b.status       AS status,
         b.created_at   AS createdAt,
         b.updated_at   AS updatedAt,
-        b.closed_at    AS closedAt
+        b.closed_at    AS closedAt,
+        /* 배치 요약 집계 (계산/확정/지급 데이터 기준) */
+        COALESCE(SUM(CASE
+        WHEN p.status IN ('CALCULATED','CONFIRMED','PAID') THEN (p.base_salary + p.overtime_pay + p.allowance_total)
+        ELSE 0
+        END), 0) AS totalGrossPay,
+
+        COALESCE(SUM(CASE
+        WHEN p.status IN ('CALCULATED','CONFIRMED','PAID') THEN p.deduction_total
+        ELSE 0
+        END), 0) AS totalDeduction,
+
+        COALESCE(SUM(CASE
+        WHEN p.status IN ('CALCULATED','CONFIRMED','PAID') THEN p.total_pay
+        ELSE 0
+        END), 0) AS totalNetPay,
+        b.created_by   AS createdBy,
+        ec.employee_name AS createdByName,
+
+        b.approved_by  AS approvedBy,
+        ea.employee_name AS approvedByName,
+        b.approved_at  AS approvedAt,
+        b.paid_by      AS paidBy,
+        ep.employee_name AS paidByName,
+        b.paid_at      AS paidAt
         FROM tbl_payroll_batch b
+        LEFT JOIN tbl_payroll p ON p.batch_id = b.batch_id
+        LEFT JOIN tbl_employee ec ON ec.employee_id = b.created_by
+        LEFT JOIN tbl_employee ea ON ea.employee_id = b.approved_by
+        LEFT JOIN tbl_employee ep ON ep.employee_id = b.paid_by
         <where>
             <if test="month != null and month != ''">
                 AND b.salary_month = #{month}
@@ -60,6 +88,11 @@
                 AND b.status = #{status}
             </if>
         </where>
+        GROUP BY
+        b.batch_id, b.salary_month, b.status, b.created_at, b.updated_at, b.closed_at,
+        b.created_by, ec.employee_name,
+        b.approved_by, ea.employee_name, b.approved_at,
+        b.paid_by, ep.employee_name, b.paid_at
         ORDER BY b.created_at DESC, b.batch_id DESC
     </select>
 

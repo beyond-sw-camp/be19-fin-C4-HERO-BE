@@ -52,8 +52,10 @@ public class PayrollEmployeeCalculateTxService {
 
             if (payroll.isLocked()) return; // 상태 검증용 (true상태면 계산 스킵)
 
+            int allowanceTotal = payroll.getAllowanceTotal() == null ? 0 : payroll.getAllowanceTotal();
+            int deductionTotal = payroll.getDeductionTotal() == null ? 0 : payroll.getDeductionTotal();
             //급여 계산 적용하는 로직
-            payroll.applyCalculated(batch.getBatchId(), baseSalary, overtimePay, 0, 0); // 호출로 급여 관련 반영
+            payroll.applyCalculated(batch.getBatchId(), baseSalary, overtimePay, allowanceTotal, deductionTotal); // 호출로 급여 관련 반영
             Payroll saved = payrollRepository.save(payroll);
 
             //연장근무 수당 항목 갱신

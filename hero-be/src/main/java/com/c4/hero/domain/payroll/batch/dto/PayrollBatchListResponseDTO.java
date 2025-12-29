@@ -33,5 +33,14 @@ public record PayrollBatchListResponseDTO(
         LocalDateTime closedAt,
         Integer totalGrossPay,
         Integer totalDeduction,
-        Integer totalNetPay
+        Integer totalNetPay,
+        Integer createdBy,
+        String createdByName,
+        Integer approvedBy,
+        String approvedByName,
+        LocalDateTime approvedAt,
+        Integer paidBy,
+        String paidByName,
+        LocalDateTime paidAt
+
 ) {}

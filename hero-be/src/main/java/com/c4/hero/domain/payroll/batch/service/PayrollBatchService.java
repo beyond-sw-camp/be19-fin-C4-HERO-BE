@@ -66,11 +66,11 @@ public class PayrollBatchService {
      *         동일 월의 배치가 이미 존재하는 경우
      */
     @Transactional
-    public Integer createBatch(String month) {
+    public Integer createBatch(String month, Integer employeeId) {
         if (batchRepository.existsBySalaryMonth(month)) {
             throw new BusinessException(ErrorCode.PAYROLL_BATCH_DUPLICATED);
         }
-        return batchRepository.save(PayrollBatch.create(month)).getBatchId();
+        return batchRepository.save(PayrollBatch.create(month, employeeId)).getBatchId();
     }
 
     /**
@@ -113,7 +113,7 @@ public class PayrollBatchService {
      * @param batchId 급여 배치 ID
      */
     @Transactional
-    public void confirm(Integer batchId) {
+    public void confirm(Integer batchId, Integer employeeId) {
         PayrollBatch batch = getBatchOrThrow(batchId);
 
         // 배치 상태 검증: CALCULATED 상태에서만 CONFIRMED로 전환 가능
@@ -136,7 +136,7 @@ public class PayrollBatchService {
         // 필요하면 updatedCount로 로그 남겨도 됨
 
         // 배치 상태 CONFIRMED로 전환
-        batch.confirm();
+        batch.confirm(employeeId);
     }
 
     /**
@@ -156,7 +156,7 @@ public class PayrollBatchService {
      * @param batchId 급여 배치 ID
      */
     @Transactional
-    public void pay(Integer batchId) {
+    public void pay(Integer batchId, Integer employeeId) {
         PayrollBatch batch = getBatchOrThrow(batchId);
 
         // 상태 검증 => CONFIRMED만 지급 가능
@@ -185,7 +185,7 @@ public class PayrollBatchService {
                     )
             );
         }
-        batch.markPaid();
+        batch.markPaid(employeeId);
     }
 }
 

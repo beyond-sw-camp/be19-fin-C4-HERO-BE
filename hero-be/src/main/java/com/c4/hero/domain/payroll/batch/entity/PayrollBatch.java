@@ -59,6 +59,21 @@ public class PayrollBatch {
     @Enumerated(EnumType.STRING)
     private PayrollBatchStatus status;
 
+       @Column(name = "created_by")
+   private Integer createdBy;
+
+           @Column(name = "approved_by")
+   private Integer approvedBy;
+
+           @Column(name = "approved_at")
+   private LocalDateTime approvedAt;
+
+           @Column(name = "paid_by")
+   private Integer paidBy;
+
+           @Column(name = "paid_at")
+   private LocalDateTime paidAt;
+
     private LocalDateTime closedAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -69,11 +84,12 @@ public class PayrollBatch {
      * @param month 급여월 (YYYY-MM)
      * @return 생성된 PayrollBatch 엔티티
      */
-    public static PayrollBatch create(String month) {
+    public static PayrollBatch create(String month, Integer employeeId) {
         PayrollBatch b = new PayrollBatch();
         b.salaryMonth = month;
         b.status = PayrollBatchStatus.READY;
         b.createdAt = LocalDateTime.now();
+        b.createdBy = employeeId;
         return b;
     }
 
@@ -85,26 +101,33 @@ public class PayrollBatch {
             throw new BusinessException(ErrorCode.PAYROLL_BATCH_INVALID_STATUS_TRANSITION);
         }
         this.status = PayrollBatchStatus.CALCULATED;
+        this.updatedAt = LocalDateTime.now();
     }
 
     /**
      * 급여 배치 확정 처리
      */
-    public void confirm() {
+    public void confirm(Integer employeeId) {
         if (status != PayrollBatchStatus.CALCULATED) {
             throw new BusinessException(ErrorCode.PAYROLL_BATCH_NOT_CALCULATED);
         }
         this.status = PayrollBatchStatus.CONFIRMED;
+        this.approvedBy = employeeId;
+        this.approvedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
     }
 
     /**
      * 급여 배치 지급 완료 처리
      */
-    public void markPaid() {
+    public void markPaid(Integer employeeId) {
         if (status != PayrollBatchStatus.CONFIRMED) {
             throw new BusinessException(ErrorCode.PAYROLL_BATCH_INVALID_STATUS_TRANSITION);
         }
         this.status = PayrollBatchStatus.PAID;
+        this.paidBy = employeeId;
+        this.paidAt = LocalDateTime.now();
         this.closedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
     }
 }
