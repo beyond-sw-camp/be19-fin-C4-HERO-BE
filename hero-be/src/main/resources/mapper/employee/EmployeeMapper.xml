@@ -309,9 +309,15 @@
         SET
         email = AES_ENCRYPT(#{dto.email}, 'hero_secret_key'),
         phone = AES_ENCRYPT(#{dto.mobile}, 'hero_secret_key'),
-        <if test="dto.address != null and dto.address != ''">
-            address = AES_ENCRYPT(#{dto.address}, 'hero_secret_key'),
-        </if>
+        <!-- 빈 문자열도 업데이트 -->
+        <choose>
+            <when test="dto.address != null and dto.address != ''">
+                address = AES_ENCRYPT(#{dto.address}, 'hero_secret_key'),
+            </when>
+            <otherwise>
+                address = NULL,
+            </otherwise>
+        </choose>
         updated_at = CURRENT_TIMESTAMP
         WHERE employee_id = #{employeeId}
         AND status != 'R'
@@ -364,15 +370,12 @@
     </update>
 
     <!--
-    직인이 없는 직원 목록 조회
-    -->
-    <select id="findEmployeesWithoutSeal" resultType="map">
-        SELECT
-            employee_id,
-            employee_name
+       직인 이미지 생성을 위한 이름 조회
+   -->
+    <select id="findEmployeeNameById" parameterType="int" resultType="string">
+        SELECT employee_name
         FROM tbl_employee
-        WHERE (seal_image_url IS NULL OR seal_image_url = '')
-          AND status = 'A'
-        ORDER BY employee_id
+        WHERE employee_id = #{employeeId}
+          AND status != 'R'
     </select>
 </mapper>
