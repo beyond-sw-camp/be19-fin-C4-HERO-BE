@@ -88,6 +88,7 @@ public class JwtUtil {
         claims.put("jobTitleId", userDetails.getJobTitleId());
         claims.put("jobTitleName", userDetails.getJobTitleName());
         claims.put("passwordChangeRequired", userDetails.isPasswordChangeRequired());
+        claims.put("imagePath", userDetails.getImagePath());
 
         return Jwts.builder()
                 .setClaims(claims)
@@ -188,7 +189,8 @@ public class JwtUtil {
                 getGradeName(accessToken),
                 getJobTitleId(accessToken),
                 getJobTitleName(accessToken),
-                passwordChangeRequired
+                passwordChangeRequired,
+                getImagePath(accessToken)
         );
 
         return new UsernamePasswordAuthenticationToken(principal, "", authorities);
@@ -295,6 +297,15 @@ public class JwtUtil {
      */
     public String getJobTitleName(String token) {
         return parseClaims(token).get("jobTitleName", String.class);
+    }
+
+    /**
+     * 이미지 경로 추출
+     * @param token
+     * @return 이미지 경로
+     */
+    public String getImagePath(String token) {
+        return parseClaims(token).get("imagePath", String.class);
     }
 
 

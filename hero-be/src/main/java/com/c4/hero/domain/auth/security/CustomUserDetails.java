@@ -40,6 +40,7 @@ public class CustomUserDetails implements UserDetails {
     private final Integer jobTitleId;
     private final String jobTitleName;
     private final boolean passwordChangeRequired; // 필드 추가
+    private final String imagePath; // 프로필 이미지 경로 추가
 
     public CustomUserDetails(Account account) {
         this.account = account;
@@ -54,13 +55,14 @@ public class CustomUserDetails implements UserDetails {
         this.jobTitleId = employee.getJobTitle() != null ? employee.getJobTitle().getJobTitleId() : null;
         this.jobTitleName = employee.getJobTitle() != null ? employee.getJobTitle().getJobTitle() : null;
         this.passwordChangeRequired = account.isPasswordChangeRequired();
+        this.imagePath = employee.getImagePath();
     }
 
     // JWT 토큰 복구용
     public CustomUserDetails(Integer employeeId, String employeeNumber, String employeeName,
                              Integer departmentId, String departmentName, Integer gradeId,
                              String gradeName, Integer jobTitleId, String jobTitleName,
-                             boolean passwordChangeRequired) { // 파라미터 추가
+                             boolean passwordChangeRequired, String imagePath) { // 파라미터 추가
         this.employeeId = employeeId;
         this.employeeNumber = employeeNumber;
         this.employeeName = employeeName;
@@ -71,6 +73,7 @@ public class CustomUserDetails implements UserDetails {
         this.jobTitleId = jobTitleId;
         this.jobTitleName = jobTitleName;
         this.passwordChangeRequired = passwordChangeRequired;
+        this.imagePath = imagePath;
         this.account = null; // API 호출 시에는 DB 객체가 필요 없으므로 null 처리
     }
 

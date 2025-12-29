@@ -3,6 +3,7 @@ package com.c4.hero.domain.employee.service;
 import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
 import com.c4.hero.common.util.EncryptionUtil;
+import com.c4.hero.common.util.FileUtil;
 import com.c4.hero.domain.employee.dto.request.SignupRequestDTO;
 import com.c4.hero.domain.employee.entity.*;
 import com.c4.hero.domain.employee.entity.EmployeeDepartment;
@@ -30,7 +31,9 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.stream.Collectors;
@@ -102,7 +105,17 @@ public class EmployeeCommandServiceImpl implements EmployeeCommandService {
             }
         });
 
-        // 2. DTO -> Employee 엔티티 변환
+        // 2. 이미지 파일 처리
+        String imagePath = null;
+        if (request.getImageFile() != null && !request.getImageFile().isEmpty()) {
+            try {
+                imagePath = FileUtil.uploadFile(request.getImageFile(), "employee");
+            } catch (IOException e) {
+                throw new BusinessException(ErrorCode.FILE_UPLOAD_FAILED);
+            }
+        }
+
+        // 3. DTO -> Employee 엔티티 변환
         EmployeeDepartment employeeDepartment = departmentRepository.findByDepartmentName(request.getDepartmentName())
                 .orElseThrow(() -> new BusinessException(ErrorCode.DEPARTMENT_NOT_FOUND));
         Grade grade = gradeRepository.findByGrade(request.getGradeName())
@@ -119,7 +132,7 @@ public class EmployeeCommandServiceImpl implements EmployeeCommandService {
                 .birthDate(request.getBirthDate())
                 .hireDate(request.getHireDate())
                 .contractType(request.getContractType())
-                .imagePath(request.getImagePath())
+                .imagePath(imagePath)
                 .address(request.getAddress() != null ? encryptionUtil.encrypt(request.getAddress()) : null)
                 .employeeDepartment(employeeDepartment)
                 .baseSalary(request.getBaseSalary())
@@ -139,6 +152,7 @@ public class EmployeeCommandServiceImpl implements EmployeeCommandService {
                 .account(accountId)
                 .passwordHash(passwordEncoder.encode(tempPassword))
                 .accountStatus(AccountStatus.ACTIVE)
+                .passwordChangeRequired(true)
                 .build();
 
         accountRepository.save(account);

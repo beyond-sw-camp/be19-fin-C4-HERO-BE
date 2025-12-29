@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.time.LocalDate;
 
 /**
@@ -69,18 +71,16 @@ public class SignupRequestDTO {
     private LocalDate hireDate;
 
     /**
-     * 프로필 이미지 경로
+     * 프로필 이미지 파일
      */
-    @NotBlank(message = "이력서 사진 경로는 필수입니다.")
-    private String imagePath;
+    @NotNull(message = "프로필 이미지는 필수입니다.")
+    private MultipartFile imageFile;
 
     /**
      * 기본급
      */
     @NotNull(message = "기본급은 필수 입력 항목입니다.")
     private Integer baseSalary;
-
-    /**
 
     /**
      * 생년월일 (선택)

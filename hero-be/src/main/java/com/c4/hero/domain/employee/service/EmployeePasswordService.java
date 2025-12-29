@@ -89,6 +89,12 @@ public class EmployeePasswordService {
         log.info("비밀번호 변경 성공 - employeeId: {}", employeeId);
     }
 
+    /**
+     * 비밀번호 찾기 시 본인 인증 후 정해진 이메일로 메일 발송
+     *
+     * @param employeeNumber 직원 사번
+     * @param email tbl_employee에 담긴 email
+     */
     @Transactional
     public void issueAndSendPasswordResetToken(String employeeNumber, String email) {
         // 1. 직원 정보 확인
@@ -107,6 +113,12 @@ public class EmployeePasswordService {
         sendPasswordResetEmail(email, token);
     }
 
+    /**
+     * 비밀번호 찾기 시 본인 인증 후 정해진 이메일로 메일 발송
+     *
+     * @param token 메일로 발송된 토큰
+     * @param newPassword 새로 정한 비밀번호
+     */
     @Transactional
     public void resetPasswordWithToken(String token, String newPassword) {
         // 1. 토큰 검증

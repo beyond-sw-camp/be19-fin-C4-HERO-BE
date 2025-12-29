@@ -22,6 +22,7 @@ import org.springframework.http.HttpStatus;
  * 2025-12-16 (승건) 부서장 관련 에러 코드 추가
  * 2025-12-22 (승건) 승진 관련 에러 코드 추가
  * 2025-12-26 (혜원) 출퇴근 타각 관련 에러 코드 추가
+ * 2025-12-29 (승건) 파일 업로드 실패 추가
  * </pre>
  *
  * @author 혜원
@@ -76,6 +77,11 @@ public enum ErrorCode {
      * 접근 거부 (본인 소유 아님 등)
      */
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "C009", "접근 권한이 없습니다."),
+
+    /**
+     * 파일 업로드 실패
+     */
+    FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "C010", "파일 업로드에 실패했습니다."),
 
     // ===== 사원(Employee) 관련 에러 =====
     /**

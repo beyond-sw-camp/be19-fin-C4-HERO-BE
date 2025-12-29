@@ -29,6 +29,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -79,8 +80,10 @@ public class EmployeeController {
      * @param request 회원가입 요청 정보 DTO
      * @return 성공 시 ApiResponse<Void>
      */
-    @PostMapping("/signup")
-    public ResponseEntity<CustomResponse<Void>> signup(@Valid @RequestBody SignupRequestDTO request) {
+    @PostMapping(value = "/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<CustomResponse<Void>> signup(
+            @Valid @ModelAttribute SignupRequestDTO request
+    ) {
         employeeCommandService.signup(request);
         return ResponseEntity.ok(CustomResponse.success());
     }
