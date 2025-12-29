@@ -7,6 +7,7 @@ import com.c4.hero.domain.approval.dto.request.ApprovalRequestDTO;
 import com.c4.hero.domain.approval.dto.response.ApprovalActionResponseDTO;
 import com.c4.hero.domain.approval.entity.*;
 import com.c4.hero.domain.approval.event.ApprovalCompletedEvent;
+import com.c4.hero.domain.approval.event.ApprovalRejectedEvent;
 import com.c4.hero.domain.approval.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,10 +31,11 @@ import java.util.UUID;
  * History
  *   2025/12/25 - 민철 CQRS 패턴 적용 및 작성화면 조회 메서드 로직 추가
  *   2025/12/26 - 민철 결재선/참조목록 저장 로직 추가 및 DTO 필드명 수정
+ *   2025/12/28 - 승건 반려 이벤트 발행 로직 추가
  * </pre>
  *
  * @author 민철
- * @version 2.2
+ * @version 2.3
  */
 @Slf4j
 @Service
@@ -298,6 +300,9 @@ public class ApprovalCommandService {
             line.reject(request.getComment());
             document.reject();
 
+            // 🎉 반려 이벤트 발행
+            publishApprovalRejectedEvent(document, request.getComment());
+
             return ApprovalActionResponseDTO.builder()
                     .success(true)
                     .message("반려 처리 완료")
@@ -356,6 +361,28 @@ public class ApprovalCommandService {
         );
 
         log.info("🎉 결재 완료 이벤트 발행 - docId: {}, templateKey: {}",
+                document.getDocId(), template.getTemplateKey());
+
+        eventPublisher.publishEvent(event);
+    }
+
+    /**
+     * 결재 반려 이벤트 발행
+     *
+     * @param document 반려된 문서
+     * @param comment 반려 사유
+     */
+    private void publishApprovalRejectedEvent(ApprovalDocument document, String comment) {
+        ApprovalTemplate template = templateRepository.findByTemplateId(document.getTemplateId());
+        ApprovalRejectedEvent event = new ApprovalRejectedEvent(
+                document.getDocId(),
+                template.getTemplateKey(),
+                document.getDetails(),
+                document.getDrafterId(),
+                comment
+        );
+
+        log.info("🚨 결재 반려 이벤트 발행 - docId: {}, templateKey: {}",
                 document.getDocId(), template.getTemplateKey());
 
         eventPublisher.publishEvent(event);
