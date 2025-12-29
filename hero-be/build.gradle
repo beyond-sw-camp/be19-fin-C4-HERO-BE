@@ -28,6 +28,9 @@ dependencies {
     // AWS S3
     implementation 'com.amazonaws:aws-java-sdk-s3:1.12.529'
 
+    // Redis
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
     // Google Calendar API (services.calendar.*)
     implementation 'com.google.apis:google-api-services-calendar:v3-rev20251207-2.0.0'
 

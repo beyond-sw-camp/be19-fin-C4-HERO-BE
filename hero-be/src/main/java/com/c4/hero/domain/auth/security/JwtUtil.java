@@ -33,10 +33,11 @@ import java.util.stream.Collectors;
  * 2025/12/10 (승건) 권한 정보에 'ROLE_' 접두사 추가
  * 2025/12/17 (승건) 토큰 정보 추출 메소드 추가 및 employeeNumber 추가
  * 2025/12/22 (혜원) 기본 User 대신 CustomUserDetails 객체 반환하도록 수정
+ * 2025/12/29 (승건) 비밀번호 재설정 토큰 생성 메서드 추가
  * </pre>
  *
  * @author 이승건
- * @version 1.2
+ * @version 1.3
  */
 @Slf4j
 @Getter
@@ -86,6 +87,7 @@ public class JwtUtil {
         claims.put("gradeName", userDetails.getGradeName());
         claims.put("jobTitleId", userDetails.getJobTitleId());
         claims.put("jobTitleName", userDetails.getJobTitleName());
+        claims.put("passwordChangeRequired", userDetails.isPasswordChangeRequired());
 
         return Jwts.builder()
                 .setClaims(claims)
@@ -109,6 +111,25 @@ public class JwtUtil {
                 .setClaims(claims)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + refreshTokenExpirationTime))
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    /**
+     * 비밀번호 재설정용 임시 토큰 생성
+     * @param employeeNumber 사용자를 식별할 사번
+     * @return 임시 토큰
+     */
+    public String createPasswordResetToken(String employeeNumber) {
+        Claims claims = Jwts.claims().setSubject(employeeNumber);
+        claims.put("type", "PASSWORD_RESET"); // 토큰 타입 지정
+
+        long expirationTime = 10 * 60 * 1000; // 10분
+
+        return Jwts.builder()
+                .setClaims(claims)
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -151,6 +172,12 @@ public class JwtUtil {
                         .map(SimpleGrantedAuthority::new)
                         .collect(Collectors.toList());
 
+        // passwordChangeRequired 값 추출 (기본값 false)
+        Boolean passwordChangeRequired = claims.get("passwordChangeRequired", Boolean.class);
+        if (passwordChangeRequired == null) {
+            passwordChangeRequired = false;
+        }
+
         CustomUserDetails principal = new CustomUserDetails(
                 getEmployeeId(accessToken),      // claims에서 employeeId 가져오기
                 getEmployeeNumber(accessToken),  // claims에서 employeeNumber 가져오기
@@ -160,7 +187,8 @@ public class JwtUtil {
                 getGradeId(accessToken),
                 getGradeName(accessToken),
                 getJobTitleId(accessToken),
-                getJobTitleName(accessToken)
+                getJobTitleName(accessToken),
+                passwordChangeRequired
         );
 
         return new UsernamePasswordAuthenticationToken(principal, "", authorities);

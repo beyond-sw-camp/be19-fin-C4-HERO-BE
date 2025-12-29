@@ -20,10 +20,11 @@ import java.util.stream.Collectors;
  * History
  * 2025/12/09 (이승건) 최초 작성
  * 2025/12/22 (혜원) 토큰 Claims 복구용 생성자 추가 및 getUsername NPE 방어 로직 적용
+ * 2025/12/29 (승건) 비밀번호 변경 필요 여부 필드 추가
  * </pre>
  *
  * @author 이승건
- * @version 1.0
+ * @version 1.1
  */
 @Getter
 public class CustomUserDetails implements UserDetails {
@@ -38,6 +39,7 @@ public class CustomUserDetails implements UserDetails {
     private final String gradeName;
     private final Integer jobTitleId;
     private final String jobTitleName;
+    private final boolean passwordChangeRequired; // 필드 추가
 
     public CustomUserDetails(Account account) {
         this.account = account;
@@ -51,13 +53,14 @@ public class CustomUserDetails implements UserDetails {
         this.gradeName = employee.getGrade() != null ? employee.getGrade().getGrade() : null;
         this.jobTitleId = employee.getJobTitle() != null ? employee.getJobTitle().getJobTitleId() : null;
         this.jobTitleName = employee.getJobTitle() != null ? employee.getJobTitle().getJobTitle() : null;
+        this.passwordChangeRequired = account.isPasswordChangeRequired();
     }
 
     // JWT 토큰 복구용
-    // 엔티티(Account) 없이 글자와 숫자 정보만으로 가방을 채웁니다.
     public CustomUserDetails(Integer employeeId, String employeeNumber, String employeeName,
                              Integer departmentId, String departmentName, Integer gradeId,
-                             String gradeName, Integer jobTitleId, String jobTitleName) {
+                             String gradeName, Integer jobTitleId, String jobTitleName,
+                             boolean passwordChangeRequired) { // 파라미터 추가
         this.employeeId = employeeId;
         this.employeeNumber = employeeNumber;
         this.employeeName = employeeName;
@@ -67,6 +70,7 @@ public class CustomUserDetails implements UserDetails {
         this.gradeName = gradeName;
         this.jobTitleId = jobTitleId;
         this.jobTitleName = jobTitleName;
+        this.passwordChangeRequired = passwordChangeRequired;
         this.account = null; // API 호출 시에는 DB 객체가 필요 없으므로 null 처리
     }
 

@@ -15,10 +15,11 @@ import java.util.Optional;
  * History
  * 2025-12-9 (이승건) 최초 작성
  * 2025-12-9 (이승건) findByAccount 메소드 추가
+ * 2025-12-29 (승건) 사번으로 계정 조회 메소드 추가
  * </pre>
  *
  * @author 이승건
- * @version 1.1
+ * @version 1.2
  */
 public interface EmployeeAccountRepository extends JpaRepository<Account, Integer> {
 
@@ -40,5 +41,19 @@ public interface EmployeeAccountRepository extends JpaRepository<Account, Intege
     @Query("SELECT a FROM Account a JOIN FETCH a.accountRoles ar JOIN FETCH ar.role WHERE a.account = :account")
     Optional<Account> findByAccountWithRoles(@Param("account") String account);
 
+    /**
+     * 직원 ID로 계정 조회
+     *
+     * @param employeeId 직원 ID
+     * @return Optional<Account>
+     */
     Optional<Account> findByEmployee_EmployeeId(Integer employeeId);
+
+    /**
+     * 사번으로 계정 조회
+     *
+     * @param employeeNumber 사번
+     * @return Optional<Account>
+     */
+    Optional<Account> findByEmployee_EmployeeNumber(String employeeNumber);
 }

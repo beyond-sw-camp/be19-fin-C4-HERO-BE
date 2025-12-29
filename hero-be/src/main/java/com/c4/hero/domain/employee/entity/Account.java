@@ -31,11 +31,12 @@ import java.util.List;
  * Description: 사용자의 계정 정보를 담는 엔티티 클래스
  *
  * History
- * 2025/12/09 이승건 최초 작성
+ * 2025/12/09 (승건) 최초 작성
+ * 2025/12/29 (승건) 비밀번호 변경 메서드 추가
  * </pre>
  *
  * @author 이승건
- * @version 1.0
+ * @version 1.1
  */
 @Entity
 @Table(name = "tbl_account")
@@ -122,5 +123,17 @@ public class Account {
         this.passwordHash = passwordHash;
         this.accountStatus = accountStatus;
         this.passwordChangeRequired = passwordChangeRequired;
+    }
+
+    /**
+     * 비밀번호를 변경합니다.
+     * 변경 시 '비밀번호 변경 필요 여부'를 false로 설정합니다.
+     *
+     * @param newPasswordHash 암호화된 새 비밀번호
+     */
+    public void changePassword(String newPasswordHash) {
+        this.passwordHash = newPasswordHash;
+        this.passwordChangedAt = LocalDateTime.now();
+        this.passwordChangeRequired = false;
     }
 }

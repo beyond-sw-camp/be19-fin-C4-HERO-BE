@@ -1,4 +1,4 @@
-package com.c4.hero.domain.promotion.repotiroy;
+package com.c4.hero.domain.promotion.repository;
 
 import com.c4.hero.domain.promotion.entity.PromotionCandidate;
 import com.c4.hero.domain.promotion.type.PromotionCandidateStatus;
