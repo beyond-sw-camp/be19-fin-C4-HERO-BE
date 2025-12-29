@@ -131,7 +131,7 @@ public class ApprovalQueryService {
 
         // 전체 문서 개수 조회 (탭별 필터링 포함)
         int totalElements = approvalMapper.countInboxDocuments(
-                employeeId, tab, fromDate, toDate, condition
+                employeeId, tab, fromDate, toDate, sortBy, condition
         );
 
         // PageResponse.of() 정적 메서드 사용

@@ -15,11 +15,12 @@ import java.util.List;
  * History
  * 2025/12/25 (민철) 작성화면 관련 결재선/참조목록 자동지정을 위한 조회 mapper
  * 2025/12/26 (민철) 문서함 조회 메서드 추가
+ * 2025/12/29 (민철) countInboxDocuments에 sortBy 파라미터 추가
  *
  * </pre>
  *
  * @author 민철
- * @version 2.0
+ * @version 2.1
  */
 @Mapper
 public interface ApprovalMapper {
@@ -72,6 +73,7 @@ public interface ApprovalMapper {
      * @param tab        탭 구분 (all/que/request/reject/ref/end/draft)
      * @param fromDate   시작일
      * @param toDate     종료일
+     * @param sortBy     검색 필드
      * @param condition  필터 조건
      * @return 전체 문서 개수
      */
@@ -80,6 +82,7 @@ public interface ApprovalMapper {
             @Param("tab") String tab,
             @Param("fromDate") String fromDate,
             @Param("toDate") String toDate,
+            @Param("sortBy") String sortBy,
             @Param("condition") String condition
     );
 

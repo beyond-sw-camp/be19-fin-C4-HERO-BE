@@ -184,6 +184,7 @@
                     SELECT 1 FROM tbl_approval_reference AR
                     WHERE AR.doc_id = D.doc_id AND AR.emp_id = #{employeeId}
                     )
+                    AND D.doc_status != 'DRAFT'
                 </when>
 
                 <!-- 승인: 완료된 문서 (본인이 승인했거나 상신한 문서 중 최종 승인) -->
@@ -191,9 +192,11 @@
                     (D.drafter_id = #{employeeId}
                     OR EXISTS (
                     SELECT 1 FROM tbl_approval_line AL
-                    WHERE AL.doc_id = D.doc_id
-                    AND AL.approver_id = #{employeeId}
-                    AND AL.line_status = 'APPROVED'
+                    WHERE AL.doc_id = D.doc_id AND AL.approver_id = #{employeeId}
+                    )
+                    OR EXISTS (
+                    SELECT 1 FROM tbl_approval_reference AR
+                    WHERE AR.doc_id = D.doc_id AND AR.emp_id = #{employeeId}
                     ))
                     AND D.doc_status = 'APPROVED'
                 </when>
@@ -216,6 +219,18 @@
             <!-- 검색 조건 필터 -->
             <if test="condition != null and condition != ''">
                 <choose>
+                    <!-- 전체 검색: 모든 필드에서 OR 조건으로 검색 -->
+                    <when test="sortBy == null or sortBy == '' or sortBy == 'all'">
+                        AND (
+                        D.doc_no LIKE CONCAT('%', #{condition}, '%')
+                        OR T.category LIKE CONCAT('%', #{condition}, '%')
+                        OR T.template_name LIKE CONCAT('%', #{condition}, '%')
+                        OR D.title LIKE CONCAT('%', #{condition}, '%')
+                        OR DEPT.department_name LIKE CONCAT('%', #{condition}, '%')
+                        OR E.employee_name LIKE CONCAT('%', #{condition}, '%')
+                        )
+                    </when>
+                    <!-- 개별 필드 검색 -->
                     <when test="sortBy == 'docNo'">
                         AND D.doc_no LIKE CONCAT('%', #{condition}, '%')
                     </when>
@@ -238,32 +253,21 @@
             </if>
         </where>
 
-        <!-- 정렬 -->
-        <choose>
-            <when test="sortBy == 'date'">
-                ORDER BY D.draft_date DESC
-            </when>
-            <when test="sortBy == 'docNo'">
-                ORDER BY D.doc_no DESC
-            </when>
-            <otherwise>
-                ORDER BY D.draft_date DESC
-            </otherwise>
-        </choose>
-
-        LIMIT #{offset}, #{size}
+        <!-- 기본 정렬: 최신순 (상신일시 내림차순) -->
+        ORDER BY D.draft_date DESC
     </select>
 
-    <!-- 문서함 전체 개수 조회 (탭별 필터링) -->
-    <select id="countInboxDocuments" resultType="int">
+    <!-- 문서함 전체 개수 조회 (페이징용) -->
+    <select id="countInboxDocuments" resultType="_int">
         SELECT COUNT(*)
         FROM tbl_approval_document D
         INNER JOIN tbl_approval_form_template T ON D.template_id = T.template_id
         INNER JOIN tbl_employee E ON D.drafter_id = E.employee_id
         INNER JOIN tbl_department DEPT ON E.department_id = DEPT.department_id
         <where>
-            <!-- 탭별 필터링 (selectInboxDocuments와 동일) -->
+            <!-- 탭별 필터링 -->
             <choose>
+                <!-- 전체: 기안자이거나 결재선/참조에 포함된 모든 문서 (단, 남이 임시저장한 문서는 제외) -->
                 <when test="tab == 'all'">
                     (D.drafter_id = #{employeeId}
                     OR EXISTS (
@@ -274,13 +278,16 @@
                     SELECT 1 FROM tbl_approval_reference AR
                     WHERE AR.doc_id = D.doc_id AND AR.emp_id = #{employeeId}
                     ))
-                    <!-- 남이 임시저장한 문서는 제외 -->
                     AND NOT (D.doc_status = 'DRAFT' AND D.drafter_id != #{employeeId})
                 </when>
+
+                <!-- 요청: 본인이 상신한 문서 -->
                 <when test="tab == 'que'">
                     D.drafter_id = #{employeeId}
                     AND D.doc_status != 'DRAFT'
                 </when>
+
+                <!-- 대기: 결재 대기 중인 문서 (본인이 결재해야 하는 문서) -->
                 <when test="tab == 'request'">
                     EXISTS (
                     SELECT 1 FROM tbl_approval_line AL
@@ -290,6 +297,8 @@
                     AND D.doc_status = 'INPROGRESS'
                     )
                 </when>
+
+                <!-- 반려: 반려된 문서 -->
                 <when test="tab == 'reject'">
                     (D.drafter_id = #{employeeId}
                     OR EXISTS (
@@ -298,36 +307,61 @@
                     ))
                     AND D.doc_status = 'REJECTED'
                 </when>
+
+                <!-- 참조: 참조자로 지정된 문서 -->
                 <when test="tab == 'ref'">
                     EXISTS (
                     SELECT 1 FROM tbl_approval_reference AR
-                    WHERE AR.doc_id = D.doc_id AND AR.emp_id = #{employeeId}
+                    WHERE AR.doc_id = D.doc_id
+                    AND AR.emp_id = #{employeeId}
                     )
+                    AND D.doc_status != 'DRAFT'
                 </when>
+
+                <!-- 승인: 승인 완료된 문서 -->
                 <when test="tab == 'end'">
                     (D.drafter_id = #{employeeId}
                     OR EXISTS (
                     SELECT 1 FROM tbl_approval_line AL
-                    WHERE AL.doc_id = D.doc_id
-                    AND AL.approver_id = #{employeeId}
-                    AND AL.line_status = 'APPROVED'
+                    WHERE AL.doc_id = D.doc_id AND AL.approver_id = #{employeeId}
+                    )
+                    OR EXISTS (
+                    SELECT 1 FROM tbl_approval_reference AR
+                    WHERE AR.doc_id = D.doc_id AND AR.emp_id = #{employeeId}
                     ))
                     AND D.doc_status = 'APPROVED'
                 </when>
+
+                <!-- 임시저장: 본인이 임시저장한 문서 -->
                 <when test="tab == 'draft'">
                     D.drafter_id = #{employeeId}
                     AND D.doc_status = 'DRAFT'
                 </when>
             </choose>
 
+            <!-- 날짜 필터링 -->
             <if test="fromDate != null and fromDate != ''">
                 AND D.draft_date >= #{fromDate}
             </if>
             <if test="toDate != null and toDate != ''">
                 AND D.draft_date <![CDATA[<=]]> #{toDate}
             </if>
+
+            <!-- 검색 조건 -->
             <if test="condition != null and condition != ''">
                 <choose>
+                    <!-- 전체 검색: 모든 필드에서 OR 조건으로 검색 -->
+                    <when test="sortBy == null or sortBy == '' or sortBy == 'all'">
+                        AND (
+                        D.doc_no LIKE CONCAT('%', #{condition}, '%')
+                        OR T.category LIKE CONCAT('%', #{condition}, '%')
+                        OR T.template_name LIKE CONCAT('%', #{condition}, '%')
+                        OR D.title LIKE CONCAT('%', #{condition}, '%')
+                        OR DEPT.department_name LIKE CONCAT('%', #{condition}, '%')
+                        OR E.employee_name LIKE CONCAT('%', #{condition}, '%')
+                        )
+                    </when>
+                    <!-- 개별 필드 검색 -->
                     <when test="sortBy == 'docNo'">
                         AND D.doc_no LIKE CONCAT('%', #{condition}, '%')
                     </when>
@@ -351,7 +385,7 @@
         </where>
     </select>
 
-    <!-- 문서 상세 정보 조회 -->
+    <!-- 나머지 쿼리들은 모두 그대로 유지 -->
     <resultMap id="approvalDocumentDetailResultMap" type="com.c4.hero.domain.approval.dto.response.ApprovalDocumentDetailResponseDTO">
         <result property="docId" column="doc_id"/>
         <result property="docNo" column="doc_no"/>
@@ -397,7 +431,6 @@
         WHERE D.doc_id = #{docId}
     </select>
 
-    <!-- 결재선 조회 -->
     <resultMap id="approvalLineResultMap" type="com.c4.hero.domain.approval.dto.response.ApprovalLineResponseDTO">
         <result property="lineId" column="line_id"/>
         <result property="approverId" column="approver_id"/>
@@ -432,7 +465,6 @@
         ORDER BY AL.seq ASC
     </select>
 
-    <!-- 참조자 조회 -->
     <resultMap id="approvalReferenceResultMap" type="com.c4.hero.domain.approval.dto.response.ApprovalReferenceResponseDTO">
         <result property="referenceId" column="reference_id"/>
         <result property="referencerId" column="referencer_id"/>
@@ -458,7 +490,6 @@
         WHERE AR.doc_id = #{docId}
     </select>
 
-    <!-- 첨부파일 조회 -->
     <resultMap id="approvalAttachmentResultMap" type="com.c4.hero.domain.approval.dto.response.ApprovalAttachmentResponseDTO">
         <result property="attachmentId" column="attachment_id"/>
         <result property="originalFilename" column="original_filename"/>
@@ -472,7 +503,6 @@
         SELECT
             file_id AS attachment_id,
             origin_name AS original_filename,
---             stored_filename AS stored_filename,
             file_size AS file_size,
             save_path AS file_url,
             uploaded_at AS uploaded_at
