@@ -2,6 +2,8 @@ package com.c4.hero.domain.promotion.event;
 
 import com.c4.hero.domain.approval.event.ApprovalCompletedEvent;
 import com.c4.hero.domain.approval.event.ApprovalRejectedEvent;
+import com.c4.hero.domain.employee.entity.Grade;
+import com.c4.hero.domain.employee.repository.EmployeeGradeRepository;
 import com.c4.hero.domain.promotion.dto.request.PromotionReviewRequestDTO;
 import com.c4.hero.domain.promotion.service.PromotionCommandService;
 import tools.jackson.core.type.TypeReference;
@@ -13,12 +15,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class PromotionEventListener {
+public class PersonnelAppointmentEventListener {
     private final PromotionCommandService promotionCommandService;
+    private final EmployeeGradeRepository gradeRepository;
     private final ObjectMapper objectMapper;
 
     @EventListener
@@ -37,21 +41,29 @@ public class PromotionEventListener {
 
             if ("SPECIAL".equals(promotionType)) {
                 // 특별 승진 처리
-                Integer employeeId = details.get("employeeId") != null ? ((Number) details.get("employeeId")).intValue() : null;
-                Integer targetGradeId = details.get("targetGradeId") != null ? ((Number) details.get("targetGradeId")).intValue() : null;
+                Integer employeeId = getInt(details, "employeeId");
+                String gradeAfterName = (String) details.get("gradeAfter");
                 String reason = (String) details.get("reason");
 
-                if (employeeId == null || targetGradeId == null) {
+                if (employeeId == null || gradeAfterName == null) {
                     log.error("❌ 특별 승진 처리 실패 - 필수 정보 누락. docId: {}", event.getDocId());
                     return;
                 }
+
+                // 직급명으로 직급 ID 조회
+                Optional<Grade> gradeOptional = gradeRepository.findByGrade(gradeAfterName);
+                if (gradeOptional.isEmpty()) {
+                    log.error("❌ 특별 승진 처리 실패 - 존재하지 않는 직급명: {}", gradeAfterName);
+                    return;
+                }
+                Integer targetGradeId = gradeOptional.get().getGradeId();
 
                 promotionCommandService.confirmDirectPromotion(employeeId, targetGradeId, reason);
                 log.info("✅ 특별 승진 발령 처리 완료 - employeeId: {}, targetGradeId: {}", employeeId, targetGradeId);
 
             } else {
                 // 정기 승진 처리 (REGULAR 또는 null)
-                Integer candidateId = details.get("candidateId") != null ? ((Number) details.get("candidateId")).intValue() : null;
+                Integer candidateId = getInt(details, "candidateId");
                 if (candidateId == null) {
                     log.error("❌ 정기 승진 처리 실패 - candidateId를 찾을 수 없음. docId: {}", event.getDocId());
                     return;
@@ -90,7 +102,7 @@ public class PromotionEventListener {
                 log.info("ℹ️ 특별 승진 결재 반려됨 - 별도 처리 없음");
             } else {
                 // 정기 승진 반려 - 후보자 상태 변경 필요
-                Integer candidateId = details.get("candidateId") != null ? ((Number) details.get("candidateId")).intValue() : null;
+                Integer candidateId = getInt(details, "candidateId");
                 if (candidateId != null) {
                     PromotionReviewRequestDTO requestDTO = PromotionReviewRequestDTO.builder()
                             .candidateId(candidateId)
@@ -105,5 +117,22 @@ public class PromotionEventListener {
             log.error("❌ 인사발령 반려 처리 중 오류 발생 - docId: {}", event.getDocId(), e);
             throw new RuntimeException("인사발령 반려 처리 중 오류 발생", e);
         }
+    }
+
+    private Integer getInt(Map<String, Object> map, String key) {
+        Object value = map.get(key);
+        if (value == null) return null;
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        if (value instanceof String) {
+            try {
+                return Integer.parseInt((String) value);
+            } catch (NumberFormatException e) {
+                log.warn("숫자 변환 실패 - key: {}, value: {}", key, value);
+                return null;
+            }
+        }
+        return null;
     }
 }

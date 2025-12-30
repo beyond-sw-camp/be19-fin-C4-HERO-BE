@@ -37,14 +37,14 @@ class PromotionEventListenerTest {
     private PromotionCommandService promotionCommandService;
 
     // @InjectMocks 대신 수동으로 주입하여 실제 ObjectMapper를 사용
-    private PromotionEventListener promotionEventListener;
+    private PersonnelAppointmentEventListener promotionEventListener;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
         // SUT(System Under Test) 수동 생성 및 의존성 주입
-        promotionEventListener = new PromotionEventListener(promotionCommandService, objectMapper);
+        promotionEventListener = new PersonnelAppointmentEventListener(promotionCommandService, objectMapper);
     }
 
     @Test

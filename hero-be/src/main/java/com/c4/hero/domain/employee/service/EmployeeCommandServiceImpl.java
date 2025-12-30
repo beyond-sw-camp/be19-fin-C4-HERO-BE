@@ -171,7 +171,7 @@ public class EmployeeCommandServiceImpl implements EmployeeCommandService {
         addDepartmentHistory(savedEmployee, ChangeType.CREATE, employeeDepartment.getDepartmentName());
 
         // 7. 직급 이력 저장
-        addGradeHistory(savedEmployee, ChangeType.CREATE, employeeDepartment.getDepartmentName());
+        addGradeHistory(savedEmployee, ChangeType.CREATE, grade.getGrade());
 
         // 8. 이메일 발송 로직 (tempPassword 발송)
         sendTemporaryPasswordEmail(request.getEmail(), accountId, tempPassword);

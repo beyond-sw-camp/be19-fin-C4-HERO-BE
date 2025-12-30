@@ -378,7 +378,7 @@ public class PromotionCommandService {
                 .build();
 
         // 결재 문서 생성 호출
-        approvalCommandService.createDocument(userDetails.getEmployeeId(), approvalRequest, null, "DRAFT");
+        approvalCommandService.createDocument(userDetails.getEmployeeId(), approvalRequest, null, "INPROGRESS");
     }
 
     /**
@@ -435,7 +435,7 @@ public class PromotionCommandService {
                 .lines(approvalLines)
                 .build();
         // 결재 문서 생성 호출
-        approvalCommandService.createDocument(userDetails.getEmployeeId(), approvalRequest, null, "DRAFT");
+        approvalCommandService.createDocument(userDetails.getEmployeeId(), approvalRequest, null, "INPROGRESS");
     }
 
     /**
