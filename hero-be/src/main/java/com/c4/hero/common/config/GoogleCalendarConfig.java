@@ -15,14 +15,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 
-@Configuration
+//@Configuration
 @RequiredArgsConstructor
 public class GoogleCalendarConfig {
 
     @Value("${google.calendar.credentials-path}")
     private Resource credentialsResource;
 
-    @Bean
+//    @Bean
     public Calendar googleCalendarClient() throws Exception {
         InputStream in = credentialsResource.getInputStream();
 
