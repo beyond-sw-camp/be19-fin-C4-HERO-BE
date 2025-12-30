@@ -18,6 +18,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 /**
  * <pre>
  * Class Name: PromotionCandidate
@@ -93,7 +95,7 @@ public class PromotionCandidate {
      * 후보자 등록 당시의 평가 점수
      */
     @Column(name = "evaluation_point", nullable = false)
-    private Integer evaluationPoint;
+    private BigDecimal evaluationPoint;
 
     /**
      * 후보자를 추천합니다.

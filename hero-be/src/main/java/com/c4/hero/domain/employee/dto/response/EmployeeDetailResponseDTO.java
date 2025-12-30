@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
@@ -44,6 +45,6 @@ public class EmployeeDetailResponseDTO {
     private Long daysOfService; // 근속 연수
     private String gradeName;
     private String jobTitleName;
-    private Integer evaluationPoint;
+    private BigDecimal evaluationPoint;
     private String status;
 }
