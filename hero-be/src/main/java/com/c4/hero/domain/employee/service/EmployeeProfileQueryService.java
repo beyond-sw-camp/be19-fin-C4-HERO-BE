@@ -6,6 +6,7 @@ import com.c4.hero.domain.employee.dto.response.EmployeeProfileResponseDTO;
 import com.c4.hero.domain.employee.mapper.EmployeeMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * History
  * 2025/12/28 (혜원) 최초 작성
+ * 2025/12/30 (승건) Mapper 메소드에 SecretKey 추가
  * </pre>
  *
  * @author 혜원
@@ -30,6 +32,9 @@ public class EmployeeProfileQueryService {
 
     private final EmployeeMapper employeeMapper;
     private final S3Service s3Service;
+
+    @Value("${encryption.secret-key}")
+    private String secretKey;
 
     // 모든 조회 메서드에서 Presigned URL 변환
     private void convertSealKeyToPresignedUrl(EmployeeProfileResponseDTO profile) {
@@ -48,7 +53,7 @@ public class EmployeeProfileQueryService {
     public EmployeeProfileResponseDTO getProfileByEmployeeId(Integer employeeId) {
         log.info("직원 프로필 조회 시작 - employeeId: {}", employeeId);
 
-        EmployeeProfileResponseDTO profile = employeeMapper.findProfileByEmployeeId(employeeId);
+        EmployeeProfileResponseDTO profile = employeeMapper.findProfileByEmployeeId(employeeId, secretKey);
 
         if (profile == null) {
             log.error("직원 정보를 찾을 수 없음 - employeeId: {}", employeeId);
@@ -78,7 +83,7 @@ public class EmployeeProfileQueryService {
             throw new IllegalArgumentException("사원번호는 필수입니다.");
         }
 
-        EmployeeProfileResponseDTO profile = employeeMapper.findProfileByEmployeeNumber(employeeNumber);
+        EmployeeProfileResponseDTO profile = employeeMapper.findProfileByEmployeeNumber(employeeNumber, secretKey);
 
         if (profile == null) {
             log.error("직원 정보를 찾을 수 없음 - employeeNumber: {}", employeeNumber);
@@ -104,14 +109,14 @@ public class EmployeeProfileQueryService {
         log.info("연락처 정보 수정 시작 - employeeId: {}", employeeId);
 
         // 직원 존재 여부 확인
-        EmployeeProfileResponseDTO profile = employeeMapper.findProfileByEmployeeId(employeeId);
+        EmployeeProfileResponseDTO profile = employeeMapper.findProfileByEmployeeId(employeeId, secretKey);
         if (profile == null) {
             log.error("직원 정보를 찾을 수 없음 - employeeId: {}", employeeId);
             throw new IllegalArgumentException("직원 정보를 찾을 수 없습니다.");
         }
 
         // 연락처 정보 업데이트
-        int updated = employeeMapper.updateContactInfo(employeeId, requestDTO);
+        int updated = employeeMapper.updateContactInfo(employeeId, requestDTO, secretKey);
 
         if (updated == 0) {
             log.error("연락처 정보 수정 실패 - employeeId: {}", employeeId);
