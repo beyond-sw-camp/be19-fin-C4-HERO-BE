@@ -87,7 +87,7 @@ jobs:
           environment_name: hero-hrsystem-env
           version_label: github-action-${{steps.current-time.outputs.formattedTime}}
           region: ap-northeast-2
-          deployment_package: /deploy/deploy.zip
+          deployment_package: deploy/deploy.zip
           use_existing_version_if_available: false
           wait_for_deployment: true
           wait_for_environment_recovery: 300
