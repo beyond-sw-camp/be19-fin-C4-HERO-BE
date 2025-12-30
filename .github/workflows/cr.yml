@@ -41,6 +41,7 @@ jobs:
 
       # MariaDB 데이터베이스 연결을 위한 application.yml 파일을 환경 변수로 생성
       - name: Create application.yml.template
+        working-directory: ./hero-be  # 추가
         run: |
           mkdir -p src/main/resources
           cat > src/main/resources/application.yml.template <<EOL
@@ -67,7 +68,6 @@ jobs:
                   '[format_sql]': true
           
           EOL
-        working-directory: ./hero-be  # 추가
 
       # envsubst는 환경 변수를 치환해주는 유틸리티로, 템플릿 파일의 ${VARIABLE} 형태의 변수를 실제 환경 변수 값으로 대체
       - name: Set Yaml
