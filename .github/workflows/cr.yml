@@ -104,6 +104,7 @@ jobs:
 
       ###############################################
       - name: Generate deployment package
+        working-directory: ./hero-be # 추가
         run: |
           mkdir -p deploy
           cp build/libs/*.jar deploy/application.jar
