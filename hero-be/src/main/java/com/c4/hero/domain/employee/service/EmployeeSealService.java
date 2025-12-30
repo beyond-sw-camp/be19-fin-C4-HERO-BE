@@ -114,16 +114,6 @@ public class EmployeeSealService {
 
         updateSealText(employeeId, sealDTO);
         log.info("직인 자동 생성 완료 - employeeId: {}, name: {}", employeeId, employeeName);
-
-        // seal_image_url을 null로 설정 (텍스트 직인은 프론트에서 생성)
-        int updated = employeeMapper.updateSealImageUrl(employeeId, null);
-
-        if (updated == 0) {
-            log.error("텍스트 직인 업데이트 실패 - employeeId: {}", employeeId);
-            throw new RuntimeException("텍스트 직인 업데이트에 실패했습니다.");
-        }
-
-        log.info("텍스트 직인 업데이트 성공 - employeeId: {}", employeeId);
     }
 
     /**
