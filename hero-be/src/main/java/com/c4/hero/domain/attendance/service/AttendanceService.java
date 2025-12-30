@@ -27,7 +27,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -50,7 +49,6 @@ import java.util.stream.Collectors;
  * - 개인 탭: 근태 요약, 근태 이력, 초과 근무, 근태 정정, 근무제 변경 이력
  * - 부서 탭: 부서 근태 현황(당일), 근태 점수 대시보드(월별), 요약 통계
  * - 반기 대시보드: 직원 1인의 반기(상/하반기) 근태 통계
- *
  * MyBatis Mapper + JPA Repository 기반으로 조회를 수행하며,
  * 공통 페이지네이션/기간 보정 로직을 내부에서 처리합니다.
  *

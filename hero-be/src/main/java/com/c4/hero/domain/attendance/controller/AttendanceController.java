@@ -10,6 +10,7 @@ import com.c4.hero.domain.attendance.dto.CorrectionDTO;
 import com.c4.hero.domain.attendance.dto.DeptWorkSystemDTO;
 import com.c4.hero.domain.attendance.dto.OvertimeDTO;
 import com.c4.hero.domain.attendance.dto.PersonalDTO;
+import com.c4.hero.domain.attendance.service.AttendanceEventService;
 import com.c4.hero.domain.attendance.service.AttendanceService;
 import com.c4.hero.domain.attendance.type.AttendanceHalfType;
 import com.c4.hero.domain.auth.security.JwtUtil;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PathVariable;
 import java.time.LocalDate;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -38,6 +40,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
  * 2025/12/09 (이지윤) 최초 작성
  * 2025/12/18 (이지윤) 개인 근태 요약, JWT 기반 조회 적용
  * 2025/12/24 (이지윤) 부서 근태 현황/대시보드/반기 대시보드 API 추가 및 코딩 컨벤션 정리
+ * 2025/12/30 (이지윤) 개인 근태 기록 단건 조회 기능 개발
  * </pre>
  *
  * 개인별/부서별 근태 및 연관된 각종 현황을 조회하는 엔드포인트를 제공합니다.
@@ -58,6 +61,7 @@ public class AttendanceController {
 
     /** 근태 관련 비즈니스 로직 처리 서비스 */
     private final AttendanceService attendanceService;
+    private final AttendanceEventService attendanceEventService;
 
     /** JWT 토큰 파싱 및 인증 정보를 처리하는 유틸리티 */
     private final JwtUtil jwtUtil;
@@ -156,6 +160,27 @@ public class AttendanceController {
 
         return attendanceService.getPersonalList(employeeId, page, size, startDate, endDate);
     }
+
+    @Operation(
+            summary = "개인 근태 기록 단건 조회",
+            description = "attendanceId로 특정 근태 기록 1건을 조회합니다. (JWT 기반 본인 데이터만 조회)"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "근태 기록 단건 조회 성공",
+                    content = @Content(schema = @Schema(implementation = PersonalDTO.class))),
+            @ApiResponse(responseCode = "401", description = "인증 실패(JWT 누락/만료/위조)"),
+            @ApiResponse(responseCode = "404", description = "근태 기록 없음(본인 데이터가 아니거나 존재하지 않음)"),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
+    @GetMapping("/{attendanceId}")
+    public PersonalDTO getAttendanceDetail(
+            HttpServletRequest request,
+            @PathVariable Integer attendanceId
+    ) {
+        Integer employeeId = getEmployeeIdFromToken(request);
+        return attendanceEventService.getPersonalDetail(employeeId, attendanceId);
+    }
+
 
     /**
      * 개인 초과 근무(연장 근무) 이력(페이지)을 조회합니다.
