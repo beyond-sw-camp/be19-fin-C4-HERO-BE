@@ -44,7 +44,7 @@ jobs:
         working-directory: ./hero-be  # 추가
         run: |
           mkdir -p src/main/resources
-          cat > src/main/resources/application-2.yml.template <<EOL
+          cat > src/main/resources/application.yml.template <<EOL
           server:
             port: 5000
             servlet:
@@ -71,11 +71,11 @@ jobs:
 
       # envsubst는 환경 변수를 치환해주는 유틸리티로, 템플릿 파일의 ${VARIABLE} 형태의 변수를 실제 환경 변수 값으로 대체
       - name: Set Yaml
+        working-directory: ./hero-be  # 추가
         run: |
           envsubst < src/main/resources/application.yml.template > src/main/resources/application.yml
           echo "Generated application.yml:"
           cat src/main/resources/application.
-        working-directory: ./hero-be  # 추가
         env:
           RDS_HOSTNAME: ${{ secrets.RDS_HOSTNAME }}
           RDS_PORT: ${{ secrets.RDS_PORT }}
