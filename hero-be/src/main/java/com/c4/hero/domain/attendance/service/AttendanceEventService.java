@@ -7,35 +7,32 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
 /**
  * <pre>
  * Class Name: AttendanceEventService
- * Description: 근태 관련 결재(Approval) 이벤트 처리 및 근태 정정 요청 생성 서비스
+ * Description: 근태 관련 결재(Approval) 이벤트 처리 및 근태 데이터 적재 서비스
  *
  * History
  * 2025/12/29 (이지윤) 최초 작성 및 컨벤션 적용
+ * 2025/12/30 (이지윤) 초과 근무 로직 추가
  * </pre>
  *
  * 결재 완료 이벤트에서 전달된 details(JSON) 정보를 기반으로
- * 근태 정정 요청(tbl_attendance_correction_request)을 생성하는 책임을 가집니다.
+ * - 근태 정정 요청(tbl_attendance_correction_request)
+ * - 초과 근무 기록(tbl_overtime)
+ * 을 생성하는 책임을 가집니다.
  */
 @Service
 @RequiredArgsConstructor
 public class AttendanceEventService {
 
-    /** 근태 관련 조회/정정 INSERT를 위한 MyBatis Mapper */
+    /** 근태 관련 조회/INSERT를 위한 MyBatis Mapper */
     private final AttendanceMapper attendanceMapper;
 
-    /**
-     * JSON 파싱용 ObjectMapper.
-     *
-     * <p>
-     * Java 8 날짜/시간 모듈 등 자동 등록을 위해 {@code findAndRegisterModules()}를 호출합니다.
-     * </p>
-     */
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     /**
@@ -59,28 +56,8 @@ public class AttendanceEventService {
     /**
      * 결재 완료(details JSON)를 기반으로 근태 정정 요청을 생성합니다.
      *
-     * <p>JSON 구조 예시</p>
-     * <pre>
-     * {
-     *   "attendanceId": 123,
-     *   "targetDate": "2025-12-10",
-     *   "correctedStart": "09:00",
-     *   "correctedEnd": "18:00",
-     *   "reason": "지각 처리 정정 요청"
-     * }
-     * </pre>
-     *
-     * <p>처리 순서</p>
-     * <ol>
-     *   <li>JSON 파싱 후 필수 값(attendanceId, targetDate) 검증</li>
-     *   <li>해당 근태(attendanceId)가 employeeId의 소유인지 검증</li>
-     *   <li>LocalDate/LocalTime 파싱</li>
-     *   <li>근태 정정 요청 INSERT</li>
-     * </ol>
-     *
      * @param employeeId  결재 기안자(또는 요청자) 직원 ID
      * @param detailsJson 결재 문서 details 필드(JSON 문자열)
-     * @throws IllegalArgumentException JSON 파싱 오류 또는 필수 값 누락, 소유 검증 실패 등
      */
     public void createCorrectionRequestFromApproval(Integer employeeId, String detailsJson) {
         try {
@@ -126,27 +103,79 @@ public class AttendanceEventService {
     }
 
     /**
-     * "HH:mm" 문자열을 {@link LocalTime} 으로 파싱합니다.
+     * 결재 완료(details JSON)를 기반으로 초과근무 기록을 생성합니다.
      *
-     * <p>규칙</p>
-     * <ul>
-     *     <li>null 또는 공백 문자열 → {@code null} 반환</li>
-     *     <li>"00:00" → 미입력으로 간주하고 {@code null} 반환</li>
-     *     <li>그 외 → {@link LocalTime#parse(CharSequence)} 사용</li>
-     * </ul>
+     * <p>전략</p>
+     * - overtime는 attendance_id FK 대신 employee_id + date 기반으로 적재/조회
      *
-     * @param hhmm "HH:mm" 형식의 문자열
-     * @return 파싱된 {@link LocalTime} 또는 {@code null}
+     * @param employeeId  결재 기안자(또는 요청자) 직원 ID
+     * @param detailsJson 결재 문서 details 필드(JSON 문자열)
+     */
+    public void createOvertimeFromApproval(Integer employeeId, String detailsJson) {
+        try {
+            JsonNode root = objectMapper.readTree(detailsJson);
+
+            // 프론트 폼 키(workDate) 기준, 혹시 몰라 date도 fallback
+            String workDateStr = root.path("workDate").asText("");
+            if (workDateStr.isBlank()) {
+                workDateStr = root.path("date").asText("");
+            }
+
+            String startTimeStr = root.path("startTime").asText("00:00");
+            String endTimeStr = root.path("endTime").asText("00:00");
+            String reason = root.path("reason").asText("");
+
+            if (workDateStr.isBlank()) {
+                throw new IllegalArgumentException("workDate 누락");
+            }
+
+            LocalDate workDate = LocalDate.parse(workDateStr);
+            LocalTime startTime = parseLocalTimeRequired(startTimeStr, "startTime");
+            LocalTime endTime = parseLocalTimeRequired(endTimeStr, "endTime");
+
+            long minutes = Duration.between(startTime, endTime).toMinutes();
+            if (minutes <= 0) {
+                throw new IllegalArgumentException("초과근무 시간 오류: endTime이 startTime보다 이후여야 합니다.");
+            }
+
+            float overtimeHours = Math.round((minutes / 60.0) * 10.0) / 10.0f;
+
+            // ✅ 초과근무 INSERT
+            // (Mapper에 insertOvertime(...) 추가 필요)
+            attendanceMapper.insertOvertime(
+                    employeeId,
+                    workDate,
+                    startTime,
+                    endTime,
+                    overtimeHours,
+                    reason
+            );
+
+        } catch (Exception e) {
+            throw new IllegalArgumentException("초과 근무 생성 실패: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * "HH:mm" 문자열을 {@link LocalTime} 으로 파싱합니다. (근태정정용: 미입력(null) 허용)
      */
     private LocalTime parseLocalTimeOrNull(String hhmm) {
         if (hhmm == null || hhmm.isBlank()) {
             return null;
         }
         if ("00:00".equals(hhmm)) {
-            // "미입력" 정책 유지
             return null;
         }
+        return LocalTime.parse(hhmm);
+    }
 
+    /**
+     * "HH:mm" 문자열을 {@link LocalTime} 으로 파싱합니다. (초과근무용: 필수)
+     */
+    private LocalTime parseLocalTimeRequired(String hhmm, String fieldName) {
+        if (hhmm == null || hhmm.isBlank() || "00:00".equals(hhmm)) {
+            throw new IllegalArgumentException(fieldName + " 누락");
+        }
         return LocalTime.parse(hhmm);
     }
 }

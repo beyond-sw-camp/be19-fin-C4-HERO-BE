@@ -11,6 +11,7 @@ import org.apache.ibatis.annotations.Param;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * <pre>
@@ -20,6 +21,7 @@ import java.util.List;
  * History
  * 2025/12/09 (이지윤) 최초 작성
  * 2025/12/30 (이지윤) 지연 출근 수정 로직에 관한 mapper 추가
+ * 2025/12/30 (이지윤) 초과 근무 로직에 관한 mapper 추가
  * </pre>
  *
  * @author 이지윤
@@ -258,6 +260,15 @@ public interface AttendanceMapper {
             @Param("employeeId") Integer employeeId,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
-
     );
+
+    void insertOvertime(
+            @Param("employeeId") Integer employeeId,
+            @Param("workDate") LocalDate workDate,
+            @Param("startTime") LocalTime startTime,
+            @Param("endTime") LocalTime endTime,
+            @Param("overtimeHours") float overtimeHours,
+            @Param("reason") String reason
+    );
+
 }
