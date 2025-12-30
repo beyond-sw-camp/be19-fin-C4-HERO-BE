@@ -30,11 +30,11 @@ jobs:
       - name: Install envsubst
         run: sudo apt-get install -y gettext
 
-      # application-deploy.yml.template 생성
-      - name: Create application-deploy.yml.template
+      # application-deploy.yml 생성
+      - name: Create application-deploy.yml
         working-directory: ./hero-be
         run: |
-          cat > src/main/resources/application-deploy.yml.template << 'EOL'
+          cat > src/main/resources/application-deploy.yml << 'EOL'
           server:
             port: 5000
             servlet:
