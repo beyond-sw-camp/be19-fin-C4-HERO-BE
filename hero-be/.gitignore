@@ -5,10 +5,12 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-## gitignore
-application.yml
-application-dev.yml
-application-secret.yml
+# application 관련 yml 무시
+application*.yml
+application-*.yml
+
+# 단, deploy는 예외 
+!application-deploy.yml
 
 ### STS ###
 .apt_generated
