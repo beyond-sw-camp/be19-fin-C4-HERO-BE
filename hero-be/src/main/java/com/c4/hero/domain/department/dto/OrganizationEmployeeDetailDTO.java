@@ -37,8 +37,6 @@ public class OrganizationEmployeeDetailDTO {
     private String imagePath;       // 프로필 이미지 경로
     
     private String email;          // 이메일 (복호화된 값)
-    private String phone;          // 전화번호 (복호화된 값)
-    private String address;        // 주소 (복호화된 값)
     private LocalDate birthDate;   // 생년월일
     private String gender;         // 성별
     private LocalDate hireDate;    // 입사일

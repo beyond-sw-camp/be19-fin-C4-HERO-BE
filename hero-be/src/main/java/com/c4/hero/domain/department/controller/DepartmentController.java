@@ -68,9 +68,9 @@ public class DepartmentController {
      * @return 조직도 트리 노드 리스트
      */
     @GetMapping("/organization-chart")
-    public ResponseEntity<List<OrganizationNodeDTO>> getOrganizationChart() {
+    public ResponseEntity<CustomResponse<List<OrganizationNodeDTO>>> getOrganizationChart() {
         List<OrganizationNodeDTO> organizationChart = departmentService.getOrganizationChart();
-        return ResponseEntity.ok(organizationChart);
+        return ResponseEntity.ok(CustomResponse.success(organizationChart));
     }
 
     /**

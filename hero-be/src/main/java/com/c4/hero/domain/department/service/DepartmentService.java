@@ -153,8 +153,6 @@ public class DepartmentService {
                             .jobTitleName(emp.getJobTitle() != null ? emp.getJobTitle().getJobTitle() : null)
                             .imagePath(emp.getImagePath())
                             .email(decryptedEmail)
-                            .phone(decryptedPhone)
-                            .address(decryptedAddress)
                             .birthDate(emp.getBirthDate())
                             .gender(emp.getGender())
                             .hireDate(emp.getHireDate())
