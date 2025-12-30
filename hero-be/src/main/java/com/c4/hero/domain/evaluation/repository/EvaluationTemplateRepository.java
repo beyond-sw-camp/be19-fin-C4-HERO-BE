@@ -2,7 +2,10 @@ package com.c4.hero.domain.evaluation.repository;
 
 import com.c4.hero.domain.evaluation.entity.EvaluationTemplate;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+
+import java.util.List;
 
 /**
  * <pre>
@@ -18,4 +21,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface EvaluationTemplateRepository extends JpaRepository<EvaluationTemplate,Integer> {
+
+    @Query("select t.templateId from EvaluationTemplate t")
+    List<Integer> findAllTemplateIds();
 }

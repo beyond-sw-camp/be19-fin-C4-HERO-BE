@@ -92,6 +92,12 @@
         <foreach collection="templateIds" item="id" open="(" close=")" separator=",">
             #{id}
         </foreach>
+        ORDER BY FIELD(
+        t.template_id,
+        <foreach collection="templateIds" item="id" separator=",">
+            #{id}
+        </foreach>
+        )
     </select>
 
     <select id="countAllTemplates" resultType="long">

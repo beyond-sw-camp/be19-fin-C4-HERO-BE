@@ -60,6 +60,12 @@
         <foreach collection="ids" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
+        ORDER BY FIELD(
+        g.evaluation_guide_id,
+        <foreach collection="ids" item="id" separator=",">
+            #{id}
+        </foreach>
+        )
     </select>
 
     <select id="countAllGuides" resultType="long">

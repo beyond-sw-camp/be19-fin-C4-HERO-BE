@@ -4,6 +4,8 @@ import com.c4.hero.domain.evaluation.entity.Evaluation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 /**
  * <pre>
  * Class Name: EvaluationRepository
@@ -19,4 +21,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface EvaluationRepository extends JpaRepository<Evaluation,Integer> {
 
+    List<Evaluation> findByTemplateId(Integer templateId);
 }

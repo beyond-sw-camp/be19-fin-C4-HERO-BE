@@ -69,7 +69,7 @@
     <select id="selectEvaluationIdsWithPaging" resultType="int">
         SELECT evaluation_id
         FROM tbl_evaluation
-        ORDER BY evaluation_id DESC
+        ORDER BY created_at DESC, evaluation_id DESC
             LIMIT #{size} OFFSET #{offset}
     </select>
 
@@ -133,6 +133,11 @@
         <foreach collection="evaluationIds" item="id" open="(" close=")" separator=",">
             #{id}
         </foreach>
+        ORDER BY FIELD(e.evaluation_id,
+        <foreach collection="evaluationIds" item="id" separator=",">
+            #{id}
+        </foreach>
+        )
     </select>
 
     <select id="countAllEvaluations" resultType="long">

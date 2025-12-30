@@ -871,10 +871,10 @@ public class EvaluationService {
         Integer evaluationId = form.getEvaluationId();
         Integer employeeId = form.getEmployeeId();
 
+        /** 평가서 총평 입력 */
         form.setTotal(updateDTO.getEvaluationFormTotal());
 
-    /** 평가서 항목 + 점수 수정 */
-
+        /** 평가서 항목 점수 채점 */
         if (updateDTO.getFormItems() != null) {
             for (FormItemUpdateDTO itemDTO : updateDTO.getFormItems()) {
 
@@ -902,47 +902,30 @@ public class EvaluationService {
             }
         }
 
-    /** 가중치 반영 평균 점수 + Rank */
-
+        /** 가중치 반영 평가서 점수 계산 */
         List<FormItem> formItems = formItemRepository.findByFormId(form.getFormId());
 
         double weightedSum = 0.0;
         double weightTotal = 0.0;
-        List<String> ranks = new java.util.ArrayList<>();
 
         for (FormItem item : formItems) {
-            ItemScore score = itemScoreRepository.findByFormItemId((item.getFormItemId()));
+            ItemScore score = itemScoreRepository.findByFormItemId(item.getFormItemId());
             if (score == null || score.getScore() == null || item.getWeight() == null) {
                 continue;
             }
 
             weightedSum += score.getScore() * item.getWeight();
             weightTotal += item.getWeight();
-
-            if (score.getRank() != null) {
-                ranks.add(score.getRank());
-            }
         }
 
         float totalScore = weightTotal > 0 ? (float) (weightedSum / weightTotal) : 0f;
 
-        String totalRank = ranks.stream()
-                .collect(java.util.stream.Collectors.groupingBy(
-                        r -> r,
-                        java.util.stream.Collectors.counting()
-                ))
-                .entrySet()
-                .stream()
-                .max(java.util.Map.Entry.comparingByValue())
-                .map(java.util.Map.Entry::getKey)
-                .orElse(null);
-
         form.setTotalScore(totalScore);
-        form.setTotalRank(totalRank);
+
+        /** 상대평가 전이므로 totalRank는 여기서 설정하지 않음 */
         formRepository.save(form);
 
-    /** 피평가자 상태 → 2 */
-
+        /** 피평가자 상태 변경 */
         Evaluatee evaluatee =
                 evaluateeRepository.findByEvaluationIdAndEmployeeId(evaluationId, employeeId);
 
@@ -951,20 +934,47 @@ public class EvaluationService {
             evaluateeRepository.save(evaluatee);
         }
 
-    /** 모든 피평가자 완료 → EvaluationForm 상태 변경 */
 
+        /** 모든 피평자가 완료 여부 확인 */
         Long remainingEvaluatee =
                 evaluateeRepository.countByEvaluationIdAndStatusNot(evaluationId, 2);
 
         if (remainingEvaluatee == 0) {
 
-        /** 모든 평가서 완료 → Evaluation 집계 */
-
+            /** 모든 평가서 조회 */
             List<EvaluationForm> forms =
                     formRepository.findByEvaluationId(evaluationId);
 
             if (!forms.isEmpty()) {
 
+                /** 상대평가 등급 계산 (S/A/B/C/F) */
+                forms.sort((a, b) -> Float.compare(
+                        b.getTotalScore(), a.getTotalScore()
+                ));
+
+                int total = forms.size();
+
+                int sCount = Math.max(1, (int) Math.round(total * 0.03));
+                int aCount = Math.max(1, (int) Math.round(total * 0.20));
+                int bCount = Math.max(1, (int) Math.round(total * 0.65));
+                int cCount = Math.max(1, (int) Math.round(total * 0.10));
+
+                int index = 0;
+
+                for (EvaluationForm f : forms) {
+
+                    if (index < sCount) f.setTotalRank("S");
+                    else if (index < sCount + aCount) f.setTotalRank("A");
+                    else if (index < sCount + aCount + bCount) f.setTotalRank("B");
+                    else if (index < sCount + aCount + bCount + cCount) f.setTotalRank("C");
+                    else f.setTotalRank("F");
+
+                    formRepository.save(f);
+                    index++;
+                }
+
+
+                /** 평가 최종 점수 계산 */
                 float evaluationAvgScore =
                         (float) forms.stream()
                                 .map(EvaluationForm::getTotalScore)
@@ -973,25 +983,10 @@ public class EvaluationService {
                                 .average()
                                 .orElse(0.0);
 
-                String evaluationRank =
-                        forms.stream()
-                                .map(EvaluationForm::getTotalRank)
-                                .filter(r -> r != null)
-                                .collect(java.util.stream.Collectors.groupingBy(
-                                        r -> r,
-                                        java.util.stream.Collectors.counting()
-                                ))
-                                .entrySet()
-                                .stream()
-                                .max(java.util.Map.Entry.comparingByValue())
-                                .map(java.util.Map.Entry::getKey)
-                                .orElse(null);
-
                 Evaluation evaluation =
                         evaluationRepository.findById(evaluationId).orElseThrow();
 
                 evaluation.setTotalScore(evaluationAvgScore);
-                evaluation.setTotalRank(evaluationRank);
                 evaluation.setStatus(2);
                 evaluation.setEndedAt(LocalDateTime.now());
 
@@ -1000,6 +995,64 @@ public class EvaluationService {
         }
 
         return form.getFormId();
+    }
+
+
+    /**
+     * 평가의 최종 등급 상대평가 채점 로직
+     *
+     * @param templateId Integer
+     *        평가를 조회하기 위한 평가 템플릿 ID
+     */
+    @Transactional
+    public void finalizeEvaluationByTemplate(Integer templateId) {
+
+        EvaluationPeriod period =
+                evaluationPeriodRepository.findByTemplateId(templateId);
+
+        if (period == null || period.getEnd().isAfter(LocalDateTime.now())) return;
+
+        List<Evaluation> evaluations =
+                evaluationRepository.findByTemplateId(templateId);
+
+        /** 모든 부서 평가가 완료된 경우만 */
+        boolean allCompleted =
+                evaluations.stream()
+                        .allMatch(e -> e.getStatus() != null && e.getStatus() == 2);
+
+        if (!allCompleted) return;
+
+        /** 이미 확정된 평가 제외 */
+        boolean alreadyFinalized =
+                evaluations.stream()
+                        .allMatch(e -> e.getTotalRank() != null);
+
+        if (alreadyFinalized) return;
+
+        /** 부서 상대평가 */
+        evaluations.sort((a, b) ->
+                Float.compare(b.getTotalScore(), a.getTotalScore())
+        );
+
+        int total = evaluations.size();
+
+        int s = Math.max(1, (int) Math.round(total * 0.03));
+        int a = Math.max(1, (int) Math.round(total * 0.20));
+        int b = Math.max(1, (int) Math.round(total * 0.65));
+        int c = Math.max(1, (int) Math.round(total * 0.10));
+
+        int idx = 0;
+        for (Evaluation e : evaluations) {
+
+            if (idx < s) e.setTotalRank("S");
+            else if (idx < s + a) e.setTotalRank("A");
+            else if (idx < s + a + b) e.setTotalRank("B");
+            else if (idx < s + a + b + c) e.setTotalRank("C");
+            else e.setTotalRank("F");
+
+            evaluationRepository.save(e);
+            idx++;
+        }
     }
 
     /**

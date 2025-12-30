@@ -2,6 +2,7 @@ package com.c4.hero.domain.payroll.batch.controller;
 
 
 import com.c4.hero.common.response.CustomResponse;
+import com.c4.hero.domain.auth.security.CustomUserDetails;
 import com.c4.hero.domain.payroll.batch.dto.PayrollBatchDetailResponseDTO;
 import com.c4.hero.domain.payroll.batch.dto.PayrollBatchListResponseDTO;
 import com.c4.hero.domain.payroll.batch.dto.PayrollBatchTargetEmployeeResponseDTO;
@@ -16,6 +17,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -64,8 +66,10 @@ public class BatchController {
             @ApiResponse(responseCode = "409", description = "이미 존재하는 배치(중복 생성)", content = @Content)
     })
     @PostMapping
-    public ResponseEntity<Integer> create(@RequestParam String month) {
-        return ResponseEntity.ok(batchService.createBatch(month));
+public ResponseEntity<Integer> create(
+        @RequestParam String month,
+        @AuthenticationPrincipal CustomUserDetails user) {
+        return ResponseEntity.ok(batchService.createBatch(month, user.getEmployeeId()));
     }
 
     /**
@@ -105,8 +109,10 @@ public class BatchController {
             @ApiResponse(responseCode = "409", description = "상태가 맞지 않아 확정 불가", content = @Content)
     })
     @PostMapping("/{batchId}/confirm")
-    public ResponseEntity<Void> confirm(@PathVariable Integer batchId) {
-        batchService.confirm(batchId);
+public ResponseEntity<Void> confirm(
+        @PathVariable Integer batchId,
+        @AuthenticationPrincipal CustomUserDetails user) {
+            batchService.confirm(batchId, user.getEmployeeId());
         return ResponseEntity.ok().build();
     }
 
@@ -198,8 +204,10 @@ public class BatchController {
             @ApiResponse(responseCode = "409", description = "상태가 맞지 않아 지급 불가", content = @Content)
     })
     @PostMapping("/{batchId}/pay")
-    public ResponseEntity<CustomResponse<Void>> pay(@PathVariable Integer batchId) {
-        batchService.pay(batchId);
+public ResponseEntity<CustomResponse<Void>> pay(
+        @PathVariable Integer batchId,
+        @AuthenticationPrincipal CustomUserDetails user) {
+            batchService.pay(batchId, user.getEmployeeId());
         return ResponseEntity.ok(CustomResponse.success());
     }
 }
