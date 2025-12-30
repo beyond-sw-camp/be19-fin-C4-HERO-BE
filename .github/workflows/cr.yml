@@ -1,169 +1,79 @@
-name: Deploy
+- name: Checkout
+  uses: actions/checkout@v4
 
-permissions:
-  contents: read
-  pull-requests: write
+- name: Set up JDK 17
+  uses: actions/setup-java@v4
+  with:
+    java-version: '17'
+    distribution: 'corretto'
 
-on:
-  pull_request:
-    types: [opened, reopened, synchronize]
+- name: Grant execute permission for gradlew
+  working-directory: ./hero-be
+  run: chmod +x ./gradlew
 
-jobs:
-  deploy-java-17:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+- name: Install envsubst
+  run: sudo apt-get install -y gettext
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'corretto'
+# Git에 있는 application-deploy.yml만 치환!
+- name: Substitute environment variables
+  working-directory: ./hero-be
+  env:
+    RDS_HOSTNAME: ${{ secrets.RDS_HOSTNAME }}
+    RDS_PORT: ${{ secrets.RDS_PORT }}
+    RDS_DB_NAME: ${{ secrets.RDS_DB_NAME }}
+    RDS_USERNAME: ${{ secrets.RDS_USERNAME }}
+    RDS_PASSWORD: ${{ secrets.RDS_PASSWORD }}
+    MAIL_ID: ${{ secrets.MAIL_ID }}
+    MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+    AES_SECRET: ${{ secrets.AES_SECRET }}
+    TOKEN_EXPIRATION_TIME: ${{ secrets.TOKEN_EXPIRATION_TIME }}
+    JWT_SECRET: ${{ secrets.JWT_SECRET }}
+    ACCESS_EXPIRATION_TIME: ${{ secrets.ACCESS_EXPIRATION_TIME }}
+    REFRESH_EXPIRATION_TIME: ${{ secrets.REFRESH_EXPIRATION_TIME }}
+    GOOGLE_CALENDAR_CREDENTIALS_PATH: ${{ secrets.GOOGLE_CALENDAR_CREDENTIALS_PATH }}
+    GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
+    AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+    AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+    AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+  run: |
+    envsubst < src/main/resources/application-deploy.yml > /tmp/application-deploy.yml
+    mv /tmp/application-deploy.yml src/main/resources/application-deploy.yml
+    cat src/main/resources/application-deploy.yml
 
-      - name: Grant execute permission for gradlew
-        working-directory: ./hero-be
-        run: chmod +x ./gradlew
-        shell: bash
+- name: Build with Gradle
+  working-directory: ./hero-be
+  run: ./gradlew clean build -x test
 
-      # envsubst 설치
-      - name: Install envsubst
-        run: sudo apt-get install -y gettext
+- name: Get current time
+  uses: 1466587594/get-current-time@v2
+  id: current-time
+  with:
+    format: YYYY-MM-DDTHH-mm-ss
+    utcOffset: "+09:00"
 
-      # application-deploy.yml 생성
-      - name: Create application-deploy.yml
-        working-directory: ./hero-be
-        run: |
-          cat > src/main/resources/application-deploy.yml << 'EOL'
-          server:
-            port: 5000
-            servlet:
-              encoding:
-                charset: UTF-8
-                force: true
-          spring:
-            datasource:
-              driver-class-name: org.mariadb.jdbc.Driver
-              url: jdbc:mariadb://${RDS_HOSTNAME}:${RDS_PORT}/${RDS_DB_NAME}
-              username: ${RDS_USERNAME}
-              password: ${RDS_PASSWORD}
+- name: Show Current Time
+  run: echo "CurrentTime=${{steps.current-time.outputs.formattedTime}}"
 
-          jpa:
-            hibernate:
-              ddl-auto: none
-            show-sql: true
-            database-platform: org.hibernate.dialect.MariaDBDialect
-            properties:
-              hibernate:
-                format_sql: true
+- name: Generate deployment package
+  working-directory: ./hero-be
+  run: |
+    mkdir -p deploy
+    cp build/libs/*.jar deploy/application.jar
+    cp Procfile deploy/Procfile
+    cp -r .ebextensions deploy/.ebextensions
+    cp -r .platform deploy/.platform
+    cd deploy && zip -r deploy.zip .
 
-          mail:
-            host: smtp.gmail.com
-            port: 587
-            username: ${MAIL_ID}
-            password: ${MAIL_PASSWORD}
-            properties:
-              mail:
-                smtp:
-                  auth: true
-                  starttls:
-                    enable: true
-
-          servlet:
-            multipart:
-              max-file-size: 5MB
-              max-request-size: 5MB
-
-          encryption:
-            secret-key: ${AES_SECRET}
-          
-          token:
-            expiration_time: ${TOKEN_EXPIRATION_TIME}
-            secret: ${JWT_SECRET}
-            access-expiration-time: ${ACCESS_EXPIRATION_TIME}
-            refresh-expiration-time: ${REFRESH_EXPIRATION_TIME}
-          
-          google:
-            calendar:
-              credentials-path: ${GOOGLE_CALENDAR_CREDENTIALS_PATH}
-              id: ${GOOGLE_CALENDAR_ID}
-              timezone: Asia/Seoul
-              application-name: HERO
-
-          cloud:
-            aws:
-              credentials:
-                access-key: ${AWS_ACCESS_KEY}
-                secret-key: ${AWS_SECRET_KEY}
-              s3:
-                bucket: ${AWS_S3_BUCKET}
-              region:
-                static: ap-northeast-2
-              stack:
-                auto: false
-          EOL
-
-      # envsubst로 환경변수 치환
-      - name: Set Yaml
-        working-directory: ./hero-be
-        env:
-          RDS_HOSTNAME: ${{ secrets.RDS_HOSTNAME }}
-          RDS_PORT: ${{ secrets.RDS_PORT }}
-          RDS_DB_NAME: ${{ secrets.RDS_DB_NAME }}
-          RDS_USERNAME: ${{ secrets.RDS_USERNAME }}
-          RDS_PASSWORD: ${{ secrets.RDS_PASSWORD }}
-          MAIL_ID: ${{ secrets.MAIL_ID }}
-          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
-          AES_SECRET: ${{ secrets.AES_SECRET }}
-          TOKEN_EXPIRATION_TIME: ${{ secrets.TOKEN_EXPIRATION_TIME }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          ACCESS_EXPIRATION_TIME: ${{ secrets.ACCESS_EXPIRATION_TIME }}
-          REFRESH_EXPIRATION_TIME: ${{ secrets.REFRESH_EXPIRATION_TIME }}
-          GOOGLE_CALENDAR_CREDENTIALS_PATH: ${{ secrets.GOOGLE_CALENDAR_CREDENTIALS_PATH }}
-          GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
-          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
-          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
-          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-        run: |
-          envsubst < src/main/resources/application-deploy.yml.template > src/main/resources/application-deploy.yml
-          echo "Generated application-deploy.yml:"
-          cat src/main/resources/application-deploy.yml
-
-      - name: Build with Gradle
-        working-directory: ./hero-be
-        run: ./gradlew clean build -x test
-        shell: bash
-
-      - name: Get current time
-        uses: 1466587594/get-current-time@v2
-        id: current-time
-        with:
-          format: YYYY-MM-DDTHH-mm-ss
-          utcOffset: "+09:00"
-
-      - name: Show Current Time
-        run: echo "CurrentTime=${{steps.current-time.outputs.formattedTime}}"
-
-      - name: Generate deployment package
-        working-directory: ./hero-be
-        run: |
-          mkdir -p deploy
-          cp build/libs/*.jar deploy/application.jar
-          cp Procfile deploy/Procfile
-          cp -r .ebextensions deploy/.ebextensions
-          cp -r .platform deploy/.platform
-          cd deploy && zip -r deploy.zip .
-
-      - name: Beanstalk Deploy
-        uses: einaregilsson/beanstalk-deploy@v22
-        with:
-          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          application_name: hero-hrsystem
-          environment_name: hero-hrsystem-env
-          version_label: github-action-${{steps.current-time.outputs.formattedTime}}
-          region: ap-northeast-2
-          deployment_package: hero-be/deploy/deploy.zip
-          use_existing_version_if_available: false
-          wait_for_deployment: true
-          wait_for_environment_recovery: 300
+- name: Beanstalk Deploy
+  uses: einaregilsson/beanstalk-deploy@v22
+  with:
+    aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    application_name: hero-hrsystem
+    environment_name: hero-hrsystem-env
+    version_label: github-action-${{steps.current-time.outputs.formattedTime}}
+    region: ap-northeast-2
+    deployment_package: hero-be/deploy/deploy.zip
+    use_existing_version_if_available: false
+    wait_for_deployment: true
+    wait_for_environment_recovery: 300
