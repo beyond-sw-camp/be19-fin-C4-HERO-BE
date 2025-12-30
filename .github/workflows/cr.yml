@@ -26,12 +26,92 @@ jobs:
         run: chmod +x ./gradlew
         shell: bash
 
-      - name: Build with Gradle
+      # envsubst 설치
+      - name: Install envsubst
+        run: sudo apt-get install -y gettext
+
+      # application-deploy.yml.template 생성
+      - name: Create application-deploy.yml.template
+        working-directory: ./hero-be
+        run: |
+          cat > src/main/resources/application-deploy.yml.template << 'EOL'
+          server:
+            port: 5000
+            servlet:
+              encoding:
+                charset: UTF-8
+                force: true
+          spring:
+            datasource:
+              driver-class-name: org.mariadb.jdbc.Driver
+              url: jdbc:mariadb://${RDS_HOSTNAME}:${RDS_PORT}/${RDS_DB_NAME}
+              username: ${RDS_USERNAME}
+              password: ${RDS_PASSWORD}
+
+          jpa:
+            hibernate:
+              ddl-auto: none
+            show-sql: true
+            database-platform: org.hibernate.dialect.MariaDBDialect
+            properties:
+              hibernate:
+                format_sql: true
+
+          mail:
+            host: smtp.gmail.com
+            port: 587
+            username: ${MAIL_ID}
+            password: ${MAIL_PASSWORD}
+            properties:
+              mail:
+                smtp:
+                  auth: true
+                  starttls:
+                    enable: true
+
+          servlet:
+            multipart:
+              max-file-size: 5MB
+              max-request-size: 5MB
+
+          encryption:
+            secret-key: ${AES_SECRET}
+          
+          token:
+            expiration_time: ${TOKEN_EXPIRATION_TIME}
+            secret: ${JWT_SECRET}
+            access-expiration-time: ${ACCESS_EXPIRATION_TIME}
+            refresh-expiration-time: ${REFRESH_EXPIRATION_TIME}
+          
+          google:
+            calendar:
+              credentials-path: ${GOOGLE_CALENDAR_CREDENTIALS_PATH}
+              id: ${GOOGLE_CALENDAR_ID}
+              timezone: Asia/Seoul
+              application-name: HERO
+
+          cloud:
+            aws:
+              credentials:
+                access-key: ${AWS_ACCESS_KEY}
+                secret-key: ${AWS_SECRET_KEY}
+              s3:
+                bucket: ${AWS_S3_BUCKET}
+              region:
+                static: ap-northeast-2
+              stack:
+                auto: false
+          EOL
+
+      # envsubst로 환경변수 치환
+      - name: Set Yaml
         working-directory: ./hero-be
         env:
-          DB_URL: jdbc:mariadb://${{ secrets.RDS_HOSTNAME }}:${{ secrets.RDS_PORT }}/${{ secrets.RDS_DB_NAME }}
-          DB_USERNAME: ${{ secrets.RDS_USERNAME }}
-          DB_PASSWORD: ${{ secrets.RDS_PASSWORD }}
+          RDS_HOSTNAME: ${{ secrets.RDS_HOSTNAME }}
+          RDS_PORT: ${{ secrets.RDS_PORT }}
+          RDS_DB_NAME: ${{ secrets.RDS_DB_NAME }}
+          RDS_USERNAME: ${{ secrets.RDS_USERNAME }}
+          RDS_PASSWORD: ${{ secrets.RDS_PASSWORD }}
           MAIL_ID: ${{ secrets.MAIL_ID }}
           MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
           AES_SECRET: ${{ secrets.AES_SECRET }}
@@ -41,11 +121,16 @@ jobs:
           REFRESH_EXPIRATION_TIME: ${{ secrets.REFRESH_EXPIRATION_TIME }}
           GOOGLE_CALENDAR_CREDENTIALS_PATH: ${{ secrets.GOOGLE_CALENDAR_CREDENTIALS_PATH }}
           GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
-          GOOGLE_CALENDAR_TIMEZONE: ${{ secrets.GOOGLE_CALENDAR_TIMEZONE }}
-          GOOGLE_CALENDAR_APPLICATION_NAME: ${{ secrets.GOOGLE_CALENDAR_APPLICATION_NAME }}
-          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
           AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+        run: |
+          envsubst < src/main/resources/application-deploy.yml.template > src/main/resources/application-deploy.yml
+          echo "Generated application-deploy.yml:"
+          cat src/main/resources/application-deploy.yml
+
+      - name: Build with Gradle
+        working-directory: ./hero-be
         run: ./gradlew clean build -x test
         shell: bash
 
@@ -58,7 +143,6 @@ jobs:
 
       - name: Show Current Time
         run: echo "CurrentTime=${{steps.current-time.outputs.formattedTime}}"
-        shell: bash
 
       - name: Generate deployment package
         working-directory: ./hero-be

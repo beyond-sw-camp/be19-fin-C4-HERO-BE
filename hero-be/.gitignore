@@ -7,10 +7,6 @@ build/
 
 # application 관련 yml 무시
 application*.yml
-application-*.yml
-
-# 단, deploy는 예외
-!application-deploy.yml
 
 ### STS ###
 .apt_generated
