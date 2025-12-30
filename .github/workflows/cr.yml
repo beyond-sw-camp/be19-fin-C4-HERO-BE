@@ -12,7 +12,7 @@ on:
 
 # 워크플로우 실행 작업 정의
 jobs:
-  test:
+  deploy-java-17:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -27,6 +27,7 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
         shell: bash
+        working-directory: ./hero-be  # 추가
 
       ##############################################################
       # 이후 이 부분은 envsubst가 추가될 예정
