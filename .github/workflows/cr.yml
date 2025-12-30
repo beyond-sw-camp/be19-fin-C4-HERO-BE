@@ -111,7 +111,6 @@ jobs:
           cp -r .ebextensions deploy/.ebextensions
           cp -r .platform deploy/.platform
           cd deploy && zip -r deploy.zip .
-        working-directory: ./hero-be  # 추가
 
       - name: Beanstalk Deploy
         uses: einaregilsson/beanstalk-deploy@v22
