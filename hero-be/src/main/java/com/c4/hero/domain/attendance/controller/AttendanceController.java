@@ -10,6 +10,7 @@ import com.c4.hero.domain.attendance.dto.CorrectionDTO;
 import com.c4.hero.domain.attendance.dto.DeptWorkSystemDTO;
 import com.c4.hero.domain.attendance.dto.OvertimeDTO;
 import com.c4.hero.domain.attendance.dto.PersonalDTO;
+import com.c4.hero.domain.attendance.service.AttendanceEventService;
 import com.c4.hero.domain.attendance.service.AttendanceService;
 import com.c4.hero.domain.attendance.type.AttendanceHalfType;
 import com.c4.hero.domain.auth.security.JwtUtil;
@@ -20,8 +21,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
+import org.springframework.web.bind.annotation.PathVariable;
 import java.time.LocalDate;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+
 
 /**
  * <pre>
@@ -32,6 +40,7 @@ import java.time.LocalDate;
  * 2025/12/09 (이지윤) 최초 작성
  * 2025/12/18 (이지윤) 개인 근태 요약, JWT 기반 조회 적용
  * 2025/12/24 (이지윤) 부서 근태 현황/대시보드/반기 대시보드 API 추가 및 코딩 컨벤션 정리
+ * 2025/12/30 (이지윤) 개인 근태 기록 단건 조회 기능 개발
  * </pre>
  *
  * 개인별/부서별 근태 및 연관된 각종 현황을 조회하는 엔드포인트를 제공합니다.
@@ -44,6 +53,7 @@ import java.time.LocalDate;
  * @author 이지윤
  * @version 1.2
  */
+@Tag( name = "근태 API", description = "개인/부서 근태 조회, 근태 점수 대시보드, 직원 반기 대시보드 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/attendance")
@@ -51,6 +61,7 @@ public class AttendanceController {
 
     /** 근태 관련 비즈니스 로직 처리 서비스 */
     private final AttendanceService attendanceService;
+    private final AttendanceEventService attendanceEventService;
 
     /** JWT 토큰 파싱 및 인증 정보를 처리하는 유틸리티 */
     private final JwtUtil jwtUtil;
@@ -88,6 +99,19 @@ public class AttendanceController {
      * @param endDate   조회 종료일(yyyy-MM-dd), null/미전달 시 기본값 사용
      * @return 개인 근태 요약 DTO
      */
+    @Operation(summary = "개인 근태 요약 조회",
+               description = "근태 관리 상단 탭"
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "개인 근태 기록 목록 조회 성공",
+                    content = @Content(schema = @Schema(implementation = PageResponse.class))
+            ),
+            @ApiResponse(responseCode = "400", description = "요청 파라미터 오류(page/size/date 범위 등)"),
+            @ApiResponse(responseCode = "401", description = "인증 실패(JWT 누락/만료/위조)"),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
     @GetMapping("/personal/summary")
     public AttSummaryDTO getPersonalSummary(
             HttpServletRequest request,
@@ -95,6 +119,7 @@ public class AttendanceController {
             @RequestParam(required = false) LocalDate endDate
     ) {
         Integer employeeId = getEmployeeIdFromToken(request);
+
 
         return attendanceService.getPersonalSummary(employeeId, startDate, endDate);
     }
@@ -112,6 +137,17 @@ public class AttendanceController {
      * @param endDate   조회 종료일(yyyy-MM-dd), null인 경우 기간 필터 미적용
      * @return 개인 근태 기록 페이지 응답 DTO
      */
+    @Operation( summary = "개인 근태 기록 목록 조회",
+            description = "로그인한 사용자의 근태 이력을 조회"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "개인 근태 기록 목록 조회 성공",
+                    content = @Content(schema = @Schema(implementation = PageResponse.class))),
+            @ApiResponse(responseCode = "400", description = "요청 파라미터 오류(page/size/date 범위 등)"),
+            @ApiResponse(responseCode = "401", description = "인증 실패(JWT 누락/만료/위조)"),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
+
     @GetMapping("/personal")
     public PageResponse<PersonalDTO> getPersonalList(
             HttpServletRequest request,
@@ -125,6 +161,27 @@ public class AttendanceController {
         return attendanceService.getPersonalList(employeeId, page, size, startDate, endDate);
     }
 
+    @Operation(
+            summary = "개인 근태 기록 단건 조회",
+            description = "attendanceId로 특정 근태 기록 1건을 조회합니다. (JWT 기반 본인 데이터만 조회)"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "근태 기록 단건 조회 성공",
+                    content = @Content(schema = @Schema(implementation = PersonalDTO.class))),
+            @ApiResponse(responseCode = "401", description = "인증 실패(JWT 누락/만료/위조)"),
+            @ApiResponse(responseCode = "404", description = "근태 기록 없음(본인 데이터가 아니거나 존재하지 않음)"),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
+    @GetMapping("/{attendanceId}")
+    public PersonalDTO getAttendanceDetail(
+            HttpServletRequest request,
+            @PathVariable Integer attendanceId
+    ) {
+        Integer employeeId = getEmployeeIdFromToken(request);
+        return attendanceEventService.getPersonalDetail(employeeId, attendanceId);
+    }
+
+
     /**
      * 개인 초과 근무(연장 근무) 이력(페이지)을 조회합니다.
      *
@@ -135,6 +192,17 @@ public class AttendanceController {
      * @param endDate   조회 종료일(yyyy-MM-dd), null인 경우 기간 필터 미적용
      * @return 초과 근무 이력 페이지 응답 DTO
      */
+    @Operation( summary = "개인 초과 근무 이력 조회",
+            description = "개인 초과 근무(연장 근무) 이력(페이지)을 조회"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "초과 근무 이력 조회 성공",
+                    content = @Content(schema = @Schema(implementation = PageResponse.class))),
+            @ApiResponse(responseCode = "400", description = "요청 파라미터 오류(page/size/date 범위 등)"),
+            @ApiResponse(responseCode = "401", description = "인증 실패(JWT 누락/만료/위조)"),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
+
     @GetMapping("/overtime")
     public PageResponse<OvertimeDTO> getOvertimeList(
             HttpServletRequest request,
@@ -158,6 +226,18 @@ public class AttendanceController {
      * @param endDate   조회 종료일(yyyy-MM-dd), null인 경우 기간 필터 미적용
      * @return 근태 정정 이력 페이지 응답 DTO
      */
+    @Operation(
+            summary = "개인 근태 정정 요청 이력 조회",
+            description = "개인 근태 정정 요청 이력(페이지)을 조회"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "근태 정정 요청 이력 조회 성공",
+                    content = @Content(schema = @Schema(implementation = PageResponse.class))),
+            @ApiResponse(responseCode = "400", description = "요청 파라미터 오류(page/size/date 범위 등)"),
+            @ApiResponse(responseCode = "401", description = "인증 실패(JWT 누락/만료/위조)"),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
+
     @GetMapping("/correction")
     public PageResponse<CorrectionDTO> getCorrectionList(
             HttpServletRequest request,
@@ -181,6 +261,18 @@ public class AttendanceController {
      * @param endDate   조회 종료일(yyyy-MM-dd), null인 경우 기간 필터 미적용
      * @return 근무제 변경 이력 페이지 응답 DTO
      */
+    @Operation(
+            summary = "개인 근무제 변경 이력 조회",
+            description = "개인 근무제 변경이력(페이지)을 조회"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "근무제 변경 이력 조회 성공",
+                    content = @Content(schema = @Schema(implementation = PageResponse.class))),
+            @ApiResponse(responseCode = "400", description = "요청 파라미터 오류(page/size/date 범위 등)"),
+            @ApiResponse(responseCode = "401", description = "인증 실패(JWT 누락/만료/위조)"),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
+
     @GetMapping("/changelog")
     public PageResponse<ChangeLogDTO> getChangeLogList(
             HttpServletRequest request,
@@ -211,6 +303,19 @@ public class AttendanceController {
      * @param size         페이지 크기 (기본값 10)
      * @return 부서 근태 현황 페이지 응답 DTO
      */
+    @Operation(
+            summary = "부서 근태 현황 조회",
+            description = "부서 근태 현황(당일 기준)을 조회"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "부서 근태 현황 조회 성공",
+                    content = @Content(schema = @Schema(implementation = PageResponse.class))),
+            @ApiResponse(responseCode = "400", description = "요청 파라미터 오류(departmentId/workDate/page/size 등)"),
+            @ApiResponse(responseCode = "401", description = "인증 실패(JWT 누락/만료/위조)"),
+            @ApiResponse(responseCode = "403", description = "권한 없음(부서 조회 권한 부족)"),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
+
     @GetMapping("/deptworksystem")
     public PageResponse<DeptWorkSystemDTO> getDeptWorkSystemList(
             HttpServletRequest request,
@@ -249,6 +354,17 @@ public class AttendanceController {
      * @param size         페이지 크기 (기본값 10)
      * @return 근태 점수 대시보드 페이지 응답 DTO
      */
+    @Operation(
+            summary = "근태 점수 대시보드 조회",
+            description = "근태 점수 대시보드(직원별 점수 리스트)를 조회"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "근태 점수 대시보드 조회 성공",
+                    content = @Content(schema = @Schema(implementation = PageResponse.class))),
+            @ApiResponse(responseCode = "400", description = "요청 파라미터 오류(month 형식/scoreSort/page/size 등)"),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
+
     @GetMapping("/dashboard")
     public PageResponse<AttendanceDashboardDTO> getAttendanceDashboardList(
             @RequestParam(name = "departmentId", required = false) Integer departmentId,
@@ -278,6 +394,17 @@ public class AttendanceController {
      * @param month        조회 월("YYYY-MM"), null인 경우 서비스에서 기본값 처리
      * @return 근태 대시보드 요약 DTO
      */
+    @Operation(
+            summary = "근태 점수 대시보드 요약 조회",
+            description = "근태 점수 대시보드 상단 요약(전체/우수/위험 직원 수)을 조회"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "근태 점수 대시보드 요약 조회 성공",
+                    content = @Content(schema = @Schema(implementation = AttendanceDashboardSummaryDTO.class))),
+            @ApiResponse(responseCode = "400", description = "요청 파라미터 오류(month 형식 등)"),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
+
     @GetMapping("/dashboard/summary")
     public AttendanceDashboardSummaryDTO getAttendanceDashboardSummary(
             @RequestParam(name = "departmentId", required = false) Integer departmentId,
@@ -306,6 +433,18 @@ public class AttendanceController {
      * @param half       반기 타입(H1/H2, 옵션)
      * @return 직원 반기 근태 대시보드 DTO
      */
+    @Operation(
+            summary = "직원 반기 근태 대시보드 조회",
+            description = "직원 1명의 반기(상/하반기) 근태 대시보드(차트 Drawer)를 조회"
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "직원 반기 근태 대시보드 조회 성공",
+                    content = @Content(schema = @Schema(implementation = AttendanceEmployeeHalfDashboardDTO.class))),
+            @ApiResponse(responseCode = "400", description = "요청 파라미터 오류(employeeId/year/half 등)"),
+            @ApiResponse(responseCode = "404", description = "직원 정보 없음(employeeId에 해당하는 직원 없음)"),
+            @ApiResponse(responseCode = "500", description = "서버 내부 오류")
+    })
+
     @GetMapping("/dashboard/employee")
     public AttendanceEmployeeHalfDashboardDTO getEmployeeHalfDashboard(
             @RequestParam Integer employeeId,

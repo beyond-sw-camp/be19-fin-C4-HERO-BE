@@ -16,10 +16,13 @@ import com.c4.hero.domain.settings.dto.response.SettingsApprovalResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsDepartmentResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsDocumentTemplateResponseDTO;
 import com.c4.hero.domain.settings.dto.response.SettingsPermissionsResponseDTO;
+import com.c4.hero.domain.settings.service.SettingsAttendanceService;
 import com.c4.hero.domain.settings.service.SettingsCommandService;
 import com.c4.hero.domain.settings.service.SettingsNotificationCommandService;
 import com.c4.hero.domain.settings.service.SettingsNotificationQueryService;
 import com.c4.hero.domain.settings.service.SettingsQueryService;
+import com.c4.hero.domain.settings.dto.response.SettingWorkSystemResponseDTO;
+import com.c4.hero.domain.settings.dto.request.SettingWorkSystemRequestDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +51,7 @@ import java.util.List;
  * 2025/12/21 (민철) 결재 관리 관련 기능 조회 api
  * 2025/12/22 (혜원) 관리자 알림 발송 및 관리 기능 추가
  * 2025/12/24 (혜원) 서비스 파일명 변경 수정, @PreAuthorize로 설정에 진입 가능한 권한체크
+ * 2025/12/29 (지윤) 근태 설정 조회 및 삽입문 기능 추가
  * </pre>
  *
  * @author 승건
@@ -65,6 +69,7 @@ public class SettingsController {
     private final NotificationCommandService notificationCommandService;
     private final SettingsNotificationCommandService settingsNotificationCommandService;
     private final SettingsNotificationQueryService settingsNotificationQueryService; // 추가
+    private final SettingsAttendanceService  settingsAttendanceService;
 
     /**
      * 부서 목록 조회 (트리 구조)
@@ -369,5 +374,32 @@ public class SettingsController {
                 settingsNotificationQueryService.checkWebSocketHealth();
 
         return ResponseEntity.ok(CustomResponse.success(health));
+    }
+
+    /**
+     * 근무제(Work System Template) 목록 조회
+     *
+     * @return 근무제 템플릿 목록
+     */
+    @GetMapping("/attendance/work-system-templates")
+    public ResponseEntity<CustomResponse<List<SettingWorkSystemResponseDTO>>> getWorkSystemTemplates() {
+        List<SettingWorkSystemResponseDTO> list = settingsAttendanceService.getWorkSystemTemplates();
+        return ResponseEntity.ok(CustomResponse.success(list));
+    }
+
+    /**
+     * 근무제(Work System Template) 저장(업서트)
+     * - 신규: workSystemTemplateId = null  -> INSERT
+     * - 수정: workSystemTemplateId != null -> UPDATE
+     *
+     * @param requestList 저장/수정할 근무제 템플릿 목록
+     * @return 성공 메시지
+     */
+    @PutMapping("/attendance/work-system-templates")
+    public ResponseEntity<CustomResponse<String>> upsertWorkSystemTemplates(
+            @RequestBody List<SettingWorkSystemRequestDTO> requestList
+    ) {
+        settingsAttendanceService.upsertWorkSystemTemplates(requestList);
+        return ResponseEntity.ok(CustomResponse.success("Work system templates upserted successfully"));
     }
 }

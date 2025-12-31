@@ -27,6 +27,18 @@
         </collection>
     </resultMap>
 
+    <!-- =========================
+        근태 설정 - 근무제 템플릿 조회 (WSTAttResDTO)
+     ========================= -->
+    <resultMap id="wstAttResultMap" type="com.c4.hero.domain.settings.dto.response.SettingWorkSystemResponseDTO">
+        <id property="workSystemTemplateId" column="work_system_template_id"/>
+        <result property="startTime" column="start_time"/>
+        <result property="endTime" column="end_time"/>
+        <result property="breakMinMinutes" column="break_min_minutes"/>
+        <result property="reason" column="reason"/>
+        <result property="workSystemTypeId" column="work_system_type_id"/>
+    </resultMap>
+
     <select id="findEmployeePermissions" resultMap="permissionsResultMap">
         SELECT
             e.employee_id AS employeeId,
@@ -160,5 +172,18 @@
         GROUP BY type
         ORDER BY COUNT(*) DESC
             LIMIT 1
+    </select>
+
+    <!-- 근무제 템플릿 전체 조회 -->
+    <select id="selectWorkSystemTemplates" resultMap="wstAttResultMap">
+        SELECT
+            wst.work_system_template_id,
+            wst.start_time,
+            wst.end_time,
+            wst.break_min_minutes,
+            wst.reason,
+            wst.work_system_type_id
+        FROM tbl_work_system_template wst
+        ORDER BY wst.work_system_template_id
     </select>
 </mapper>

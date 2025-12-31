@@ -9,6 +9,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 /**
@@ -18,10 +19,11 @@ import java.util.List;
  *
  * History
  * 2025/12/09 (이지윤) 최초 작성
+ * 2025/12/30 (이지윤) 지연 출근 수정 로직에 관한 mapper 추가
  * </pre>
  *
  * @author 이지윤
- * @version 1.1
+ * @version 1.2
  */
 @Mapper
 public interface AttendanceMapper {
@@ -99,6 +101,28 @@ public interface AttendanceMapper {
             @Param("endDate") LocalDate endDate
 
     );
+
+    /**
+     * 개인 근태 기록 단건 조회 (본인 소유 데이터만)
+     *
+     * @param employeeId 로그인한 사용자 ID
+     * @param attendanceId 근태 기록 PK
+     * @return 개인 근태 기록 1건 (없으면 null)
+     */
+    PersonalDTO selectPersonalById(
+            @Param("employeeId") Integer employeeId,
+            @Param("attendanceId") Integer attendanceId
+    );
+
+    int insertCorrectionRequest(
+            @Param("employeeId") Integer employeeId,
+            @Param("attendanceId") Integer attendanceId,
+            @Param("targetDate") LocalDate targetDate,
+            @Param("correctedStart") LocalTime correctedStart,
+            @Param("correctedEnd") LocalTime correctedEnd,
+            @Param("reason") String reason
+    );
+
 
 
     /**
