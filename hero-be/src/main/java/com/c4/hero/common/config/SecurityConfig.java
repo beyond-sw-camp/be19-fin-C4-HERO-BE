@@ -155,7 +155,7 @@ public class SecurityConfig {
 
         // 허용할 Origin (프론트엔드 주소)
         configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:5173"   // Vite 기본 포트
+                "http://localhost:8080"   // 프론트
         ));
 
         // 허용할 HTTP 메서드
