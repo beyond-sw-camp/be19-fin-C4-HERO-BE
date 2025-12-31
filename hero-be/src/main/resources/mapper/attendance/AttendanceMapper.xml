@@ -10,6 +10,8 @@
     History
     2025/12/09 (이지윤) 최초 작성 및 컨벤션 적용
     2025/12/30 (이지윤) 지연 출근 수정 로직 관련 쿼리문 추가
+    2025/12/30 (이지윤) 초과 근무 로직 추가
+    2025/12/31 (이지윤) 근무제 변경 로직 추가
     ============================================================
 -->
 
@@ -75,9 +77,9 @@
     </resultMap>
 
     <!-- ============================================================
- 2-0)  근태 기록 상단 요약
-    AttendanceMapper.selectPersonalSummary(...)
- ============================================================ -->
+         2-0)  근태 기록 상단 요약
+            AttendanceMapper.selectPersonalSummary(...)
+        ============================================================ -->
     <select id="selectPersonalSummary"
             resultType="com.c4.hero.domain.attendance.dto.AttSummaryDTO"
             parameterType="map" >
@@ -249,6 +251,31 @@
     </select>
 
     <!-- ============================================================
+      3-3) 초과 근무 등록
+         AttendanceMapper.insertOvertime(...)
+      ============================================================ -->
+    <insert id="insertOvertime">
+        INSERT INTO tbl_overtime
+        (
+            date,
+            start_time,
+            end_time,
+            overtime_hours,
+            reason,
+            employee_id
+        )
+        VALUES
+            (
+                #{workDate},
+                #{startTime},
+                #{endTime},
+                #{overtimeHours},
+                #{reason},
+                #{employeeId}
+            )
+    </insert>
+
+    <!-- ============================================================
          4-1) 근태 정정(Correction) 기록 SELECT (페이지 조회)
             AttendanceMapper.selectCorrectionPage(...)
          ============================================================ -->
@@ -340,5 +367,62 @@
             </if>
         </where>
     </select>
+
+    <!-- ============================================================
+         5-3) 근무제 변경 이름 출력
+     ============================================================ -->
+    <select id="selectWorkSystemNameByAnyId" resultType="string" parameterType="int">
+        SELECT
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM tbl_work_system_type
+                    WHERE work_system_type_id = #{id}
+                )
+                    THEN (
+                    SELECT name
+                    FROM tbl_work_system_type
+                    WHERE work_system_type_id = #{id}
+                )
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM tbl_work_system_template
+                    WHERE work_system_template_id = #{id}
+                )
+                    THEN (
+                    SELECT reason
+                    FROM tbl_work_system_template
+                    WHERE work_system_template_id = #{id}
+                )
+                ELSE NULL
+                END AS template_name
+    </select>
+
+    <!-- ============================================================
+        5-4) 근무제 정정 요청 등록
+        AttendanceMapper.insertWorkSystemChangeLog( ... )
+ ============================================================ -->
+    <insert id="insertWorkSystemChangeLog" parameterType="map">
+        INSERT INTO tbl_work_system_change_log (
+            date,
+            change_reason,
+            template_name,
+            start_time,
+            end_time,
+            work_system_template_id,
+            employee_id
+        )
+        VALUES (
+                   #{date},
+                   #{changeReason},
+                   #{templateName},
+                   #{startTime},
+                   #{endTime},
+                   #{workSystemTemplateId},
+                   #{employeeId}
+               )
+    </insert>
+
+
 
 </mapper>

@@ -12,7 +12,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -30,15 +29,15 @@ import java.util.List;
  *
  * History
  * 2025/12/16 (이지윤) 최초 작성 및 백엔드 코딩 컨벤션 적용
- * 2025/12/23 (수정) Google Calendar 동기화 엔드포인트 추가
+ * 2025/12/30 (리팩토링) Google Calendar 연동 제거
  * </pre>
  *
  * @author 이지윤
- * @version 1.1
+ * @version 1.2
  */
 @Tag(
         name = "휴가 API",
-        description = "개인 휴가 이력/요약, 부서 휴가 캘린더, Google Calendar 동기화 API"
+        description = "개인 휴가 이력/요약, 부서 휴가 캘린더 API"
 )
 @RestController
 @RequestMapping("/api/vacation")
@@ -71,7 +70,6 @@ public class VacationController {
             @ApiResponse(responseCode = "401", description = "인증 실패(JWT 누락/만료/위조)"),
             @ApiResponse(responseCode = "500", description = "서버 내부 오류")
     })
-
     @GetMapping("/history")
     public PageResponse<VacationHistoryDTO> getVacationHistory(
             HttpServletRequest request,
@@ -111,7 +109,6 @@ public class VacationController {
             @ApiResponse(responseCode = "403", description = "권한 없음(부서 캘린더 조회 권한 부족)"),
             @ApiResponse(responseCode = "500", description = "서버 내부 오류")
     })
-
     @GetMapping("/department/calendar")
     public List<DepartmentVacationDTO> getDepartmentVacationCalendar(
             HttpServletRequest request,
@@ -138,56 +135,9 @@ public class VacationController {
             @ApiResponse(responseCode = "401", description = "인증 실패(JWT 누락/만료/위조)"),
             @ApiResponse(responseCode = "500", description = "서버 내부 오류")
     })
-
     @GetMapping("/summary")
     public VacationSummaryDTO getVacationSummary(HttpServletRequest request) {
         Integer employeeId = getEmployeeIdFromToken(request);
         return vacationService.findVacationLeaves(employeeId);
-    }
-
-    // ======================================================================
-    // Google Calendar Sync (테스트/운영 대비용으로 남겨두는 엔드포인트)
-    // ======================================================================
-
-    /**
-     * 특정 월의 휴가 로그를 Google Calendar에 동기화합니다.
-     *
-     * <p>예시</p>
-     * POST /api/vacation/google-calendar/sync?year=2025&month=12
-     *
-     * <p>주의</p>
-     * - 현재는 인증만 타고(토큰 필요), 권한(관리자 전용)은 별도 설정 권장
-     *
-     * @param request JWT 토큰 확인용
-     * @param year    동기화 대상 연도 (필수)
-     * @param month   동기화 대상 월 1~12 (필수)
-     * @return inserted/updated/failed/total
-     */
-    @Operation(
-            summary = "Google Calendar 휴가 동기화",
-            description = "특정 월의 휴가 로그를 Google Calendar에 동기화"
-    )
-    @ApiResponses({
-            @ApiResponse(
-                    responseCode = "200",
-                    description = "Google Calendar 동기화 성공",
-                    content = @Content(schema = @Schema(implementation = VacationService.SyncResult.class))
-            ),
-            @ApiResponse(responseCode = "400", description = "요청 파라미터 오류(year/month 범위 등)"),
-            @ApiResponse(responseCode = "401", description = "인증 실패(JWT 누락/만료/위조)"),
-            @ApiResponse(responseCode = "500", description = "서버 내부 오류")
-    })
-
-    @PostMapping("/google-calendar/sync")
-    public VacationService.SyncResult syncGoogleCalendar(
-            HttpServletRequest request,
-            @RequestParam(name = "year") int year,
-            @RequestParam(name = "month") int month
-    ) {
-        // 토큰이 유효한지 최소 체크(사용자 식별)
-        // 지금은 반환값을 쓰진 않지만, 인증이 안되면 여기서 예외 발생하도록 유지
-        getEmployeeIdFromToken(request);
-
-        return vacationService.syncVacationLogsToGoogleCalendar(year, month);
     }
 }
