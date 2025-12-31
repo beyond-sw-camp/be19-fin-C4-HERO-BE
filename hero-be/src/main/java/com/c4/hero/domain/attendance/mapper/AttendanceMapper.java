@@ -21,6 +21,7 @@ import java.util.List;
  * 2025/12/09 (이지윤) 최초 작성
  * 2025/12/30 (이지윤) 지연 출근 수정 로직에 관한 mapper 추가
  * 2025/12/30 (이지윤) 초과 근무 로직에 관한 mapper 추가
+ * 2025/12/30 (이지윤) 근무제 수정 변경 로직에 관한 mapper 추가
  * </pre>
  *
  * @author 이지윤
@@ -268,6 +269,30 @@ public interface AttendanceMapper {
             @Param("endTime") LocalTime endTime,
             @Param("overtimeHours") float overtimeHours,
             @Param("reason") String reason
+    );
+
+    /**
+     * 근무제 정정 요청 총 개수를 조회합니다.
+     *
+     * @param id 로그인한 사람의 정보 확인
+     * <p>
+     * ※ 목록 조회(selectCorrectionPage)와 동일한 기간 필터를 적용하기 위해
+     *    {@code startDate}, {@code endDate} 파라미터가 메서드 간 중복되어 있습니다.
+     * </p>
+     */
+
+    // ✅ (추가) work_system_template_id 또는 work_system_type_id 어떤 값이 와도 이름을 얻기 위한 조회
+    String selectWorkSystemNameByAnyId(@Param("id") int id);
+
+    // ✅ (추가) 근무제 변경 이력 INSERT
+    int insertWorkSystemChangeLog(
+            @Param("employeeId") int employeeId,
+            @Param("date") LocalDate date,
+            @Param("changeReason") String changeReason,
+            @Param("templateName") String templateName,
+            @Param("startTime") LocalTime startTime,
+            @Param("endTime") LocalTime endTime,
+            @Param("workSystemTemplateId") int workSystemTemplateId
     );
 
 }

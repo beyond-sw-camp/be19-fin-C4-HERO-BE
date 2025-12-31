@@ -11,6 +11,7 @@
     2025/12/09 (이지윤) 최초 작성 및 컨벤션 적용
     2025/12/30 (이지윤) 지연 출근 수정 로직 관련 쿼리문 추가
     2025/12/30 (이지윤) 초과 근무 로직 추가
+    2025/12/31 (이지윤) 근무제 변경 로직 추가
     ============================================================
 -->
 
@@ -366,5 +367,62 @@
             </if>
         </where>
     </select>
+
+    <!-- ============================================================
+         5-3) 근무제 변경 이름 출력
+     ============================================================ -->
+    <select id="selectWorkSystemNameByAnyId" resultType="string" parameterType="int">
+        SELECT
+            CASE
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM tbl_work_system_type
+                    WHERE work_system_type_id = #{id}
+                )
+                    THEN (
+                    SELECT name
+                    FROM tbl_work_system_type
+                    WHERE work_system_type_id = #{id}
+                )
+                WHEN EXISTS (
+                    SELECT 1
+                    FROM tbl_work_system_template
+                    WHERE work_system_template_id = #{id}
+                )
+                    THEN (
+                    SELECT reason
+                    FROM tbl_work_system_template
+                    WHERE work_system_template_id = #{id}
+                )
+                ELSE NULL
+                END AS template_name
+    </select>
+
+    <!-- ============================================================
+        5-4) 근무제 정정 요청 등록
+        AttendanceMapper.insertWorkSystemChangeLog( ... )
+ ============================================================ -->
+    <insert id="insertWorkSystemChangeLog" parameterType="map">
+        INSERT INTO tbl_work_system_change_log (
+            date,
+            change_reason,
+            template_name,
+            start_time,
+            end_time,
+            work_system_template_id,
+            employee_id
+        )
+        VALUES (
+                   #{date},
+                   #{changeReason},
+                   #{templateName},
+                   #{startTime},
+                   #{endTime},
+                   #{workSystemTemplateId},
+                   #{employeeId}
+               )
+    </insert>
+
+
 
 </mapper>

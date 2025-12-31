@@ -1,11 +1,14 @@
 package com.c4.hero.domain.attendance.service;
 
+import com.c4.hero.domain.attendance.dto.ChangeLogDTO;
 import com.c4.hero.domain.attendance.dto.PersonalDTO;
 import com.c4.hero.domain.attendance.mapper.AttendanceMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -18,6 +21,7 @@ import java.time.LocalTime;
  * History
  * 2025/12/29 (이지윤) 최초 작성 및 컨벤션 적용
  * 2025/12/30 (이지윤) 초과 근무 로직 추가
+ * 2025/12/31 (이지윤) 근무제 변경 로직 추가
  * </pre>
  *
  * 결재 완료 이벤트에서 전달된 details(JSON) 정보를 기반으로
@@ -177,4 +181,54 @@ public class AttendanceEventService {
         }
         return LocalTime.parse(hhmm);
     }
+
+    /**
+     * 결재 완료(details JSON)를 기반으로 초과근무 기록을 생성합니다.
+     *
+     * @param employeeId  결재 기안자(또는 요청자) 직원 ID
+     * @param detailsJson 결재 문서 details 필드(JSON 문자열)
+     */
+    public void createWorkSystemChangeLogFromApproval(Integer employeeId, String detailsJson) {
+        try {
+            JsonNode root = objectMapper.readTree(detailsJson);
+
+            int workSystemTemplateId = root.path("workSystemTemplate").asInt(0);
+            String applyDateStr = root.path("applyDate").asText("");
+            String startTimeStr = root.path("startTime").asText("09:00");
+            String endTimeStr = root.path("endTime").asText("18:00");
+            String reason = root.path("reason").asText("");
+
+            if (workSystemTemplateId == 0) {
+                throw new IllegalArgumentException("workSystemTemplate 누락");
+            }
+            if (applyDateStr.isBlank()) {
+                throw new IllegalArgumentException("applyDate 누락");
+            }
+
+            LocalDate applyDate = LocalDate.parse(applyDateStr);
+            LocalTime startTime = LocalTime.parse(startTimeStr);
+            LocalTime endTime = LocalTime.parse(endTimeStr);
+
+            // ✅ template_name 채우기(로그 테이블에 문자열이 필요)
+            // - ID가 템플릿ID든 타입ID든 대응 가능하도록, SQL에서 존재하는 쪽을 우선 조회하게 만들 예정(아래 XML 참고)
+            String templateName = attendanceMapper.selectWorkSystemNameByAnyId(workSystemTemplateId);
+            if (templateName == null || templateName.isBlank()) {
+                templateName = "근무제 변경";
+            }
+
+            attendanceMapper.insertWorkSystemChangeLog(
+                    employeeId,
+                    applyDate,
+                    reason,
+                    templateName,
+                    startTime,
+                    endTime,
+                    workSystemTemplateId
+            );
+
+        } catch (Exception e) {
+            throw new IllegalArgumentException("근무제 변경 이력 생성 실패: " + e.getMessage(), e);
+        }
+    }
+
 }

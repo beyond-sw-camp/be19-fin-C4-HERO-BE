@@ -15,10 +15,8 @@ import org.springframework.transaction.event.TransactionPhase;
  *
  * History
  * 2025/12/29 (이지윤) 최초 작성 및 컨벤션 적용
-<<<<<<< HEAD
  * 2025/12/30 (이지윤) 초과 근무 로직 추가
-=======
->>>>>>> develop
+ * 2025/12/31 (이지윤) 근무제 변경 신청 로직 추가
  * </pre>
  *
  * ApprovalCompletedEvent 중, 근태기록수정신청서(templateKey=modifyworkrecord)에 대해서만
@@ -65,6 +63,15 @@ public class AttendanceApprovalEventListener {
                         event.getDetails()
                 );
                 log.info("초과근무신청서 처리 완료. templateKey={}, details={}", templateKey, event.getDetails());
+                return;
+            }
+
+            if ("changework".equals(templateKey)) {
+                attendanceEventService.createWorkSystemChangeLogFromApproval(
+                        event.getDrafterId(),
+                        event.getDetails()
+                );
+                log.info("근무제변경신청서 처리 완료. templateKey={}, details={}", templateKey, event.getDetails());
                 return;
             }
 
