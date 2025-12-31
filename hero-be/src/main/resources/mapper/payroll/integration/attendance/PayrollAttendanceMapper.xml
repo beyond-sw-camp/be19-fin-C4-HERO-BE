@@ -34,7 +34,7 @@
      * 사용 목적
      *  - 월 급여 계산의 기준 금액으로 사용
      -->
-<select id="selectBaseSalary" resultType="int">
+<select id="selectBaseSalary" resultType="java.lang.Integer">
         SELECT base_salary
         FROM tbl_employee
         WHERE employee_id = #{employeeId}
@@ -54,7 +54,7 @@
     *  - 급여 계산 전 근태 데이터 존재 여부 검증
     -->
     <select id="countAttendanceInMonth" resultType="int">
-        SELECT COUNT(*)
+        SELECT COUNT(DISTINCT work_date)
         FROM tbl_attendance
         WHERE employee_id = #{employeeId}
         AND work_date <![CDATA[>=]]> #{start}
@@ -79,13 +79,31 @@
    *  - 월 근로 시간 기반 급여 산출
    -->
     <select id="sumWorkedMinutesInMonth" resultType="int">
-        SELECT COALESCE(SUM(TIMESTAMPDIFF(MINUTE, start_time, end_time)), 0)
+        SELECT COALESCE(SUM(
+            CASE
+                -- work_duration(분)이 있으면 그 값을 우선 사용
+              WHEN work_duration IS NOT NULL THEN work_duration
+            -- 없으면 출/퇴근 시간으로 계산
+                WHEN start_time IS NOT NULL AND end_time IS NOT NULL THEN TIMESTAMPDIFF(MINUTE, start_time, end_time)
+                ELSE 0
+                END), 0)
         FROM tbl_attendance
         WHERE employee_id = #{employeeId}
         AND work_date <![CDATA[>=]]> #{start}
         AND work_date <![CDATA[<=]]> #{end}
-        AND start_time IS NOT NULL
-        AND end_time IS NOT NULL
     </select>
+
+
+        <!--
+     * 특정 월의 근무일수(표시/검증용)
+     * - 중복 근태가 있을 수 있으므로 work_date 기준 DISTINCT
+     -->
+        <select id="countWorkDaysInMonth" resultType="int">
+            SELECT COUNT(DISTINCT work_date)
+                FROM tbl_attendance
+                   WHERE employee_id = #{employeeId}
+                   AND work_date <![CDATA[>=]]> #{start}
+                   AND work_date <![CDATA[<=]]> #{end}
+        </select>
 
 </mapper>

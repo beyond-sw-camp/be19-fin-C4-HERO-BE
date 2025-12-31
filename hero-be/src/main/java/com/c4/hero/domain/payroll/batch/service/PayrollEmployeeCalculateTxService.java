@@ -1,6 +1,9 @@
 package com.c4.hero.domain.payroll.batch.service;
 
 import com.c4.hero.common.exception.BusinessException;
+import com.c4.hero.domain.payroll.adjustment.entity.PayrollRaise;
+import com.c4.hero.domain.payroll.adjustment.mapper.PayrollAdjustmentQueryMapper;
+import com.c4.hero.domain.payroll.adjustment.repository.PayrollRaiseRepository;
 import com.c4.hero.domain.payroll.batch.entity.Payroll;
 import com.c4.hero.domain.payroll.batch.entity.PayrollBatch;
 import com.c4.hero.domain.payroll.batch.entity.PayrollItem;
@@ -32,6 +35,8 @@ public class PayrollEmployeeCalculateTxService {
     private final PayrollRepository payrollRepository;
     private final PayrollItemRepository payrollItemRepository;
     private final PayrollAttendanceService attendanceService;
+    private final PayrollRaiseRepository payrollRaiseRepository;
+    private final PayrollAdjustmentQueryMapper payrollAdjustmentQueryMapper;
 
     /**
      * 단일 사원 급여 계산 (REQUIRES_NEW 트랜잭션 사용)
@@ -43,6 +48,14 @@ public class PayrollEmployeeCalculateTxService {
     public void calculateOne(PayrollBatch batch, Integer empId) {
         try {
             int baseSalary = attendanceService.getBaseSalary(empId); // 근태 연동(기본급 조회)
+
+            baseSalary = payrollRaiseRepository
+                    .findTopByEmployeeIdAndEffectiveMonthAndStatusOrderByRaiseIdDesc(
+                            empId, batch.getSalaryMonth(), "APPROVED"
+                    )
+                    .map(PayrollRaise::getAfterSalary)
+                    .orElse(baseSalary);
+
             int overtimePay = attendanceService.calculateOvertime(batch.getSalaryMonth(), empId); //연장근무 수당 계산
 
             Payroll payroll = payrollRepository
@@ -54,6 +67,18 @@ public class PayrollEmployeeCalculateTxService {
 
             int allowanceTotal = payroll.getAllowanceTotal() == null ? 0 : payroll.getAllowanceTotal();
             int deductionTotal = payroll.getDeductionTotal() == null ? 0 : payroll.getDeductionTotal();
+
+            int manualAdjustNet = payrollAdjustmentQueryMapper
+                    .sumApprovedAdjustmentNet(empId, batch.getSalaryMonth());
+            if (manualAdjustNet != 0) {
+                // 조정은 "수당/공제" 어느 쪽이든 될 수 있는데,
+                // 현재 네 Payroll 구조는 allowanceTotal/deductionTotal로 합산해서 totalPay 계산하니까
+                // net이 +면 allowanceTotal에, -면 deductionTotal에 넣는 게 제일 무난함.
+                if (manualAdjustNet > 0) allowanceTotal += manualAdjustNet;
+                else deductionTotal += Math.abs(manualAdjustNet);
+            }
+
+
             //급여 계산 적용하는 로직
             payroll.applyCalculated(batch.getBatchId(), baseSalary, overtimePay, allowanceTotal, deductionTotal); // 호출로 급여 관련 반영
             Payroll saved = payrollRepository.save(payroll);
@@ -62,10 +87,11 @@ public class PayrollEmployeeCalculateTxService {
             payrollItemRepository.deleteByPayrollIdAndItemTypeAndItemCode(
                     saved.getPayrollId(), "ALLOWANCE", "OVERTIME"
             );
-            payrollItemRepository.save(
-                    PayrollItem.of(saved.getPayrollId(), "ALLOWANCE", "OVERTIME", "연장근무수당", overtimePay, "Y")
-            );
-
+            if (overtimePay > 0) {
+                payrollItemRepository.save(
+                        PayrollItem.of(saved.getPayrollId(), "ALLOWANCE", "OVERTIME", "연장근무수당", overtimePay, "Y")
+                );
+            }
         } catch (BusinessException be) {
             saveFailed(batch, empId, be.getMessage());
         } catch (Exception e) {
@@ -88,6 +114,7 @@ public class PayrollEmployeeCalculateTxService {
         if (!fail.isLocked()) {
             fail.markFailed(batch.getBatchId(), message);
             payrollRepository.save(fail);
+
         }
     }
 }

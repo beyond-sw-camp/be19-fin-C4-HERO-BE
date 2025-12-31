@@ -1,0 +1,7 @@
+<mapper namespace="com.c4.hero.domain.payroll.adjustment.mapper.PayrollRaiseCommandMapper">
+    <update id="updateEmployeeBaseSalary">
+        UPDATE tbl_employee
+        SET base_salary = #{baseSalary}
+        WHERE employee_id = #{employeeId}
+    </update>
+</mapper>

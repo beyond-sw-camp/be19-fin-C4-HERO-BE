@@ -162,6 +162,13 @@
             p.allowance_total AS allowanceTotal,
             p.deduction_total AS deductionTotal,
             p.total_pay       AS totalPay,
+            (
+                SELECT COUNT(DISTINCT a.work_date)
+                FROM tbl_attendance a
+                WHERE a.employee_id = p.employee_id
+                AND a.work_date <![CDATA[>=]]> CONCAT(p.salary_month, '-01')
+                AND a.work_date <![CDATA[<=]]> LAST_DAY(CONCAT(p.salary_month, '-01'))
+            ) AS attendanceDays,
             p.error_message AS errorMessage
         FROM tbl_payroll p
                  JOIN tbl_employee e ON e.employee_id = p.employee_id

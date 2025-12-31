@@ -90,11 +90,11 @@ public class PayrollAttendanceServiceImpl implements PayrollAttendanceService {
         String end = ym.atEndOfMonth().toString();   // YYYY-MM-28/29/30/31
 
         int cnt = mapper.countAttendanceInMonth(employeeId, start, end);
-        if (cnt == 0) {
-            throw new BusinessException(ErrorCode.PAYROLL_ATTENDANCE_LOG_NOT_FOUND);
-        }
+        // 근태 기록이 없는 경우 (입사/퇴사/휴직 등 정상 케이스)
+        if (cnt == 0) return 0;
         // 월 총 근무 시간(분 단위)
-        int workedMin = mapper.sumWorkedMinutesInMonth(employeeId, start, end);
+        Integer workedMinObj = mapper.sumWorkedMinutesInMonth(employeeId, start, end);
+        int workedMin = workedMinObj == null ? 0 : workedMinObj;
 
         // 기준 근무 시간 (MVP 기준: 209시간)
         int standardMin = 209 * 60;

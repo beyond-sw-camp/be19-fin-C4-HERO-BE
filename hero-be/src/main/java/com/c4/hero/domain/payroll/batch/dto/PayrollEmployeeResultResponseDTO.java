@@ -25,6 +25,7 @@ package com.c4.hero.domain.payroll.batch.dto;
  * @param allowanceTotal 수당 합계
  * @param deductionTotal 공제 합계
  * @param totalPay       실지급액
+ * @param attendanceDays 해당 월 근태(근무) 일수(근태기록 0건 표시용)
  * @param errorMessage   계산 실패 사유 (FAILED 상태일 경우 내려오는 상세 메시지)
  */
 public record PayrollEmployeeResultResponseDTO(
@@ -39,5 +40,6 @@ public record PayrollEmployeeResultResponseDTO(
         Integer allowanceTotal,
         Integer deductionTotal,
         Integer totalPay,
+        Integer attendanceDays,
         String errorMessage
 ) {}
