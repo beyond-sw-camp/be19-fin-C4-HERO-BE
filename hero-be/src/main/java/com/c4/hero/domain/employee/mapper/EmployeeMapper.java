@@ -19,6 +19,7 @@ import java.util.Optional;
  * History
  * 2025/12/09 (승건) 최초 작성
  * 2025/12/28 (혜원) 프로필 관련 메서드 추가
+ * 2025/12/30 (승건) Mapper 메소드에 SecretKey 추가
  * </pre>
  *
  * @author 승건
@@ -80,27 +81,33 @@ public interface EmployeeMapper {
      * 직원 ID로 프로필 정보 조회
      *
      * @param employeeId 직원 ID
+     * @param secretKey 암호화 키
      * @return EmployeeProfileResponseDTO 직원 프로필 정보
      */
-    EmployeeProfileResponseDTO findProfileByEmployeeId(@Param("employeeId") Integer employeeId);
+    EmployeeProfileResponseDTO findProfileByEmployeeId(@Param("employeeId") Integer employeeId,
+                                                       @Param("secretKey") String secretKey);
 
     /**
      * 사원번호로 프로필 정보 조회
      *
      * @param employeeNumber 사원번호 (예: EMP005)
+     * @param secretKey 암호화 키
      * @return EmployeeProfileResponseDTO 직원 프로필 정보
      */
-    EmployeeProfileResponseDTO findProfileByEmployeeNumber(@Param("employeeNumber") String employeeNumber);
+    EmployeeProfileResponseDTO findProfileByEmployeeNumber(@Param("employeeNumber") String employeeNumber,
+                                                           @Param("secretKey") String secretKey);
 
     /**
      * 연락처 정보 수정
      *
      * @param employeeId 직원 ID
      * @param requestDTO 수정할 연락처 정보
+     * @param secretKey 암호화 키
      * @return 수정된 행 수
      */
     int updateContactInfo(@Param("employeeId") Integer employeeId,
-                          @Param("dto") ContactUpdateRequestDTO requestDTO);
+                          @Param("dto") ContactUpdateRequestDTO requestDTO,
+                          @Param("secretKey") String secretKey);
 
     /**
      * 직원 ID로 비밀번호 조회

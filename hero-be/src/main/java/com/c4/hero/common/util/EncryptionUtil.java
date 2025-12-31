@@ -14,7 +14,7 @@ import java.util.Base64;
  * Class Name: EncryptionUtil
  * Description: 데이터 암호화/복호화 유틸리티
  *
- * - AES-256 알고리즘 사용
+ * - AES-128-ECB 알고리즘 사용 (MariaDB 호환)
  * - 개인정보(이메일, 전화번호, 주소 등) 암호화
  * - DB에 저장 시 VARBINARY 타입으로 저장
  *
@@ -22,6 +22,7 @@ import java.util.Base64;
  *
  * History
  * 2025/11/28 (혜원) 최초 작성
+ * 2025/12/30 (승건) mariaDB의 AES 로직과 호환되도록 수정
  * </pre>
  *
  * @author 혜원
@@ -31,19 +32,14 @@ import java.util.Base64;
 @Component
 public class EncryptionUtil {
 
-//    private static final String ALGORITHM = "AES";
-//    private static final String SECRET_KEY = "P9qR1sT3uV5wX7yZ9aB1cD3eF5gH7iJ9";
-
-    /**
-     * 암호화 키 (32자 = 256비트)
-     * TODO: application.yml에서 주입받아 사용
-     * 예: @Value("${encryption.secret-key}")
-     */
-    private final String ALGORITHM = "AES";
-
+    // MariaDB aes-128-ecb와 호환되는 설정
+    // Java에서는 AES/ECB/PKCS5Padding을 사용
+    private final String ALGORITHM = "AES/ECB/PKCS5Padding";
     private final String SECRET_KEY;
 
-    public EncryptionUtil(@Value("${encryption.secret-key}") String secretKey) {
+    public EncryptionUtil(
+            @Value("${encryption.secret-key}") String secretKey
+    ) {
         SECRET_KEY = secretKey;
     }
 
@@ -56,9 +52,12 @@ public class EncryptionUtil {
      * @throws RuntimeException 암호화 실패 시
      */
     public byte[] encrypt(String plainText) {
+
+        if(plainText == null) return null;
+
         try {
-            // 암호화 키 생성
-            SecretKeySpec secretKey = new SecretKeySpec(SECRET_KEY.getBytes(), ALGORITHM);
+            // 암호화 키 생성 (128비트 = 16바이트로 조정)
+            SecretKeySpec secretKey = getSecretKeySpec();
 
             // Cipher 인스턴스 생성 및 암호화 모드 설정
             Cipher cipher = Cipher.getInstance(ALGORITHM);
@@ -82,8 +81,8 @@ public class EncryptionUtil {
     public String decrypt(byte[] encryptedData) {
         if (encryptedData == null) return null;
         try {
-            // 복호화 키 생성
-            SecretKeySpec secretKey = new SecretKeySpec(SECRET_KEY.getBytes(), ALGORITHM);
+            // 복호화 키 생성 (128비트 = 16바이트로 조정)
+            SecretKeySpec secretKey = getSecretKeySpec();
 
             // Cipher 인스턴스 생성 및 복호화 모드 설정
             Cipher cipher = Cipher.getInstance(ALGORITHM);
@@ -117,5 +116,22 @@ public class EncryptionUtil {
     public String decryptFromBase64(String base64Encrypted) {
         byte[] decoded = Base64.getDecoder().decode(base64Encrypted);
         return decrypt(decoded);
+    }
+
+    /**
+     * MariaDB 호환 키 생성 메서드
+     * 키 길이가 16바이트(128비트)가 되도록 조정
+     * - 짧으면 0으로 패딩
+     * - 길면 XOR 연산으로 압축 (MariaDB 방식)
+     */
+    private SecretKeySpec getSecretKeySpec() {
+        byte[] keyBytes = new byte[16]; // 128비트
+        byte[] sourceKey = SECRET_KEY.getBytes(StandardCharsets.UTF_8);
+
+        for (int i = 0; i < sourceKey.length; i++) {
+            keyBytes[i % 16] ^= sourceKey[i];
+        }
+
+        return new SecretKeySpec(keyBytes, "AES");
     }
 }

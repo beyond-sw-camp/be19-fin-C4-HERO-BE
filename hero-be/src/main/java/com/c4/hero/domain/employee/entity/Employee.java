@@ -20,6 +20,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -168,7 +169,7 @@ public class Employee {
     private JobTitle jobTitle;
 
     @Column(name = "evaluation_point")
-    private Integer evaluationPoint;
+    private BigDecimal evaluationPoint;
 
     @Column(name = "base_salary")
     private Integer baseSalary;
@@ -182,7 +183,7 @@ public class Employee {
 
     public void changeGrade(Grade newGrade) {
         this.grade = newGrade;
-        this.evaluationPoint = 0;
+        this.evaluationPoint = BigDecimal.valueOf(0);
     }
     public void changeJobTitle(JobTitle newJobTitle) {
         this.jobTitle = newJobTitle;
@@ -195,7 +196,7 @@ public class Employee {
                     byte[] email, byte[] phone, LocalDate birthDate,
                     String gender, EmployeeStatus status, String contractType,
                     byte[] address, LocalDate hireDate, String imagePath,
-                    Grade grade, JobTitle jobTitle, Integer evaluationPoint,
+                    Grade grade, JobTitle jobTitle, BigDecimal evaluationPoint,
                     Integer baseSalary) {
         this.employeeDepartment = employeeDepartment;
         this.employeeNumber = employeeNumber;
