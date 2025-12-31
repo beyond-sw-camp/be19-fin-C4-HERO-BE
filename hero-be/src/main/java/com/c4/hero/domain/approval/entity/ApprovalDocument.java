@@ -94,4 +94,18 @@ public class ApprovalDocument {
     public void assignDocNo(String docNo) {
         this.docNo = docNo;
     }
+
+    /**
+     * 제목 수정
+     */
+    public void updateTitle(String title) {
+        this.title = title;
+    }
+
+    /**
+     * 상세 내용 수정
+     */
+    public void updateDetails(String details) {
+        this.details = details;
+    }
 }

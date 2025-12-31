@@ -1,10 +1,7 @@
 package com.c4.hero.domain.approval.controller;
 
 import com.c4.hero.common.response.PageResponse;
-import com.c4.hero.domain.approval.dto.ApprovalTemplateResponseDTO;
-import com.c4.hero.domain.approval.dto.BeforePayrollResponseDTO;
-import com.c4.hero.domain.approval.dto.ResignTypeResponseDTO;
-import com.c4.hero.domain.approval.dto.WorkSystemTypeResponseDTO;
+import com.c4.hero.domain.approval.dto.*;
 import com.c4.hero.domain.approval.dto.response.VacationTypeResponseDTO;
 import com.c4.hero.domain.approval.dto.response.ApprovalDocumentDetailResponseDTO;
 import com.c4.hero.domain.approval.dto.response.ApprovalDocumentsResponseDTO;
@@ -20,6 +17,12 @@ import com.c4.hero.domain.approval.service.OrganizationService;
 import com.c4.hero.domain.attendance.entity.WorkSystemType;
 import com.c4.hero.domain.auth.security.CustomUserDetails;
 import com.c4.hero.domain.employee.entity.Employee;
+import com.c4.hero.domain.employee.entity.EmployeeDepartment;
+import com.c4.hero.domain.employee.entity.Grade;
+import com.c4.hero.domain.employee.entity.JobTitle;
+import com.c4.hero.domain.employee.repository.EmployeeDepartmentRepository;
+import com.c4.hero.domain.employee.repository.EmployeeGradeRepository;
+import com.c4.hero.domain.employee.repository.EmployeeJobTitleRepository;
 import com.c4.hero.domain.vacation.entity.VacationType;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
@@ -65,6 +68,9 @@ public class ApprovalQueryController {
     private final ApprovalWorkSystemTypeRepository approvalWorkSystemTypeRepository;
     private final ApprovalResignTypeRepository approvalResignTypeRepository;
     private final ApprovalEmployeeRepository approvalEmployeeRepository;
+    private final EmployeeDepartmentRepository departmentRepository;
+    private final EmployeeGradeRepository gradeRepository;
+    private final EmployeeJobTitleRepository jobTitleRepository;
 
 
     /**
@@ -131,7 +137,7 @@ public class ApprovalQueryController {
     )
     @GetMapping("/inbox/documents")
     public ResponseEntity<PageResponse<ApprovalDocumentsResponseDTO>> getInboxDocuments(
-            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "all") String tab,
             @RequestParam(required = false) String fromDate,
@@ -141,13 +147,13 @@ public class ApprovalQueryController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Integer employeeId = userDetails.getEmployeeId();
-        log.info("📬 문서함 조회 요청 - employeeId: {}, tab: {}, page: {}", employeeId, tab, page);
+        log.info("문서함 조회 요청 - employeeId: {}, tab: {}, page: {}", employeeId, tab, page);
 
         PageResponse<ApprovalDocumentsResponseDTO> response = approvalQueryService.getInboxDocuments(
                 page, size, tab, fromDate, toDate, sortBy, condition, employeeId
         );
 
-        log.info("✅ 문서함 조회 완료 - 결과: {}건", response.getTotalElements());
+        log.info("문서함 조회 완료 - 결과: {}건", response.getTotalElements());
         return ResponseEntity.ok().body(response);
     }
 
@@ -168,11 +174,11 @@ public class ApprovalQueryController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Integer employeeId = userDetails.getEmployeeId();
-        log.info("📄 문서 상세 조회 요청 - docId: {}, employeeId: {}", docId, employeeId);
+        log.info("문서 상세 조회 요청 - docId: {}, employeeId: {}", docId, employeeId);
 
         ApprovalDocumentDetailResponseDTO response = approvalQueryService.getDocumentDetail(docId, employeeId);
 
-        log.info("✅ 문서 상세 조회 완료 - docNo: {}", response.getDocNo());
+        log.info("문서 상세 조회 완료 - docNo: {}", response.getDocNo());
         return ResponseEntity.ok().body(response);
     }
 
@@ -193,11 +199,11 @@ public class ApprovalQueryController {
     )
     @GetMapping("/organization/tree")
     public ResponseEntity<OrganizationTreeResponseDTO> getOrganizationTree() {
-        log.info("📋 조직도 전체 조회 요청");
+        log.info("조직도 전체 조회 요청");
 
         OrganizationTreeResponseDTO response = organizationService.getOrganizationTree();
 
-        log.info("✅ 조직도 조회 완료");
+        log.info("조직도 조회 완료");
         return ResponseEntity.ok().body(response);
     }
 
@@ -221,7 +227,7 @@ public class ApprovalQueryController {
             @RequestParam(required = false) Integer departmentId,
             @RequestParam(required = false) Integer gradeId
     ) {
-        log.info("🔍 직원 검색 요청 - keyword: {}, departmentId: {}, gradeId: {}",
+        log.info("직원 검색 요청 - keyword: {}, departmentId: {}, gradeId: {}",
                 keyword, departmentId, gradeId);
 
         EmployeeSearchRequestDTO requestDTO = EmployeeSearchRequestDTO.builder()
@@ -232,7 +238,7 @@ public class ApprovalQueryController {
 
         EmployeeSearchResponseDTO response = organizationService.searchEmployees(requestDTO);
 
-        log.info("✅ 직원 검색 완료 - 결과: {}건", response.getTotalCount());
+        log.info("직원 검색 완료 - 결과: {}건", response.getTotalCount());
         return ResponseEntity.ok().body(response);
     }
 
@@ -252,11 +258,11 @@ public class ApprovalQueryController {
     public ResponseEntity<List<OrganizationEmployeeDTO>> getDepartmentEmployees(
             @PathVariable Integer departmentId
     ) {
-        log.info("👥 부서별 직원 조회 요청 - departmentId: {}", departmentId);
+        log.info("부서별 직원 조회 요청 - departmentId: {}", departmentId);
 
         List<OrganizationEmployeeDTO> employees = organizationService.getDepartmentEmployees(departmentId);
 
-        log.info("✅ 부서별 직원 조회 완료 - 결과: {}명", employees.size());
+        log.info("부서별 직원 조회 완료 - 결과: {}명", employees.size());
         return ResponseEntity.ok().body(employees);
     }
 
@@ -341,5 +347,26 @@ public class ApprovalQueryController {
                 .build();
 
         return ResponseEntity.ok().body(response);
+    }
+    
+    /**
+     * 부서/직급/직책 목록 조회
+     *
+     * @param  
+     * @return  
+     */
+    @GetMapping("/personnel-types")
+    public ResponseEntity<PersonnelTypesResponseDTO> getTypesList() {
+
+        List<EmployeeDepartment> departments = departmentRepository.findByDepartmentIdGreaterThan(0);
+        List<Grade> grades = gradeRepository.findByGradeIdGreaterThan(0);
+        List<JobTitle> jobTitles = jobTitleRepository.findByJobTitleIdGreaterThan(0);
+        return ResponseEntity.ok()
+                .body(PersonnelTypesResponseDTO.builder()
+                        .departments(departments)
+                        .grades(grades)
+                        .jobTitles(jobTitles)
+                        .build()
+        );
     }
 }

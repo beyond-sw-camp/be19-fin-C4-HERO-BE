@@ -26,6 +26,7 @@ import java.util.List;
  * 2025/12/15 (민철) 최초 작성 - 서식 목록 조회 / 북마크 / 상신 / 임시저장 api
  * 2025/12/17 (민철) 문서함 조회 api
  * 2025/12/25 (민철) 작성화면 조회 api 및 CQRS 패턴 적용
+ * 2025/12/31 (민철) 대기중 문서 회수처리 api
  *
  * </pre>
  *
@@ -113,6 +114,57 @@ public class ApprovalCommandController {
     }
 
     /**
+     * 임시저장 문서 업데이트
+     *
+     * @param docId   문서 ID
+     * @param request 문서 수정 요청 DTO
+     * @param files   첨부 파일 목록
+     * @return 업데이트된 문서 ID
+     */
+    @Operation(summary = "임시저장 문서 수정", description = "임시저장 문서의 내용을 수정합니다. 제목, 상세내용, 결재선, 참조자, 첨부파일을 모두 변경할 수 있습니다.")
+    @PutMapping("/documents/{docId}")
+    public ResponseEntity<Integer> updateDraftDocument(
+            @PathVariable Integer docId,
+            @RequestPart("data") ApprovalRequestDTO request,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.info("임시저장 문서 업데이트 요청 - docId: {}", docId);
+
+        Integer employeeId = userDetails.getEmployeeId();
+        Integer updatedDocId = approvalCommandService.updateDraftDocument(employeeId, docId, request, files);
+
+        return ResponseEntity.ok(updatedDocId);
+    }
+
+    /**
+     * 임시저장 문서를 상신으로 변경
+     *
+     * @param docId 문서 ID
+     * @param data  문서 수정 요청 DTO
+     * @param files 첨부 파일 목록
+     * @return 상신된 문서 ID
+     */
+    @Operation(summary = "임시저장 문서 상신", description = "임시저장된 문서를 정식으로 상신합니다. 문서 번호가 생성되고 결재 프로세스가 시작됩니다. (상태: DRAFT → INPROGRESS)")
+    @PostMapping(
+            value = "/documents/{docId}/submit",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<?> submitDraftDocument(
+            @PathVariable Integer docId,
+            @RequestPart("data") ApprovalRequestDTO data,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files,
+            @AuthenticationPrincipal CustomUserDetails userDetails
+    ) {
+        log.info("임시저장 문서 상신 요청 - docId: {}", docId);
+
+        Integer employeeId = userDetails.getEmployeeId();
+        Integer submittedDocId = approvalCommandService.submitDraftDocument(employeeId, docId, data, files);
+
+        return ResponseEntity.ok().body("상신 완료. ID: " + submittedDocId);
+    }
+
+    /**
      * 결재 승인/반려 처리
      *
      * @param request     결재 처리 요청 DTO
@@ -129,16 +181,43 @@ public class ApprovalCommandController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
         Integer employeeId = userDetails.getEmployeeId();
-        log.info("🔄 결재 처리 요청 - docId: {}, lineId: {}, action: {}, employeeId: {}",
+        log.info("결재 처리 요청 - docId: {}, lineId: {}, action: {}, employeeId: {}",
                 request.getDocId(), request.getLineId(), request.getAction(), employeeId);
 
         ApprovalActionResponseDTO response = approvalCommandService.processApproval(
                 request, employeeId
         );
 
-        log.info("✅ 결재 처리 완료 - success: {}, docStatus: {}",
+        log.info("결재 처리 완료 - success: {}, docStatus: {}",
                 response.isSuccess(), response.getDocStatus());
         return ResponseEntity.ok().body(response);
+    }
+
+    /**
+     * 결재 대기 중 문서 회수 처리
+     *
+     * @param docId 문서ID
+     * @return message 회수처리성공 메시지(임시저장문서함으로 이동하였습니다)
+     */
+    @PostMapping("/{docId}/cancellations")
+    public ResponseEntity<?> cancelDocument(@PathVariable Integer docId) {
+
+        String message = approvalCommandService.cancelDocument(docId);
+
+        return ResponseEntity.ok().body(message);
+    }
+    
+    /**
+     * 임시저장 문서 삭제
+     *
+     * @param docId 임시저장 문서번호
+     * @return  
+     */
+    @Operation(summary = "", description = "")
+    @DeleteMapping("/{docId}")
+    public ResponseEntity<?> deleteDocument(@PathVariable Integer docId) {
+        String message = approvalCommandService.deleteDocument(docId);
+        return ResponseEntity.ok().body(message);
     }
 
 }
