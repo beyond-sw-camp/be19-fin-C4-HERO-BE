@@ -15,6 +15,8 @@ import org.springframework.transaction.event.TransactionPhase;
  *
  * History
  * 2025/12/29 (이지윤) 최초 작성 및 컨벤션 적용
+ * 2025/12/30 (이지윤) 초과 근무 로직 추가
+ * 2025/12/31 (이지윤) 근무제 변경 신청 로직 추가
  * </pre>
  *
  * ApprovalCompletedEvent 중, 근태기록수정신청서(templateKey=modifyworkrecord)에 대해서만
@@ -43,28 +45,46 @@ public class AttendanceApprovalEventListener {
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onApprovalCompleted(ApprovalCompletedEvent event) {
-        // 근태기록수정신청서가 아닌 템플릿은 무시
-        if (!"modifyworkrecord".equals(event.getTemplateKey())) {
-            return;
-        }
+        final String templateKey = event.getTemplateKey();
 
         try {
-            // details JSON 문자열 그대로 서비스로 전달하여 근태 정정 요청 생성
-            attendanceEventService.createCorrectionRequestFromApproval(
-                    event.getDrafterId(),
-                    event.getDetails()
-            );
+            if ("modifyworkrecord".equals(templateKey)) {
+                attendanceEventService.createCorrectionRequestFromApproval(
+                        event.getDrafterId(),
+                        event.getDetails()
+                );
+                log.info("근태기록수정신청서 처리 완료. templateKey={}, details={}", templateKey, event.getDetails());
+                return;
+            }
+
+            if ("overtime".equals(templateKey)) {
+                attendanceEventService.createOvertimeFromApproval(
+                        event.getDrafterId(),
+                        event.getDetails()
+                );
+                log.info("초과근무신청서 처리 완료. templateKey={}, details={}", templateKey, event.getDetails());
+                return;
+            }
+
+            if ("changework".equals(templateKey)) {
+                attendanceEventService.createWorkSystemChangeLogFromApproval(
+                        event.getDrafterId(),
+                        event.getDetails()
+                );
+                log.info("근무제변경신청서 처리 완료. templateKey={}, details={}", templateKey, event.getDetails());
+                return;
+            }
+
+            return;
+
         } catch (Exception e) {
             log.error(
-                    "근태 정정 요청 적재 실패. docNo={}, templateKey={}",
+                    "근태 이벤트 적재 실패. docId={}, templateKey={}, details={}",
                     event.getDocId(),
-                    event.getTemplateKey(),
+                    templateKey,
+                    event.getDetails(),
                     e
             );
-            return;
         }
-
-        log.info("근태기록수정신청서 처리 완료. templateKey={}, details={}",
-                event.getTemplateKey(), event.getDetails());
     }
 }

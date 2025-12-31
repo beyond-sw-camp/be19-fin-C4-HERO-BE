@@ -73,6 +73,27 @@ public class VacationLog {
     @JoinColumn(name = "employee_id")
     private Employee employee;
 
-    @Column(name = "google_event_id")
-    private String googleEventId;
+
+    public static VacationLog create(
+            Employee employee,
+            VacationType vacationType,
+            LocalDate startDate,
+            LocalDate endDate,
+            String reason,
+            VacationStatus status
+    ) {
+        VacationLog log = new VacationLog();
+
+        log.employee = employee;
+        log.vacationType = vacationType;
+        log.startDate = startDate;
+        log.endDate = endDate;
+        log.reason = reason;
+        log.approvalStatus = status;
+
+        return log;
+    }
+
+    public void info(String s, Integer employeeId, int vacationTypeId, LocalDate startDate, LocalDate endDate) {
+    }
 }

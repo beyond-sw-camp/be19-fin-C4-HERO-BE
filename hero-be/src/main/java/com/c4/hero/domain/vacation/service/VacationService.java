@@ -1,31 +1,29 @@
 package com.c4.hero.domain.vacation.service;
 
 import com.c4.hero.common.response.PageResponse;
+import com.c4.hero.domain.employee.entity.Employee;
 import com.c4.hero.domain.employee.repository.EmployeeRepository;
 import com.c4.hero.domain.vacation.dto.DepartmentVacationDTO;
 import com.c4.hero.domain.vacation.dto.VacationHistoryDTO;
 import com.c4.hero.domain.vacation.dto.VacationSummaryDTO;
 import com.c4.hero.domain.vacation.entity.VacationLog;
+import com.c4.hero.domain.vacation.entity.VacationType;
 import com.c4.hero.domain.vacation.repository.DepartmentVacationRepository;
 import com.c4.hero.domain.vacation.repository.VacationRepository;
 import com.c4.hero.domain.vacation.repository.VacationSummaryRepository;
-import com.google.api.client.googleapis.json.GoogleJsonResponseException;
-import com.google.api.client.util.DateTime;
-import com.google.api.services.calendar.Calendar;
-import com.google.api.services.calendar.model.Event;
-import com.google.api.services.calendar.model.EventDateTime;
+import com.c4.hero.domain.vacation.repository.VacationTypeRepository;
+import com.c4.hero.domain.vacation.type.VacationStatus;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+
 import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * <pre>
@@ -34,11 +32,11 @@ import java.util.Map;
  *
  * History
  * 2025/12/16 (이지윤) 최초 작성 및 코딩 컨벤션 적용
- * 2025/12/23 (수정) Google Calendar 동기화 기능 통합
+ * 2025/12/30 (리팩토링) Google Calendar 연동 제거
  * </pre>
  *
  * @author 이지윤
- * @version 1.1
+ * @version 1.2
  */
 @Service
 @RequiredArgsConstructor
@@ -49,14 +47,8 @@ public class VacationService {
     private final DepartmentVacationRepository departmentVacationRepository;
     private final VacationSummaryRepository vacationSummaryRepository;
     private final EmployeeRepository employeeRepository;
-
-    /** Google Calendar API Client (Config에서 Bean으로 등록된 것 주입) */
-    private final Calendar googleCalendarClient;
-
-    @Value("${google.calendar.id}")
-    private String calendarId;
-
-    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+    private final VacationTypeRepository vacationTypeRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     /**
      * 직원 휴가 이력을 페이지 단위로 조회합니다.
@@ -96,7 +88,7 @@ public class VacationService {
             Integer year,
             Integer month
     ) {
-        LocalDate now = LocalDate.now(KST);
+        LocalDate now = LocalDate.now();
 
         int targetYear = (year != null) ? year : now.getYear();
         int targetMonth = (month != null) ? month : now.getMonthValue();
@@ -128,127 +120,53 @@ public class VacationService {
         return vacationSummaryRepository.findSummaryByEmployeeId(employeeId);
     }
 
-    // ========================================================================
-    // Google Calendar Sync (기존 GoogleCalendarSyncService 로직 통합)
-    // ========================================================================
-
     /**
-     * 특정 월의 tbl_vacation_log 데이터를 Google Calendar에 동기화합니다.
+     * 결재 완료된 휴가 신청서(details JSON)를 기반으로 VacationLog를 생성합니다.
      *
-     * <p>
-     * - google_event_id가 없으면 insert 후 google_event_id 저장
-     * - google_event_id가 있으면 update
-     * - update 시 404(캘린더에서 이벤트 삭제됨)면 insert로 복구 후 google_event_id 갱신
-     * </p>
-     *
-     * @param year  연도
-     * @param month 월(1~12)
-     * @return 동기화 결과
+     * @param employeeId  휴가 신청자(기안자) employeeId
+     * @param detailsJson ApprovalDocument.details에 저장된 JSON 문자열
      */
-    public SyncResult syncVacationLogsToGoogleCalendar(int year, int month) {
-        if (month < 1 || month > 12) {
-            throw new IllegalArgumentException("month는 1~12 범위여야 합니다. month=" + month);
-        }
+    @Transactional
+    public void createVacationLogFromApproval(Integer employeeId, String detailsJson) {
+        try {
+            JsonNode root = objectMapper.readTree(detailsJson);
+            int vacationTypeId = root.path("vacationType").asInt(0);
+            String startDateStr = root.path("startDate").asText(null);
+            String endDateStr = root.path("endDate").asText(null);
+            String reason = root.path("reason").asText("");
 
-        LocalDate firstDay = LocalDate.of(year, month, 1);
-        LocalDate lastDay = firstDay.plusMonths(1).minusDays(1);
-
-        // 월 범위와 "겹치는" 휴가만 조회 (start<=monthEnd AND end>=monthStart)
-        // 아래 파생 메서드는 VacationRepository에 추가되어 있어야 합니다.
-        List<VacationLog> logs = vacationRepository
-                .findByStartDateLessThanEqualAndEndDateGreaterThanEqual(lastDay, firstDay);
-
-        int inserted = 0;
-        int updated = 0;
-        int failed = 0;
-
-        for (VacationLog log : logs) {
-            try {
-                // 원하면 APPROVED만 동기화하도록 여기서 필터링하세요.
-                // 예) if (log.getApprovalStatus() != VacationStatus.APPROVED) continue;
-
-                String eventId = log.getGoogleEventId();
-                Event event = buildEventFromLog(log);
-
-                if (eventId == null || eventId.isBlank()) {
-                    Event created = googleCalendarClient.events()
-                            .insert(calendarId, event)
-                            .execute();
-
-                    log.setGoogleEventId(created.getId());
-                    inserted++;
-                    continue;
-                }
-
-                try {
-                    googleCalendarClient.events()
-                            .update(calendarId, eventId, event)
-                            .execute();
-                    updated++;
-                } catch (GoogleJsonResponseException e) {
-                    if (e.getStatusCode() == 404) {
-                        Event created = googleCalendarClient.events()
-                                .insert(calendarId, event)
-                                .execute();
-
-                        log.setGoogleEventId(created.getId());
-                        inserted++;
-                    } else {
-                        throw e;
-                    }
-                }
-
-            } catch (Exception ex) {
-                failed++;
-                System.err.println("[GoogleCalendarSync] failed. vacationLogId=" + log.getVacationLogId()
-                        + ", msg=" + ex.getMessage());
+            if (vacationTypeId <= 0 || startDateStr == null || endDateStr == null) {
+                throw new IllegalArgumentException(
+                        "휴가 신청 details에 필수 값(vacationType/startDate/endDate)이 누락되었습니다. details=" + detailsJson
+                );
             }
+
+            LocalDate startDate = LocalDate.parse(startDateStr);
+            LocalDate endDate = LocalDate.parse(endDateStr);
+
+            Employee employee = employeeRepository.findById(employeeId)
+                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 직원입니다. employeeId=" + employeeId));
+
+            VacationType vacationType = vacationTypeRepository.findById(vacationTypeId)
+                    .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 휴가 유형입니다. vacationTypeId=" + vacationTypeId));
+
+            VacationLog log = VacationLog.create(
+                    employee,
+                    vacationType,
+                    startDate,
+                    endDate,
+                    reason,
+                    VacationStatus.APPROVED
+            );
+
+            vacationRepository.save(log);
+
+            log.info("[VacationService] VacationLog saved. employeeId={}, typeId={}, start={}, end={}",
+                    employeeId, vacationTypeId, startDate, endDate);
+
+        } catch (Exception e) {
+            // 상위 리스너에서 잡아서 로그 찍도록 예외 그대로 던지기
+            throw new IllegalStateException("휴가 신청 details 처리 중 오류 발생. details=" + detailsJson, e);
         }
-
-        return new SyncResult(inserted, updated, failed, logs.size());
-    }
-
-    /**
-     * VacationLog -> Google Calendar Event 변환
-     *
-     * - 휴가는 UX상 "하루 종일" 이벤트로 생성하는 것이 자연스럽습니다.
-     * - Google Calendar all-day 이벤트의 end.date는 "종료 다음날"(exclusive) 규칙입니다.
-     */
-    private Event buildEventFromLog(VacationLog log) {
-        LocalDate start = log.getStartDate();      // LocalDate
-        LocalDate endInclusive = log.getEndDate(); // LocalDate
-        LocalDate endExclusive = endInclusive.plusDays(1);
-
-        Event event = new Event();
-        event.setSummary(buildSummary(log));
-        event.setDescription(buildDescription(log));
-
-        event.setStart(new EventDateTime().setDate(new DateTime(start.toString())));
-        event.setEnd(new EventDateTime().setDate(new DateTime(endExclusive.toString())));
-
-        // 추적용 메타데이터(선택)
-        Map<String, String> priv = new HashMap<>();
-        priv.put("vacationLogId", String.valueOf(log.getVacationLogId()));
-        Event.ExtendedProperties ep = new Event.ExtendedProperties();
-        ep.setPrivate(priv);
-        event.setExtendedProperties(ep);
-
-        return event;
-    }
-
-    private String buildSummary(VacationLog log) {
-        // 가능하면 “사원명 - 휴가종류” 형태로(프론트 표시와 동일)
-        // 엔티티 연관관계에 따라 아래 부분은 프로젝트 구조에 맞게 조정하세요.
-        String employeeName = (log.getEmployee() != null) ? log.getEmployee().getEmployeeName() : "직원";
-        String typeName = (log.getVacationType() != null) ? log.getVacationType().getVacationTypeName() : "휴가";
-        return employeeName + " - " + typeName;
-    }
-
-    private String buildDescription(VacationLog log) {
-        String reason = (log.getReason() != null) ? log.getReason() : "";
-        return "HERO VacationLogId=" + log.getVacationLogId() + "\n" + reason;
-    }
-
-    public record SyncResult(int inserted, int updated, int failed, int total) {
     }
 }
