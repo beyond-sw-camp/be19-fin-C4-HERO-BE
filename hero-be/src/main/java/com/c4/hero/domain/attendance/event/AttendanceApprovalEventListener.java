@@ -15,7 +15,10 @@ import org.springframework.transaction.event.TransactionPhase;
  *
  * History
  * 2025/12/29 (이지윤) 최초 작성 및 컨벤션 적용
+<<<<<<< HEAD
  * 2025/12/30 (이지윤) 초과 근무 로직 추가
+=======
+>>>>>>> develop
  * </pre>
  *
  * ApprovalCompletedEvent 중, 근태기록수정신청서(templateKey=modifyworkrecord)에 대해서만
