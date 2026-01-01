@@ -5,11 +5,9 @@ permissions:
   pull-requests: write
 
 on:
-  pull_request:
-    types: [opened, reopened, synchronize]
   push:
     branches:
-       - "main"
+      - "main"
 
 jobs:
   deploy-java-17:
