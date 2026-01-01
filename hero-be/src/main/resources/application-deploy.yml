@@ -1,0 +1,91 @@
+## eb환경 자바플랫폼 nginx 서버를 5000으로 사용하고 있기 때문
+server:
+  port: 5000
+
+## spring
+spring:
+  config:
+    import: optional:classpath:application-secret.yml
+  datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
+    url: jdbc:mariadb://${RDS_HOSTNAME}:${RDS_PORT}/${RDS_DB_NAME}
+    username: ${RDS_USERNAME}
+    password: ${RDS_PASSWORD}
+
+  jpa:
+    hibernate:
+    ddl-auto: none
+    show-sql: true
+    database-platform: org.hibernate.dialect.MariaDBDialect
+    properties:
+      hibernate:
+        format_sql: true
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_ID} # 이메일 발신자로 사용하려는 주소
+    password: ${MAIL_PASSWORD} # 위 계정의 앱 비밀번호
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  # 파일 업로드 크기 제한
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+## encryption
+encryption:
+  secret-key: ${AES_SECRET}
+
+## login
+token:
+  expiration_time: ${TOKEN_EXPIRATION_TIME}
+  secret: ${JWT_SECRET}
+  access-expiration-time: ${ACCESS_EXPIRATION_TIME}
+  refresh-expiration-time: ${REFRESH_EXPIRATION_TIME}
+
+## s3
+cloud:
+  aws:
+    credentials:
+      access-key: ${AWS_ACCESS_KEY_ID}
+      secret-key: ${AWS_SECRET_ACCESS_KEY}
+    s3:
+      bucket: ${AWS_S3_BUCKET}
+    region:
+      static: ap-northeast-2
+    stack:
+      auto: false
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

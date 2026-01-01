@@ -75,7 +75,7 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
         // 1. Access Token, Refresh Token 생성
         String accessToken = jwtUtil.createAccessToken(authResult);
         String refreshToken = jwtUtil.createRefreshToken(authResult);
-
+        log.info("accessToken: {}", accessToken);
         // 2. Access Token은 헤더에, Refresh Token은 HttpOnly 쿠키에 추가
         response.addHeader(JwtUtil.AUTHORIZATION_HEADER, JwtUtil.BEARER_PREFIX + accessToken);
         response.addCookie(createRefreshTokenCookie(refreshToken));

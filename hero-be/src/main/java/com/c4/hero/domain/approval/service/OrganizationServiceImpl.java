@@ -42,7 +42,7 @@ public class OrganizationServiceImpl implements OrganizationService {
      */
     @Override
     public OrganizationTreeResponseDTO getOrganizationTree() {
-        log.info("📋 조직도 전체 조회 시작");
+        log.info("조직도 전체 조회 시작");
 
         // 1. 모든 부서 조회
         List<OrganizationDepartmentDTO> departments = organizationMapper.selectAllDepartments();
@@ -84,7 +84,7 @@ public class OrganizationServiceImpl implements OrganizationService {
                 .children(rootChildren)
                 .build();
 
-        log.info("✅ 조직도 전체 조회 완료");
+        log.info("조직도 전체 조회 완료");
 
         return OrganizationTreeResponseDTO.builder()
                 .root(virtualRoot)
@@ -151,7 +151,7 @@ public class OrganizationServiceImpl implements OrganizationService {
      */
     @Override
     public EmployeeSearchResponseDTO searchEmployees(EmployeeSearchRequestDTO requestDTO) {
-        log.info("🔍 직원 검색 시작 - keyword: {}", requestDTO.getKeyword());
+        log.info("직원 검색 시작 - keyword: {}", requestDTO.getKeyword());
 
         List<OrganizationEmployeeDTO> employees = organizationMapper.searchEmployees(
                 requestDTO.getKeyword(),
@@ -159,7 +159,7 @@ public class OrganizationServiceImpl implements OrganizationService {
                 requestDTO.getGradeId()
         );
 
-        log.info("✅ 직원 검색 완료 - 결과: {}건", employees.size());
+        log.info("직원 검색 완료 - 결과: {}건", employees.size());
 
         return EmployeeSearchResponseDTO.builder()
                 .employees(employees)
@@ -181,7 +181,7 @@ public class OrganizationServiceImpl implements OrganizationService {
 
         List<OrganizationEmployeeDTO> employees = organizationMapper.selectEmployeesByDepartment(departmentId);
 
-        log.info("✅ 부서별 직원 조회 완료 - 결과: {}명", employees.size());
+        log.info("부서별 직원 조회 완료 - 결과: {}명", employees.size());
 
         return employees;
     }

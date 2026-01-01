@@ -21,10 +21,11 @@ import java.util.UUID;
  *
  * History
  * 2025/12/28 (혜원) 최초 작성
+ * 2026/01/01 (민철) 파일 확장자 추가
  * </pre>
  *
  * @author 혜원
- * @version 1.0
+ * @version 1.1
  */
 @Slf4j
 @Service
@@ -125,8 +126,8 @@ public class S3Service {
      * 이미지 파일 검증
      */
     private void validateImageFile(String extension) {
-        if (!extension.matches("jpg|jpeg|png")) {
-            throw new IllegalArgumentException("지원하지 않는 파일 형식입니다. (jpg, jpeg, png만 가능)");
+        if (!extension.matches("jpg|jpeg|png|pdf|hwp|doc|docx")) {
+            throw new IllegalArgumentException("지원하지 않는 파일 형식입니다. (jpg, jpeg, png, pdf, hwp, doc, docx만 가능)");
         }
     }
 

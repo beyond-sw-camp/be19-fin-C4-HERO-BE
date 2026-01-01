@@ -18,4 +18,5 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface ApprovalReferenceRepository extends JpaRepository<ApprovalReference, Integer> {
+    void deleteByDocId(Integer docId);
 }
