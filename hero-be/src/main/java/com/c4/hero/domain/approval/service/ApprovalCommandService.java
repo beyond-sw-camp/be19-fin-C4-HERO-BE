@@ -36,6 +36,7 @@ import java.util.Optional;
  *   2025/12/28 (승건) 반려 이벤트 발행 로직 추가
  *   2025/12/31 (민철) 임시저장 문서 수정 및 상신 메서드 추가
  *   2026/01/01 (민철) S3 파일 업로드 방식으로 변경
+ *   2026/01/02 (민철) 결재선이 1단계(기안자)일 경우 상신-승인 동시 처리
  * </pre>
  *
  * @author 민철
@@ -127,6 +128,26 @@ public class ApprovalCommandService {
         if (files != null && !files.isEmpty()) {
             saveFilesToS3(files, savedDoc);
             log.info("첨부파일 저장 완료 - 파일 수: {}", files.size());
+        }
+
+        // 5. 상신(INPROGRESS)인 경우 결재선 확인 및 자동 승인 처리
+        if ("INPROGRESS".equals(status)) {
+            List<ApprovalLine> lines = lineRepository.findByDocIdOrderBySeqAsc(savedDoc.getDocId());
+            boolean onlyDrafter = lines.stream()
+                    .allMatch(line -> line.getSeq() == 1);
+
+            if (onlyDrafter) {
+                // 결재선이 기안자(seq=1)만 있는 경우 자동 승인
+                savedDoc.complete();
+                String docNo = generateDocNo();
+                savedDoc.assignDocNo(docNo);
+                documentRepository.save(savedDoc);
+
+                log.info("결재선이 1단계만 존재 - 자동 승인 처리 완료, 문서번호: {}", docNo);
+
+                // 승인 완료 이벤트 발행
+                publishApprovalCompletedEvent(savedDoc);
+            }
         }
 
         log.info("문서 생성 완료 - docId: {}", savedDoc.getDocId());
@@ -359,7 +380,7 @@ public class ApprovalCommandService {
     /**
      * 임시저장 문서를 상신 처리
      * - DRAFT → INPROGRESS 상태 변경
-     * - 문서 번호는 최종 승인 시 생성
+     * - 결재선이 1단계(기안)만 있으면 자동 승인 처리
      *
      * @param employeeId 사원 ID
      * @param docId      문서 ID
@@ -393,35 +414,53 @@ public class ApprovalCommandService {
         document.updateDetails(dto.getDetails());
         log.info("문서 본문 업데이트 완료 - docId: {}", docId);
 
-        // 3. 문서 상태 변경 (DRAFT → INPROGRESS)
-        document.changeStatus("INPROGRESS");
-        documentRepository.save(document);
-        log.info("문서 상태 변경 완료 - docId: {}, status: INPROGRESS (문서 번호는 최종 승인 시 생성)", docId);
-
-        // 4. 기존 결재선 삭제 후 재생성
+        // 3. 기존 결재선 삭제 후 재생성
         lineRepository.deleteByDocId(docId);
         if (dto.getLines() != null && !dto.getLines().isEmpty()) {
             saveApprovalLines(docId, dto.getLines());
             log.info("결재선 업데이트 완료 - 결재자 수: {}", dto.getLines().size());
         }
 
-        // 5. 기존 참조자 삭제 후 재생성
+        // 4. 기존 참조자 삭제 후 재생성
         referenceRepository.deleteByDocId(docId);
         if (dto.getReferences() != null && !dto.getReferences().isEmpty()) {
             saveReferences(docId, dto.getReferences());
             log.info("참조자 업데이트 완료 - 참조자 수: {}", dto.getReferences().size());
         }
 
-        // 6. 기존 첨부파일 삭제 (S3 및 DB)
+        // 5. 기존 첨부파일 삭제 (S3 및 DB)
         deleteAttachments(docId);
 
-        // 7. 새 파일 업로드 (S3)
+        // 6. 새 파일 업로드 (S3)
         if (files != null && !files.isEmpty()) {
             saveFilesToS3(files, document);
             log.info("첨부파일 업데이트 완료 - 파일 수: {}", files.size());
         }
 
-        log.info("임시저장 문서 상신 완료 - docId: {} (문서 번호는 최종 승인 시 생성됨)", docId);
+        // 7. 결재선 확인 및 상태 처리
+        List<ApprovalLine> lines = lineRepository.findByDocIdOrderBySeqAsc(docId);
+        boolean onlyDrafter = lines.stream()
+                .allMatch(line -> line.getSeq() == 1);
+
+        if (onlyDrafter) {
+            // 결재선이 기안자(seq=1)만 있는 경우 자동 승인
+            document.complete();
+            String docNo = generateDocNo();
+            document.assignDocNo(docNo);
+            documentRepository.save(document);
+
+            log.info("결재선이 1단계만 존재 - 자동 승인 처리 완료, 문서번호: {}", docNo);
+
+            // 승인 완료 이벤트 발행
+            publishApprovalCompletedEvent(document);
+        } else {
+            // 결재선이 2단계 이상인 경우 진행중 상태로 변경
+            document.changeStatus("INPROGRESS");
+            documentRepository.save(document);
+            log.info("문서 상태 변경 완료 - docId: {}, status: INPROGRESS", docId);
+        }
+
+        log.info("임시저장 문서 상신 완료 - docId: {}", docId);
         return docId;
     }
 
@@ -484,7 +523,7 @@ public class ApprovalCommandService {
             // 5. 모든 결재자 승인 확인
             List<ApprovalLine> allLines = lineRepository.findByDocIdOrderBySeqAsc(request.getDocId());
             boolean allApproved = allLines.stream()
-                    .filter(l -> l.getSeq() > 1)
+                    .filter(l -> l.getSeq() > 0)
                     .allMatch(l -> "APPROVED".equals(l.getLineStatus()));
 
             if (allApproved) {

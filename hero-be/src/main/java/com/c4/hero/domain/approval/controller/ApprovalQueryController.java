@@ -1,11 +1,7 @@
 package com.c4.hero.domain.approval.controller;
 
 import com.c4.hero.common.response.PageResponse;
-import com.c4.hero.domain.approval.dto.*;
-import com.c4.hero.domain.approval.dto.response.VacationTypeResponseDTO;
-import com.c4.hero.domain.approval.dto.response.ApprovalDocumentDetailResponseDTO;
-import com.c4.hero.domain.approval.dto.response.ApprovalDocumentsResponseDTO;
-import com.c4.hero.domain.approval.dto.response.ApprovalTemplateDetailResponseDTO;
+import com.c4.hero.domain.approval.dto.response.*;
 import com.c4.hero.domain.approval.dto.organization.*;
 import com.c4.hero.domain.approval.entity.ApprovalResignType;
 import com.c4.hero.domain.approval.repository.ApprovalEmployeeRepository;

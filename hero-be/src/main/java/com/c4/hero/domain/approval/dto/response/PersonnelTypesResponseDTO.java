@@ -1,4 +1,4 @@
-package com.c4.hero.domain.approval.dto;
+package com.c4.hero.domain.approval.dto.response;
 
 import com.c4.hero.domain.employee.entity.EmployeeDepartment;
 import com.c4.hero.domain.employee.entity.Grade;

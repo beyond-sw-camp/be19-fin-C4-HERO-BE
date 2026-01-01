@@ -4,7 +4,7 @@ import com.c4.hero.common.response.PageResponse;
 import com.c4.hero.common.s3.S3Service;
 import com.c4.hero.domain.approval.dto.ApprovalDefaultLineDTO;
 import com.c4.hero.domain.approval.dto.ApprovalDefaultRefDTO;
-import com.c4.hero.domain.approval.dto.ApprovalTemplateResponseDTO;
+import com.c4.hero.domain.approval.dto.response.ApprovalTemplateResponseDTO;
 import com.c4.hero.domain.approval.dto.response.*;
 import com.c4.hero.domain.approval.entity.*;
 import com.c4.hero.domain.approval.mapper.ApprovalMapper;
