@@ -2,6 +2,7 @@ package com.c4.hero.domain.approval.service;
 
 import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
+import com.c4.hero.common.s3.S3Service;
 import com.c4.hero.domain.approval.dto.ApprovalLineDTO;
 import com.c4.hero.domain.approval.dto.ApprovalReferenceDTO;
 import com.c4.hero.domain.approval.dto.request.ApprovalActionRequestDTO;
@@ -18,14 +19,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * <pre>
@@ -33,14 +31,15 @@ import java.util.UUID;
  * Description : 전자결재 커맨드 관련 서비스 로직 (삽입/수정/삭제)
  *
  * History
- *   2025/12/25 - 민철 CQRS 패턴 적용 및 작성화면 조회 메서드 로직 추가
- *   2025/12/26 - 민철 결재선/참조목록 저장 로직 추가 및 DTO 필드명 수정
- *   2025/12/28 - 승건 반려 이벤트 발행 로직 추가
- *   2025/12/31 - 민철 임시저장 문서 수정 및 상신 메서드 추가
+ *   2025/12/25 (민철) CQRS 패턴 적용 및 작성화면 조회 메서드 로직 추가
+ *   2025/12/26 (민철) 결재선/참조목록 저장 로직 추가 및 DTO 필드명 수정
+ *   2025/12/28 (승건) 반려 이벤트 발행 로직 추가
+ *   2025/12/31 (민철) 임시저장 문서 수정 및 상신 메서드 추가
+ *   2026/01/01 (민철) S3 파일 업로드 방식으로 변경
  * </pre>
  *
  * @author 민철
- * @version 2.4
+ * @version 2.5
  */
 @Slf4j
 @Service
@@ -54,8 +53,7 @@ public class ApprovalCommandService {
     private final ApprovalBookmarkRepository bookmarkRepository;
     private final ApprovalTemplateRepository templateRepository;
     private final ApplicationEventPublisher eventPublisher;
-
-    private final String UPLOAD_DIR = "C:/hero_uploads/";
+    private final S3Service s3Service;
 
     /* ========================================== */
     /* 즐겨찾기 */
@@ -125,9 +123,9 @@ public class ApprovalCommandService {
             log.info("참조자 저장 완료 - 참조자 수: {}", dto.getReferences().size());
         }
 
-        // 4. 첨부파일 저장
+        // 4. 첨부파일 저장 (S3)
         if (files != null && !files.isEmpty()) {
-            saveFiles(files, savedDoc);
+            saveFilesToS3(files, savedDoc);
             log.info("첨부파일 저장 완료 - 파일 수: {}", files.size());
         }
 
@@ -225,55 +223,41 @@ public class ApprovalCommandService {
                     .build();
 
             referenceRepository.save(reference);
-
-            log.debug("참조자 저장 - referencerId: {}, referencerName: {}",
-                    refDTO.getReferencerId(), refDTO.getReferencerName());
+            log.debug("참조자 저장 - empId: {}", refDTO.getReferencerId());
         }
     }
 
     /* ========================================== */
-    /* 첨부파일 저장 */
+    /* 첨부파일 저장 (S3) */
     /* ========================================== */
 
     /**
-     * 첨부파일 저장
+     * 첨부파일을 S3에 업로드하고 DB에 저장
      *
-     * @param files    첨부 파일 목록
-     * @param document 문서 Entity
+     * @param files    업로드할 파일 목록
+     * @param document 문서 엔티티
      */
-    private void saveFiles(List<MultipartFile> files, ApprovalDocument document) {
-        File dir = new File(UPLOAD_DIR);
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
-
+    private void saveFilesToS3(List<MultipartFile> files, ApprovalDocument document) {
         for (MultipartFile file : files) {
-            if (file.isEmpty()) {
-                continue;
-            }
-
-            String originalName = file.getOriginalFilename();
-            String uuidName = UUID.randomUUID() + "_" + originalName;
-            String savePath = UPLOAD_DIR + uuidName;
-
             try {
-                file.transferTo(new File(savePath));
+                // S3에 파일 업로드
+                String s3Key = s3Service.uploadFile(file, "approval");
 
+                // DB에 첨부파일 정보 저장
                 ApprovalAttachment attachment = ApprovalAttachment.builder()
                         .document(document)
-                        .originName(originalName)
-                        .savePath(savePath)
+                        .originName(file.getOriginalFilename())
+                        .savePath(s3Key)
                         .fileSize(file.getSize())
                         .build();
 
                 attachmentRepository.save(attachment);
+                log.info("S3 파일 업로드 및 DB 저장 완료 - 원본명: {}, S3 Key: {}",
+                        file.getOriginalFilename(), s3Key);
 
-                log.debug("첨부파일 저장 - originName: {}, size: {} bytes",
-                        originalName, file.getSize());
-
-            } catch (IOException e) {
-                log.error("파일 저장 실패: {}", originalName, e);
-                throw new RuntimeException("파일 업로드 중 오류가 발생했습니다.");
+            } catch (Exception e) {
+                log.error("파일 업로드 실패 - 파일명: {}", file.getOriginalFilename(), e);
+                throw new RuntimeException("파일 업로드에 실패했습니다: " + file.getOriginalFilename(), e);
             }
         }
     }
@@ -283,13 +267,13 @@ public class ApprovalCommandService {
     /* ========================================== */
 
     /**
-     * 임시저장 문서 업데이트
+     * 임시저장 문서 수정
      *
-     * @param employeeId 현재 사용자 ID
+     * @param employeeId 사원 ID
      * @param docId      문서 ID
-     * @param dto        문서 수정 요청 DTO
-     * @param files      첨부 파일 목록
-     * @return 업데이트된 문서 ID
+     * @param dto        수정할 내용
+     * @param files      새 첨부파일 목록
+     * @return 수정된 문서 ID
      */
     @Transactional
     public Integer updateDraftDocument(
@@ -298,26 +282,121 @@ public class ApprovalCommandService {
             ApprovalRequestDTO dto,
             List<MultipartFile> files
     ) {
-        log.info("임시저장 문서 업데이트 시작 - docId: {}, employeeId: {}", docId, employeeId);
+        log.info("임시저장 문서 수정 시작 - docId: {}, employeeId: {}", docId, employeeId);
 
-        // 1. 기존 문서 조회
+        // 1. 문서 조회 및 검증
         ApprovalDocument document = documentRepository.findById(docId)
-                .orElseThrow(() -> new IllegalArgumentException("문서를 찾을 수 없습니다."));
-
-        // 2. 권한 확인
-        if (!document.getDrafterId().equals(employeeId)) {
-            throw new IllegalArgumentException("문서 수정 권한이 없습니다.");
-        }
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND, "문서를 찾을 수 없습니다."));
 
         if (!"DRAFT".equals(document.getDocStatus())) {
-            throw new IllegalArgumentException("임시저장 문서만 수정할 수 있습니다.");
+            throw new IllegalArgumentException("임시저장 상태의 문서만 수정 가능합니다.");
         }
 
-        // 3. 문서 정보 업데이트
+        if (!document.getDrafterId().equals(employeeId)) {
+            throw new IllegalArgumentException("문서 작성자만 수정할 수 있습니다.");
+        }
+
+        // 2. 문서 본문 업데이트
         document.updateTitle(dto.getTitle());
         document.updateDetails(dto.getDetails());
-        documentRepository.save(document);
         log.info("문서 본문 업데이트 완료 - docId: {}", docId);
+
+        // 3. 기존 결재선 삭제 후 재생성
+        lineRepository.deleteByDocId(docId);
+        if (dto.getLines() != null && !dto.getLines().isEmpty()) {
+            saveApprovalLines(docId, dto.getLines());
+            log.info("결재선 업데이트 완료 - 결재자 수: {}", dto.getLines().size());
+        }
+
+        // 4. 기존 참조자 삭제 후 재생성
+        referenceRepository.deleteByDocId(docId);
+        if (dto.getReferences() != null && !dto.getReferences().isEmpty()) {
+            saveReferences(docId, dto.getReferences());
+            log.info("참조자 업데이트 완료 - 참조자 수: {}", dto.getReferences().size());
+        }
+
+        // 5. 기존 첨부파일 삭제 (S3 및 DB)
+        deleteAttachments(docId);
+
+        // 6. 새 파일 업로드 (S3)
+        if (files != null && !files.isEmpty()) {
+            saveFilesToS3(files, document);
+            log.info("첨부파일 업데이트 완료 - 파일 수: {}", files.size());
+        }
+
+        log.info("임시저장 문서 수정 완료 - docId: {}", docId);
+        return docId;
+    }
+
+    /**
+     * 문서의 모든 첨부파일 삭제 (S3 및 DB)
+     *
+     * @param docId 문서 ID
+     */
+    private void deleteAttachments(Integer docId) {
+        List<ApprovalAttachment> existingFiles = attachmentRepository.findByDocumentDocId(docId);
+
+        for (ApprovalAttachment attachment : existingFiles) {
+            // S3에서 파일 삭제
+            try {
+                s3Service.deleteFile(attachment.getSavePath());
+                log.info("S3 파일 삭제 완료 - S3 Key: {}", attachment.getSavePath());
+            } catch (Exception e) {
+                log.error("S3 파일 삭제 실패 - S3 Key: {}", attachment.getSavePath(), e);
+                // S3 삭제 실패해도 계속 진행
+            }
+        }
+
+        // DB에서 첨부파일 레코드 삭제
+        attachmentRepository.deleteByDocumentDocId(docId);
+        log.info("첨부파일 DB 레코드 삭제 완료 - docId: {}", docId);
+    }
+
+    /* ========================================== */
+    /* 임시저장 문서 상신 */
+    /* ========================================== */
+
+    /**
+     * 임시저장 문서를 상신 처리
+     * - DRAFT → INPROGRESS 상태 변경
+     * - 문서 번호는 최종 승인 시 생성
+     *
+     * @param employeeId 사원 ID
+     * @param docId      문서 ID
+     * @param dto        수정할 내용
+     * @param files      새 첨부파일 목록
+     * @return 상신된 문서 ID
+     */
+    @Transactional
+    public Integer submitDraftDocument(
+            Integer employeeId,
+            Integer docId,
+            ApprovalRequestDTO dto,
+            List<MultipartFile> files
+    ) {
+        log.info("임시저장 문서 상신 시작 - docId: {}, employeeId: {}", docId, employeeId);
+
+        // 1. 문서 조회 및 검증
+        ApprovalDocument document = documentRepository.findById(docId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND, "문서를 찾을 수 없습니다."));
+
+        if (!"DRAFT".equals(document.getDocStatus())) {
+            throw new IllegalArgumentException("임시저장 상태의 문서만 상신 가능합니다.");
+        }
+
+        if (!document.getDrafterId().equals(employeeId)) {
+            throw new IllegalArgumentException("문서 작성자만 상신할 수 있습니다.");
+        }
+
+        // 2. 문서 본문 업데이트
+        document.updateTitle(dto.getTitle());
+        document.updateDetails(dto.getDetails());
+        log.info("문서 본문 업데이트 완료 - docId: {}", docId);
+
+        // 3. 문서 상태 변경 (DRAFT → INPROGRESS)
+        document.changeStatus("INPROGRESS");
+        documentRepository.save(document);
+        log.info("문서 상태 변경 완료 - docId: {}, status: INPROGRESS (문서 번호는 최종 승인 시 생성)", docId);
 
         // 4. 기존 결재선 삭제 후 재생성
         lineRepository.deleteByDocId(docId);
@@ -333,98 +412,12 @@ public class ApprovalCommandService {
             log.info("참조자 업데이트 완료 - 참조자 수: {}", dto.getReferences().size());
         }
 
-        // 6. 기존 첨부파일 삭제 후 재업로드
-        List<ApprovalAttachment> existingFiles = attachmentRepository.findByDocumentDocId(docId);
-        for (ApprovalAttachment attachment : existingFiles) {
-            File file = new File(attachment.getSavePath());
-            if (file.exists()) {
-                file.delete();
-            }
-        }
-        attachmentRepository.deleteByDocumentDocId(docId);
+        // 6. 기존 첨부파일 삭제 (S3 및 DB)
+        deleteAttachments(docId);
 
-        // 새 파일 업로드
+        // 7. 새 파일 업로드 (S3)
         if (files != null && !files.isEmpty()) {
-            saveFiles(files, document);
-            log.info("첨부파일 업데이트 완료 - 파일 수: {}", files.size());
-        }
-
-        log.info("임시저장 문서 업데이트 완료 - docId: {}", docId);
-        return docId;
-    }
-
-    /* ========================================== */
-    /* 임시저장 문서 상신 */
-    /* ========================================== */
-
-    /**
-     * 임시저장 문서를 상신으로 변경
-     *
-     * @param employeeId 현재 사용자 ID
-     * @param docId      문서 ID
-     * @param dto        문서 수정 요청 DTO
-     * @param files      첨부 파일 목록
-     * @return 상신된 문서 ID
-     */
-    @Transactional
-    public Integer submitDraftDocument(
-            Integer employeeId,
-            Integer docId,
-            ApprovalRequestDTO dto,
-            List<MultipartFile> files
-    ) {
-        log.info("임시저장 문서 상신 시작 - docId: {}, employeeId: {}", docId, employeeId);
-
-        // 1. 기존 문서 조회
-        ApprovalDocument document = documentRepository.findById(docId)
-                .orElseThrow(() -> new IllegalArgumentException("문서를 찾을 수 없습니다."));
-
-        // 2. 권한 확인
-        if (!document.getDrafterId().equals(employeeId)) {
-            throw new IllegalArgumentException("문서 상신 권한이 없습니다.");
-        }
-
-        if (!"DRAFT".equals(document.getDocStatus())) {
-            throw new IllegalArgumentException("임시저장 문서만 상신할 수 있습니다.");
-        }
-
-        // 3. 문서 정보 업데이트
-        document.updateTitle(dto.getTitle());
-        document.updateDetails(dto.getDetails());
-
-        // 4. 문서 상태를 INPROGRESS로 변경 (문서 번호는 생성하지 않음!)
-        document.changeStatus("INPROGRESS");
-
-        documentRepository.save(document);
-        log.info("문서 상태 변경 완료 - docId: {}, status: INPROGRESS (문서 번호는 최종 승인 시 생성)", docId);
-
-        // 5. 기존 결재선 삭제 후 재생성
-        lineRepository.deleteByDocId(docId);
-        if (dto.getLines() != null && !dto.getLines().isEmpty()) {
-            saveApprovalLines(docId, dto.getLines());
-            log.info("결재선 업데이트 완료 - 결재자 수: {}", dto.getLines().size());
-        }
-
-        // 6. 기존 참조자 삭제 후 재생성
-        referenceRepository.deleteByDocId(docId);
-        if (dto.getReferences() != null && !dto.getReferences().isEmpty()) {
-            saveReferences(docId, dto.getReferences());
-            log.info("참조자 업데이트 완료 - 참조자 수: {}", dto.getReferences().size());
-        }
-
-        // 7. 기존 첨부파일 삭제 후 재업로드
-        List<ApprovalAttachment> existingFiles = attachmentRepository.findByDocumentDocId(docId);
-        for (ApprovalAttachment attachment : existingFiles) {
-            File file = new File(attachment.getSavePath());
-            if (file.exists()) {
-                file.delete();
-            }
-        }
-        attachmentRepository.deleteByDocumentDocId(docId);
-
-        // 새 파일 업로드
-        if (files != null && !files.isEmpty()) {
-            saveFiles(files, document);
+            saveFilesToS3(files, document);
             log.info("첨부파일 업데이트 완료 - 파일 수: {}", files.size());
         }
 
@@ -596,23 +589,39 @@ public class ApprovalCommandService {
         }
 
         document.changeStatus("DRAFT");
-        log.info("문서 회수 완료 - docId: {}, status: INPROGRESS", docId);
+        log.info("문서 회수 완료 - docId: {}, status: DRAFT", docId);
         documentRepository.save(document);
         return "성공하였습니다.";
     }
 
+    /**
+     * 임시저장 문서 삭제
+     * - 첨부파일 S3에서 삭제
+     * - DB에서 문서 및 관련 데이터 삭제
+     *
+     * @param docId 문서 ID
+     * @return 삭제 성공 메시지
+     */
     @Transactional
     public String deleteDocument(Integer docId) {
         try {
-            attachmentRepository.deleteByDocumentDocId(docId);
-            lineRepository.deleteByDocId(docId);
+            // 1. 첨부파일 삭제 (S3 및 DB)
+            deleteAttachments(docId);
 
-            log.info("삭제할 문서번호: {}", docId);
+            // 2. 결재선 삭제
+            lineRepository.deleteByDocId(docId);
+            log.info("결재선 삭제 완료 - docId: {}", docId);
+
+            // 3. 참조자 삭제
             referenceRepository.deleteByDocId(docId);
-            log.info("삭제할 문서번호: {}", docId);
+            log.info("참조자 삭제 완료 - docId: {}", docId);
+
+            // 4. 문서 삭제
             documentRepository.deleteById(docId);
-            log.info("삭제할 문서번호: {}", docId);
+            log.info("문서 삭제 완료 - docId: {}", docId);
+
         } catch (Exception ex) {
+            log.error("문서 삭제 실패 - docId: {}", docId, ex);
             throw new BusinessException(ErrorCode.ENTITY_NOT_FOUND, "삭제실패");
         }
 

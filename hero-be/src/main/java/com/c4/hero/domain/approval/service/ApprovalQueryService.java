@@ -1,12 +1,14 @@
 package com.c4.hero.domain.approval.service;
 
 import com.c4.hero.common.response.PageResponse;
+import com.c4.hero.common.s3.S3Service;
 import com.c4.hero.domain.approval.dto.ApprovalDefaultLineDTO;
 import com.c4.hero.domain.approval.dto.ApprovalDefaultRefDTO;
 import com.c4.hero.domain.approval.dto.ApprovalTemplateResponseDTO;
 import com.c4.hero.domain.approval.dto.response.*;
 import com.c4.hero.domain.approval.entity.*;
 import com.c4.hero.domain.approval.mapper.ApprovalMapper;
+import com.c4.hero.domain.approval.repository.ApprovalAttachmentRepository;
 import com.c4.hero.domain.approval.repository.ApprovalBookmarkRepository;
 import com.c4.hero.domain.approval.repository.ApprovalTemplateRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,11 +33,12 @@ import java.util.stream.Collectors;
  * 2025/12/25 (민철) CQRS 패턴 적용 및 작성화면 조회 메서드 로직 추가
  * 2025/12/26 (민철) 문서함 목록 조회 구현 (PageResponse 사용)
  * 2025/12/26 (민철) 페이지 인덱스 음수 방지 로직 추가
+ * 2026/01/01 (민철) 첨부파일 다운로드 URL 생성 추가
  *
  * </pre>
  *
  * @author 민철
- * @version 2.2
+ * @version 2.3
  */
 @Slf4j
 @Service
@@ -44,7 +47,9 @@ public class ApprovalQueryService {
 
     private final ApprovalTemplateRepository templateRepository;
     private final ApprovalBookmarkRepository bookmarkRepository;
+    private final ApprovalAttachmentRepository attachmentRepository;
     private final ApprovalMapper approvalMapper;
+    private final S3Service s3Service;
 
 
     /**
@@ -163,8 +168,36 @@ public class ApprovalQueryService {
         List<ApprovalReferenceResponseDTO> references = approvalMapper.selectApprovalReferences(docId);
         document.setReferences(references);
 
-        // 첨부파일 조회
+        // 첨부파일 조회 (MyBatis)
         List<ApprovalAttachmentResponseDTO> attachments = approvalMapper.selectApprovalAttachments(docId);
+
+        // 각 첨부파일에 대해 Presigned URL 생성
+        if (attachments != null && !attachments.isEmpty()) {
+            // JPA로 실제 파일 정보 다시 조회하여 save_path 가져오기
+            List<ApprovalAttachment> entities = attachmentRepository.findByDocumentDocId(docId);
+
+            for (ApprovalAttachmentResponseDTO dto : attachments) {
+                try {
+                    // DTO의 attachmentId와 매칭되는 엔티티 찾기
+                    ApprovalAttachment entity = entities.stream()
+                            .filter(e -> e.getFileId().equals(dto.getAttachmentId()))
+                            .findFirst()
+                            .orElse(null);
+
+                    if (entity != null && entity.getSavePath() != null) {
+                        String presignedUrl = s3Service.generatePresignedUrl(entity.getSavePath(), 7);
+                        dto.setDownloadUrl(presignedUrl);
+                        log.debug("Presigned URL 생성 완료 - attachmentId: {}, fileName: {}",
+                                dto.getAttachmentId(), dto.getOriginalFilename());
+                    } else {
+                        log.warn("첨부파일 경로 없음 - attachmentId: {}", dto.getAttachmentId());
+                    }
+                } catch (Exception e) {
+                    log.error("Presigned URL 생성 실패 - attachmentId: {}", dto.getAttachmentId(), e);
+                }
+            }
+        }
+
         document.setAttachments(attachments);
 
         return document;
