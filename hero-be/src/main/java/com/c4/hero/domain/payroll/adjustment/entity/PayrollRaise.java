@@ -18,10 +18,25 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
+/**
+ * <pre>
+ * Entity Name : PayrollRaise
+ * Description : 급여 인상 내역 엔티티
+ *
+ * History
+ *  2025/12/31 - 동근 최초 작성
+ * </pre>
+ *
+ * @author 동근
+ * @version 1.0
+ */
+
 @Entity
 @Table(
         name = "tbl_payroll_raise",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"employee_id", "effective_month"})
+                uniqueConstraints = {
+                        @UniqueConstraint(columnNames = {"approval_doc_id"})
+                }
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -46,6 +61,9 @@ public class PayrollRaise {
     @Column(name = "after_salary", nullable = false)
     private Integer afterSalary;
 
+    @Column(name = "raise_percent", precision = 5, scale = 1)
+    private java.math.BigDecimal raisePercent;
+
     @Column(name = "effective_month", nullable = false, length = 7)
     private String effectiveMonth;
 
@@ -62,4 +80,7 @@ public class PayrollRaise {
 
     @Column(name = "requested_by")
     private Integer requestedBy;
+
+    @Column(name = "approval_doc_id")
+    private Integer approvalDocId;
 }

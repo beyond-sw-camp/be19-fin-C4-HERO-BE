@@ -17,6 +17,18 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
+/**
+ * <pre>
+ * Entity Name : PayrollAdjustment
+ * Description : 급여 조정 내역 엔티티
+ *
+ * History
+ *  2025/12/31 - 동근 최초 작성
+ * </pre>
+ *
+ * @author 동근
+ * @version 1.0
+ */
 @Entity
 @Table(name = "tbl_payroll_adjustment")
 @Getter
@@ -58,4 +70,7 @@ public class PayrollAdjustment {
 
     @Column(name = "created_by")
     private Integer createdBy;
+
+    @Column(name = "approval_doc_id")
+    private Integer approvalDocId;
 }

@@ -1,8 +1,6 @@
 package com.c4.hero.domain.payroll.adjustment.event;
 
 import com.c4.hero.domain.approval.event.ApprovalCompletedEvent;
-import com.c4.hero.domain.payroll.adjustment.dto.PayrollAdjustmentDetailDTO;
-import com.c4.hero.domain.payroll.adjustment.dto.PayrollRaiseDetailDTO;
 import com.c4.hero.domain.payroll.adjustment.service.PayrollAdjustmentCommandService;
 import com.c4.hero.domain.payroll.adjustment.service.PayrollRaiseCommandService;
 import org.junit.jupiter.api.DisplayName;
@@ -12,7 +10,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import tools.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -39,10 +36,6 @@ class PayrollApprovalEventListenerTest {
     @Mock
     private PayrollRaiseCommandService raiseService;
 
-    // ⭐ 핵심: 리스너에 주입될 ObjectMapper를 Mock으로 둔다
-    @Mock
-    private ObjectMapper objectMapper;
-
     @InjectMocks
     private PayrollApprovalEventListener listener;
 
@@ -51,15 +44,6 @@ class PayrollApprovalEventListenerTest {
     void testAdjustmentAppliedWhenApprovalCompleted() throws Exception {
         // Given
         String details = "{\"payrollId\":101,\"reason\":\"급여 누락분 정정\",\"sign\":\"+\",\"amount\":50000,\"effectiveMonth\":\"2026-01\"}";
-
-        PayrollAdjustmentDetailDTO dto = new PayrollAdjustmentDetailDTO();
-        dto.setPayrollId(101);
-        dto.setReason("급여 누락분 정정");
-        dto.setSign("+");
-        dto.setAmount(50000);
-        dto.setEffectiveMonth("2026-01");
-
-        when(objectMapper.readValue(details, PayrollAdjustmentDetailDTO.class)).thenReturn(dto);
 
         ApprovalCompletedEvent event = new ApprovalCompletedEvent(
                 1,
@@ -108,15 +92,6 @@ class PayrollApprovalEventListenerTest {
         // Given
         String details = "{\"employeeId\":77,\"reason\":\"연봉 조정\",\"beforeSalary\":3000000,\"afterSalary\":3300000,\"effectiveMonth\":\"2026-01\"}";
 
-        PayrollRaiseDetailDTO dto = new PayrollRaiseDetailDTO();
-        dto.setEmployeeId(77);
-        dto.setReason("연봉 조정");
-        dto.setBeforeSalary(3000000);
-        dto.setAfterSalary(3300000);
-        dto.setEffectiveMonth("2026-01");
-
-        when(objectMapper.readValue(details, PayrollRaiseDetailDTO.class)).thenReturn(dto);
-
         ApprovalCompletedEvent event = new ApprovalCompletedEvent(
                 2,
                 "payrollraise",
@@ -135,6 +110,7 @@ class PayrollApprovalEventListenerTest {
         ArgumentCaptor<Integer> beforeCaptor = ArgumentCaptor.forClass(Integer.class);
         ArgumentCaptor<Integer> afterCaptor = ArgumentCaptor.forClass(Integer.class);
         ArgumentCaptor<String> reasonCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Double> raisePercentCaptor = ArgumentCaptor.forClass(Double.class);
         ArgumentCaptor<String> monthCaptor = ArgumentCaptor.forClass(String.class);
 
         verify(raiseService, times(1)).applyApprovedRaise(
@@ -144,6 +120,7 @@ class PayrollApprovalEventListenerTest {
                 beforeCaptor.capture(),
                 afterCaptor.capture(),
                 reasonCaptor.capture(),
+                raisePercentCaptor.capture(),
                 monthCaptor.capture()
         );
 
@@ -176,24 +153,12 @@ class PayrollApprovalEventListenerTest {
 
         // Then
         verifyNoInteractions(adjustmentService, raiseService);
-        // (중요) 다른 템플릿이면 objectMapper.readValue도 불리지 않아야 함
-        verifyNoInteractions(objectMapper);
     }
 
     @Test
     @DisplayName("effectiveMonth 누락 시 자동으로 익월(yyyy-MM) 세팅되어 호출됨")
     void testEffectiveMonthDefaultedToNextMonthWhenMissing() throws Exception {
-        // Given: effectiveMonth 누락
         String details = "{\"employeeId\":77,\"reason\":\"연봉 조정\",\"beforeSalary\":3000000,\"afterSalary\":3300000}";
-
-        PayrollRaiseDetailDTO dto = new PayrollRaiseDetailDTO();
-        dto.setEmployeeId(77);
-        dto.setReason("연봉 조정");
-        dto.setBeforeSalary(3000000);
-        dto.setAfterSalary(3300000);
-        dto.setEffectiveMonth(null); // intentionally null
-
-        when(objectMapper.readValue(details, PayrollRaiseDetailDTO.class)).thenReturn(dto);
 
         ApprovalCompletedEvent event = new ApprovalCompletedEvent(
                 4,
@@ -210,7 +175,7 @@ class PayrollApprovalEventListenerTest {
         ArgumentCaptor<String> monthCaptor = ArgumentCaptor.forClass(String.class);
 
         verify(raiseService, times(1)).applyApprovedRaise(
-                anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyString(), monthCaptor.capture()
+                anyInt(), anyInt(), anyInt(), anyInt(), anyInt(), anyString(),nullable(Double.class) ,monthCaptor.capture()
         );
 
         assertThat(monthCaptor.getValue()).matches("\\d{4}-\\d{2}");
