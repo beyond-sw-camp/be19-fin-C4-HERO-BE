@@ -1,0 +1,94 @@
+name: Deploy
+
+permissions:
+  contents: read
+  pull-requests: write
+
+on:
+  push:
+    branches:
+      - "main"
+
+jobs:
+  deploy-java-17:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'corretto'
+
+      - name: Grant execute permission for gradlew
+        working-directory: ./hero-be
+        run: chmod +x ./gradlew
+
+      - name: Install envsubst
+        run: sudo apt-get install -y gettext
+
+      - name: Substitute environment variables
+        working-directory: ./hero-be
+        env:
+          RDS_HOSTNAME: ${{ secrets.RDS_HOSTNAME }}
+          RDS_PORT: ${{ secrets.RDS_PORT }}
+          RDS_DB_NAME: ${{ secrets.RDS_DB_NAME }}
+          RDS_USERNAME: ${{ secrets.RDS_USERNAME }}
+          RDS_PASSWORD: ${{ secrets.RDS_PASSWORD }}
+          MAIL_ID: ${{ secrets.MAIL_ID }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          AES_SECRET: ${{ secrets.AES_SECRET }}
+          TOKEN_EXPIRATION_TIME: ${{ secrets.TOKEN_EXPIRATION_TIME }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          ACCESS_EXPIRATION_TIME: ${{ secrets.ACCESS_EXPIRATION_TIME }}
+          REFRESH_EXPIRATION_TIME: ${{ secrets.REFRESH_EXPIRATION_TIME }}
+          GOOGLE_CALENDAR_CREDENTIALS_PATH: ${{ secrets.GOOGLE_CALENDAR_CREDENTIALS_PATH }}
+          GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
+          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+        run: |
+          envsubst < src/main/resources/application-deploy.yml > /tmp/application-deploy.yml
+          mv /tmp/application-deploy.yml src/main/resources/application-deploy.yml
+          cat src/main/resources/application-deploy.yml
+
+      - name: Build with Gradle
+        working-directory: ./hero-be
+        run: ./gradlew clean build -x test
+
+      - name: Get current time
+        uses: 1466587594/get-current-time@v2
+        id: current-time
+        with:
+          format: YYYY-MM-DDTHH-mm-ss
+          utcOffset: "+09:00"
+
+      - name: Show Current Time
+        run: echo "CurrentTime=${{steps.current-time.outputs.formattedTime}}"
+
+      - name: Generate deployment package
+        run: |
+            mkdir -p deploy
+            cp hero-be/build/libs/*.jar deploy/application.jar
+            
+            cp Procfile deploy/
+            cp -r .ebextensions deploy/
+            cp -r .platform deploy/
+            
+            cd deploy && zip -r deploy.zip .
+
+      - name: Beanstalk Deploy
+        uses: einaregilsson/beanstalk-deploy@v22
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: hero-hrsystem
+          environment_name: hero-hrsystem-env
+          version_label: github-action-${{steps.current-time.outputs.formattedTime}}
+          region: ap-northeast-2
+          deployment_package: deploy/deploy.zip
+          use_existing_version_if_available: false
+          wait_for_deployment: true
+          wait_for_environment_recovery: 300

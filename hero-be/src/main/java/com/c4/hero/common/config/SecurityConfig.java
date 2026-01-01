@@ -4,6 +4,7 @@ import com.c4.hero.domain.auth.security.AuthenticationFilter;
 import com.c4.hero.domain.auth.security.JwtUtil;
 import com.c4.hero.domain.auth.security.JwtVerificationFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -23,6 +24,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * <pre>
@@ -155,7 +157,8 @@ public class SecurityConfig {
 
         // 허용할 Origin (프론트엔드 주소)
         configuration.setAllowedOrigins(Arrays.asList(
-                "http://localhost:5173"   // Vite 기본 포트
+                "https://hero-hr.site",
+                "http://localhost:8080" // 개발환경
         ));
 
         // 허용할 HTTP 메서드
