@@ -28,7 +28,7 @@ public class PayrollApprovalEventListener {
 
     private final PayrollAdjustmentCommandService adjustmentService;
     private final PayrollRaiseCommandService raiseService;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @EventListener
     @Transactional
