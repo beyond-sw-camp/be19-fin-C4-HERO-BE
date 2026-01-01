@@ -12,6 +12,7 @@ on:
     branches:
       - "deploy/aws-rds"  # 어떤 브랜치에서든 main 브랜치를 대상으로 PR을 올릴 때 실행
 
+
 jobs:
   deploy-java-17:
     runs-on: ubuntu-latest

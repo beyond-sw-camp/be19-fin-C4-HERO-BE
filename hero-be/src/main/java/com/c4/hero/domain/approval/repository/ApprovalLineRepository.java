@@ -1,5 +1,6 @@
 package com.c4.hero.domain.approval.repository;
 
+import com.c4.hero.domain.approval.entity.ApprovalDefaultLine;
 import com.c4.hero.domain.approval.entity.ApprovalLine;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -28,4 +29,6 @@ public interface ApprovalLineRepository extends JpaRepository<ApprovalLine, Inte
      * @return 결재선 목록
      */
     List<ApprovalLine> findByDocIdOrderBySeqAsc(Integer docId);
+
+    void deleteByDocId(Integer docId);
 }

@@ -14,6 +14,7 @@ import java.util.Optional;
  * History
  * 2025/12/09 승건 최초 작성
  * 2025/12/19 승건 상위 부서의 ID를 기준으로 조회하는 메소드 추가
+ * 2025/12/31 (민철) 부서목록 조회 쿼리 메서드
  * </pre>
  *
  * @author 이승건
@@ -36,4 +37,6 @@ public interface EmployeeDepartmentRepository extends JpaRepository<EmployeeDepa
      * @return 하위 부서 엔티티 목록
      */
     List<EmployeeDepartment> findByParentDepartmentId(Integer parentDepartmentId);
+
+    List<EmployeeDepartment> findByDepartmentIdGreaterThan(int id);
 }

@@ -27,4 +27,5 @@ public class ApprovalActionResponseDTO {
     private boolean success;
     private String message;
     private String docStatus;
+    private String docNo;
 }
