@@ -369,6 +369,4 @@ public class ApprovalQueryController {
                         .build()
         );
     }
-
-    
 }
