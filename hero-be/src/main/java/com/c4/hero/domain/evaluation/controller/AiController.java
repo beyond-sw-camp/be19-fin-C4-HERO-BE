@@ -7,6 +7,7 @@ import com.c4.hero.domain.evaluation.dto.ai.violation.GuideViolationRequestDTO;
 import com.c4.hero.domain.evaluation.dto.ai.violation.GuideViolationResponseDTO;
 import com.c4.hero.domain.evaluation.service.AiService;
 import com.c4.hero.domain.evaluation.service.EvaluationService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -45,6 +46,10 @@ public class AiController {
      * @param request MemberAnalysisRequestDTO
      * @return result MemberAnalysisResponseDTO
      */
+    @Operation(
+            summary = "사원 역량 분석",
+            description = "평가 데이터를 통해 사원의 역량을 분석한다."
+    )
     @PostMapping("/analysis/member")
     public ResponseEntity<MemberAnalysisResponseDTO> analyzeMember(
             @RequestBody MemberAnalysisRequestDTO request
@@ -56,11 +61,15 @@ public class AiController {
 
 
     /**
-     * 평가 가이드 분석
+     * 평가 가이드 위반 분석
      *
      * @param request MemberAnalysisRequestDTO
      * @return result MemberAnalysisResponseDTO
      */
+    @Operation(
+            summary = "평가 가이드 위반 분석",
+            description = "평가 데이터를 통해 평가 가이드 위반을 분석한다."
+    )
     @PostMapping("/violation")
     public ResponseEntity<List<GuideViolationResponseDTO>> analyzeViolation(
             @RequestBody GuideViolationRequestDTO request
@@ -80,6 +89,10 @@ public class AiController {
      * @param dashboardData List<Object>
      * @return result List<PromotionCandidateResponseDTO>
      */
+    @Operation(
+            summary = "승진 추천 대상자 분석",
+            description = "평가 데이터를 통해 승진 추천 대상자를 분석한다."
+    )
     @PostMapping("/promotion")
     public ResponseEntity<List<PromotionCandidateResponseDTO>> analyzePromotion(
             @RequestBody List<Object> dashboardData
