@@ -12,6 +12,8 @@ import com.c4.hero.domain.approval.entity.*;
 import com.c4.hero.domain.approval.event.ApprovalCompletedEvent;
 import com.c4.hero.domain.approval.event.ApprovalRejectedEvent;
 import com.c4.hero.domain.approval.repository.*;
+import com.c4.hero.domain.employee.repository.EmployeeRepository;
+import com.c4.hero.domain.notification.event.approval.ApprovalNotificationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -37,10 +39,11 @@ import java.util.Optional;
  *   2025/12/31 (민철) 임시저장 문서 수정 및 상신 메서드 추가
  *   2026/01/01 (민철) S3 파일 업로드 방식으로 변경
  *   2026/01/02 (민철) 결재선이 1단계(기안자)일 경우 상신-승인 동시 처리
+ *   2026/01/02 (혜원) 결재 알림 이벤트 발행 추가
  * </pre>
  *
  * @author 민철
- * @version 2.5
+ * @version 3.0
  */
 @Slf4j
 @Service
@@ -55,6 +58,7 @@ public class ApprovalCommandService {
     private final ApprovalTemplateRepository templateRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final S3Service s3Service;
+    private final EmployeeRepository employeeRepository;  // 추가
 
     /* ========================================== */
     /* 즐겨찾기 */
@@ -147,6 +151,16 @@ public class ApprovalCommandService {
 
                 // 승인 완료 이벤트 발행
                 publishApprovalCompletedEvent(savedDoc);
+            } else {
+                // 첫 번째 결재자에게 알림
+                ApprovalLine firstApprover = lines.stream()
+                        .filter(line -> line.getSeq() == 2)
+                        .findFirst()
+                        .orElse(null);
+
+                if (firstApprover != null) {
+                    publishApprovalRequestEvent(savedDoc, firstApprover);
+                }
             }
         }
 
@@ -455,6 +469,16 @@ public class ApprovalCommandService {
             publishApprovalCompletedEvent(document);
         } else {
             // 결재선이 2단계 이상인 경우 진행중 상태로 변경
+            // 추가: 첫 번째 결재자에게 알림
+            ApprovalLine firstApprover = lines.stream()
+                    .filter(line -> line.getSeq() == 2)
+                    .findFirst()
+                    .orElse(null);
+
+            if (firstApprover != null) {
+                publishApprovalRequestEvent(document, firstApprover);
+            }
+
             document.changeStatus("INPROGRESS");
             documentRepository.save(document);
             log.info("문서 상태 변경 완료 - docId: {}, status: INPROGRESS", docId);
@@ -547,6 +571,16 @@ public class ApprovalCommandService {
                         .build();
             } else {
                 // 아직 대기중인 결재자 있음
+                // 다음 결재자에게 알림
+                ApprovalLine nextApprover = allLines.stream()
+                        .filter(l -> "PENDING".equals(l.getLineStatus()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (nextApprover != null) {
+                    publishApprovalRequestEvent(document, nextApprover);
+                }
+
                 document.changeStatus("INPROGRESS");
 
                 return ApprovalActionResponseDTO.builder()
@@ -630,6 +664,10 @@ public class ApprovalCommandService {
         document.changeStatus("DRAFT");
         log.info("문서 회수 완료 - docId: {}, status: DRAFT", docId);
         documentRepository.save(document);
+
+        // 회수 완료 알림
+        publishApprovalRecalledEvent(document);
+
         return "성공하였습니다.";
     }
 
@@ -665,5 +703,61 @@ public class ApprovalCommandService {
         }
 
         return "삭제를 성공하였습니다.";
+    }
+
+    /* ========================================== */
+    /* 신규 추가: 알림 헬퍼 메서드 */
+    /* ========================================== */
+
+    /**
+     * 기안자 이름 조회
+     */
+    private String getDrafterName(Integer employeeId) {
+        return employeeRepository.findById(employeeId)
+                .map(emp -> emp.getEmployeeName())
+                .orElse("알 수 없음");
+    }
+
+    /**
+     * 결재 요청 이벤트 발행 (결재자에게 알림)
+     */
+    private void publishApprovalRequestEvent(ApprovalDocument document, ApprovalLine approver) {
+        ApprovalTemplate template = templateRepository.findByTemplateId(document.getTemplateId());
+
+        ApprovalNotificationEvent.ApprovalRequestEvent event =
+                ApprovalNotificationEvent.ApprovalRequestEvent.builder()
+                        .docId(document.getDocId())
+                        .templateKey(template.getTemplateKey())
+                        .title(document.getTitle())
+                        .drafterId(document.getDrafterId())
+                        .drafterName(getDrafterName(document.getDrafterId()))
+                        .approverId(approver.getApproverId())
+                        .seq(approver.getSeq())
+                        .requestedAt(LocalDateTime.now())
+                        .build();
+
+        log.info("[알림 발행] 결재 요청 - docId: {}, approverId: {}",
+                document.getDocId(), approver.getApproverId());
+
+        eventPublisher.publishEvent(event);
+    }
+
+    /**
+     * 회수 완료 이벤트 발행 (기안자에게 알림)
+     */
+    private void publishApprovalRecalledEvent(ApprovalDocument document) {
+        ApprovalTemplate template = templateRepository.findByTemplateId(document.getTemplateId());
+
+        ApprovalNotificationEvent.ApprovalRecalledEvent event =
+                ApprovalNotificationEvent.ApprovalRecalledEvent.builder()
+                        .docId(document.getDocId())
+                        .templateKey(template.getTemplateKey())
+                        .title(document.getTitle())
+                        .drafterId(document.getDrafterId())
+                        .recalledAt(LocalDateTime.now())
+                        .build();
+
+        log.info("[알림 발행] 회수 완료 - docId: {}", document.getDocId());
+        eventPublisher.publishEvent(event);
     }
 }
