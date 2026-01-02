@@ -255,6 +255,9 @@
 
         <!-- 기본 정렬: 최신순 (상신일시 내림차순) -->
         ORDER BY D.draft_date DESC
+
+        <!-- 페이징 처리 -->
+        LIMIT #{size} OFFSET #{offset}
     </select>
 
     <!-- 문서함 전체 개수 조회 (페이징용) -->

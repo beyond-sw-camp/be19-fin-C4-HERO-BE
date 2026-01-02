@@ -16,6 +16,7 @@ import com.c4.hero.domain.evaluation.dto.template.EvaluationTemplateResponseDTO;
 import com.c4.hero.domain.evaluation.dto.template.EvaluationTemplateUpdateDTO;
 import com.c4.hero.domain.evaluation.service.EvaluationService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -37,6 +38,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/evaluation")
 @RequiredArgsConstructor
+@Tag(name = "평가 API", description = "평가 관련 API")
 public class EvaluationController {
 
 
