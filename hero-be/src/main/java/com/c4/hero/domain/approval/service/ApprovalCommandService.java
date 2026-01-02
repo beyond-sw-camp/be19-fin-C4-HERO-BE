@@ -469,7 +469,7 @@ public class ApprovalCommandService {
             publishApprovalCompletedEvent(document);
         } else {
             // 결재선이 2단계 이상인 경우 진행중 상태로 변경
-            // 추가: 첫 번째 결재자에게 알림
+            // 첫 번째 결재자에게 알림
             ApprovalLine firstApprover = lines.stream()
                     .filter(line -> line.getSeq() == 2)
                     .findFirst()
@@ -535,6 +535,9 @@ public class ApprovalCommandService {
 
             publishApprovalRejectedEvent(document, request.getComment());
 
+            // 반려 알림 이벤트 추가
+            publishApprovalRejectedNotificationEvent(document, request.getComment(), employeeId);
+
             return ApprovalActionResponseDTO.builder()
                     .success(true)
                     .message("반려 처리 완료")
@@ -561,7 +564,9 @@ public class ApprovalCommandService {
                     log.info("최종 승인 완료 - 문서 번호 생성됨: {}", docNo);
                 }
 
-                publishApprovalCompletedEvent(document);
+                publishApprovalCompletedEvent(document); // 결재 완료 발행
+
+                publishApprovalCompletedNotificationEvent(document, employeeId);
 
                 return ApprovalActionResponseDTO.builder()
                         .success(true)
@@ -739,6 +744,49 @@ public class ApprovalCommandService {
         log.info("[알림 발행] 결재 요청 - docId: {}, approverId: {}",
                 document.getDocId(), approver.getApproverId());
 
+        eventPublisher.publishEvent(event);
+    }
+
+    /**
+     * 결재 반려 알림 이벤트 발행 (기안자에게 알림)
+     */
+    private void publishApprovalRejectedNotificationEvent(ApprovalDocument document, String comment, Integer rejecterId) {
+        ApprovalTemplate template = templateRepository.findByTemplateId(document.getTemplateId());
+
+        ApprovalNotificationEvent.ApprovalRejectedEvent event =
+                ApprovalNotificationEvent.ApprovalRejectedEvent.builder()
+                        .docId(document.getDocId())
+                        .templateKey(template.getTemplateKey())
+                        .title(document.getTitle())
+                        .drafterId(document.getDrafterId()) // 수신자: 기안자
+                        .rejecterId(rejecterId)
+                        .rejecterName(getDrafterName(rejecterId))
+                        .comment(comment)
+                        .rejectedAt(LocalDateTime.now())
+                        .build();
+
+        log.info("[알림 발행] 결재 반려 - docId: {}, drafterId: {}", document.getDocId(), document.getDrafterId());
+        eventPublisher.publishEvent(event);
+    }
+
+    /**
+     * 최종 승인 완료 알림 이벤트 발행 (기안자에게 알림)
+     */
+    private void publishApprovalCompletedNotificationEvent(ApprovalDocument document, Integer finalApproverId) {
+        ApprovalTemplate template = templateRepository.findByTemplateId(document.getTemplateId());
+
+        ApprovalNotificationEvent.ApprovalCompletedEvent event =
+                ApprovalNotificationEvent.ApprovalCompletedEvent.builder()
+                        .docId(document.getDocId())
+                        .templateKey(template.getTemplateKey())
+                        .title(document.getTitle())
+                        .drafterId(document.getDrafterId()) // 수신자: 기안자
+                        .approverId(finalApproverId)
+                        .approverName(getDrafterName(finalApproverId))
+                        .completedAt(LocalDateTime.now())
+                        .build();
+
+        log.info("[알림 발행] 결재 승인 완료 - docId: {}, drafterId: {}", document.getDocId(), document.getDrafterId());
         eventPublisher.publishEvent(event);
     }
 
