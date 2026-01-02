@@ -38,5 +38,6 @@ public class PayrollBatchStatusTxService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAYROLL_BATCH_NOT_FOUND));
 
         batch.markCalculated();
+        batchRepository.save(batch);
     }
 }

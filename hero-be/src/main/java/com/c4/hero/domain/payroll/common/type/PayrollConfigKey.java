@@ -28,6 +28,9 @@ public enum PayrollConfigKey {
     /** 반올림 단위 (1 / 10 / 100 / 1000 등) */
     ROUNDING_UNIT,
 
+    /** 기본금액 기준 타입 (예: BASE_SALARY / CONTRACT / FIXED 등) */
+    BASE_AMOUNT_TYPE,
+
     /** 휴일 처리 규칙 */
     HOLIDAY_RULE,
 

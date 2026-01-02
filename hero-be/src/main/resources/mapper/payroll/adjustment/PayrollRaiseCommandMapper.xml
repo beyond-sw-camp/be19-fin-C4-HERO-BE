@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+  <pre>
+  Mapper Name : PayrollRaiseCommandMapper
+  Description : 급여 인상 승인 시 사원 기준 급여(base salary)를 갱신하는 Command 전용 매퍼
+
+  History
+   2025/12/31 - 동근 최초 작성
+  </pre>
+-->
+<mapper namespace="com.c4.hero.domain.payroll.adjustment.mapper.PayrollRaiseCommandMapper">
+<!--   사원 기준 급여(base salary) 업데이트  -->
+    <update id="updateEmployeeBaseSalary" parameterType="map">
+        UPDATE tbl_employee
+        SET base_salary = #{baseSalary}
+        WHERE employee_id = #{employeeId}
+    </update>
+
+</mapper>

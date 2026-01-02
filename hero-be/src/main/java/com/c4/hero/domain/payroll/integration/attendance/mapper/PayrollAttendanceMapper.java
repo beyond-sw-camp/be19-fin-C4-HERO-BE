@@ -61,4 +61,16 @@ public interface PayrollAttendanceMapper {
     Integer sumWorkedMinutesInMonth(@Param("employeeId") Integer employeeId,
                                     @Param("start") String start,
                                     @Param("end") String end);
+
+
+    /**
+     * 특정 월의 근태 '근무일수'(work_date distinct) 조회 (표시/검증용)
+     * @param employeeId 사원 ID
+     * @param start 조회 시작일 (YYYY-MM-01)
+     * @param end 조회 종료일 (YYYY-MM-DD)
+     * @return 근무일수
+     */
+    int countWorkDaysInMonth(@Param("employeeId") Integer employeeId,
+                             @Param("start") String start,
+                             @Param("end") String end);
 }
