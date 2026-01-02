@@ -344,12 +344,15 @@ public class PromotionCommandService {
         // 결재선 설정
         List<ApprovalLineDTO> approvalLines = createApprovalLines(userDetails);
 
+        // 기본 결재선이 없는 경우 관리자에게 상신
+        if(approvalLines.size() == 1) {
+            approvalLines.add(ApprovalLineDTO.builder().seq(2).approverId(1).build());
+        }
+
         // 상세 정보(details) JSON 생성
         Map<String, Object> detailsMap = new HashMap<>();
-        detailsMap.put("promotionType", "REGULAR");
-        detailsMap.put("candidateId", candidate.getCandidateId());
         detailsMap.put("changeType", "승진");
-        detailsMap.put("employeeId", employee.getEmployeeId());
+        detailsMap.put("employeeNumber", employee.getEmployeeNumber());
         detailsMap.put("employeeName", employee.getEmployeeName());
         detailsMap.put("effectiveDate", plan.getAppointmentAt().toString());
         detailsMap.put("auditTrail", now.format(DateUtil.YYYY_MM_DD));
@@ -403,9 +406,8 @@ public class PromotionCommandService {
         List<ApprovalLineDTO> approvalLines = createApprovalLines(userDetails);
         // 상세 정보(details) JSON 생성
         Map<String, Object> detailsMap = new HashMap<>();
-        detailsMap.put("promotionType", "SPECIAL");
         detailsMap.put("changeType", "특별승진");
-        detailsMap.put("employeeId", employee.getEmployeeId());
+        detailsMap.put("employeeNumber", employee.getEmployeeNumber());
         detailsMap.put("employeeName", employee.getEmployeeName());
         detailsMap.put("effectiveDate", now.toLocalDate().toString()); // 발령일은 즉시
         detailsMap.put("auditTrail", now.format(DateUtil.YYYY_MM_DD));
@@ -510,12 +512,12 @@ public class PromotionCommandService {
     /**
      * 특별 승진을 최종 확정합니다.
      *
-     * @param employeeId 승진 대상 직원 ID
+     * @param employeeNumber 승진 대상 직원 사번
      * @param targetGradeId 목표 직급 ID
      * @param reason 승진 사유
      */
-    public void confirmDirectPromotion(Integer employeeId, Integer targetGradeId, String reason) {
-        Employee employee = employeeRepository.findById(employeeId)
+    public void confirmDirectPromotion(String employeeNumber, Integer targetGradeId, String reason) {
+        Employee employee = employeeRepository.findByEmployeeNumber(employeeNumber)
                 .orElseThrow(() -> new BusinessException(ErrorCode.EMPLOYEE_NOT_FOUND));
         Grade newGrade = gradeRepository.findById(targetGradeId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.GRADE_NOT_FOUND));

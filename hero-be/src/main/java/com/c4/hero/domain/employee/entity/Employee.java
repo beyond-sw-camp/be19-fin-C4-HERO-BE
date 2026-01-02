@@ -1,5 +1,6 @@
 package com.c4.hero.domain.employee.entity;
 
+import com.c4.hero.common.util.EncryptionUtil;
 import com.c4.hero.domain.employee.type.EmployeeStatus;
 import com.c4.hero.domain.employee.type.converter.EmployeeStatusConverter;
 import jakarta.persistence.Column;
@@ -189,7 +190,41 @@ public class Employee {
         this.jobTitle = newJobTitle;
     }
 
+    public void changeStatus(EmployeeStatus newStatus) {
+        this.status = newStatus;
+    }
 
+    public void updateTerminationDate(LocalDate terminationDate) {
+        this.terminationDate = terminationDate;
+    }
+
+    public void updateRetentionExpireAt(LocalDate retentionExpireAt) {
+        this.retentionExpireAt = retentionExpireAt;
+    }
+
+    /**
+     * 개인정보를 익명화(마스킹) 처리합니다.
+     * 통계에 필요한 정보(사번, 입사일, 퇴사일, 부서, 직급 등)는 유지하고,
+     * 개인 식별 정보(이름, 이메일, 전화번호 등)는 삭제하거나 마스킹합니다.
+     *
+     * @param encryptionUtil 암호화 유틸리티
+     */
+    public void anonymize(EncryptionUtil encryptionUtil) {
+        this.employeeName = "퇴사자";
+        
+        // UNIQUE 제약조건을 피하기 위해 employeeId를 포함한 더미 데이터 생성 후 암호화
+        String dummyEmail = "deleted_" + this.employeeId + "@example.com";
+        this.email = encryptionUtil.encrypt(dummyEmail);
+        
+        String dummyPhone = "000-0000-" + String.format("%04d", this.employeeId % 10000);
+        this.phone = encryptionUtil.encrypt(dummyPhone);
+        
+        this.birthDate = null;
+        this.gender = "U"; // Unknown
+        this.address = null;
+        this.imagePath = null;
+        this.sealImageUrl = null;
+    }
 
     @Builder
     public Employee(EmployeeDepartment employeeDepartment, String employeeNumber, String employeeName,

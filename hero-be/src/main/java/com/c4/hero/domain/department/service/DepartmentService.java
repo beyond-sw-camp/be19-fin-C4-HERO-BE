@@ -1,5 +1,6 @@
 package com.c4.hero.domain.department.service;
 
+import com.c4.hero.common.s3.S3Service;
 import com.c4.hero.common.util.EncryptionUtil;
 import com.c4.hero.domain.department.dto.DepartmentDTO;
 import com.c4.hero.domain.department.dto.EmployeeDepartmentHistoryDTO;
@@ -59,6 +60,7 @@ public class DepartmentService {
     private final EmployeeDepartmentHistoryRepository employeeDepartmentHistoryRepository;
     private final EmployeeGradeHistoryRepository employeeGradeHistoryRepository;
     private final EncryptionUtil encryptionUtil;
+    private final S3Service s3Service;
 
     /**
      * 전체 부서 목록을 조회하여 DepartmentDTO 리스트로 반환합니다.
@@ -143,6 +145,9 @@ public class DepartmentService {
                         log.warn("주소 복호화 실패 - employeeId: {}, error: {}", emp.getEmployeeId(), e.getMessage());
                     }
 
+                    // S3 URL 변환
+                    String imageUrl = s3Service.generatePresignedUrl(emp.getImagePath());
+
                     OrganizationEmployeeDetailDTO empDto = OrganizationEmployeeDetailDTO.builder()
                             .employeeId(emp.getEmployeeId())
                             .employeeName(emp.getEmployeeName())
@@ -151,7 +156,7 @@ public class DepartmentService {
                             .gradeName(emp.getGrade() != null ? emp.getGrade().getGrade() : null)
                             .jobTitleId(emp.getJobTitle() != null ? emp.getJobTitle().getJobTitleId() : null)
                             .jobTitleName(emp.getJobTitle() != null ? emp.getJobTitle().getJobTitle() : null)
-                            .imagePath(emp.getImagePath())
+                            .imagePath(imageUrl)
                             .email(decryptedEmail)
                             .birthDate(emp.getBirthDate())
                             .gender(emp.getGender())

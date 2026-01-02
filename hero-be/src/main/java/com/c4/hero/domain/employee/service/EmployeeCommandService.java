@@ -45,4 +45,20 @@ public interface EmployeeCommandService {
      * @param gradeName
      */
     void addGradeHistory(Employee employee, ChangeType changeType, String gradeName);
+
+    /**
+     * 직원의 부서를 변경하고 이력을 저장합니다.
+     *
+     * @param employeeNumber 사번
+     * @param departmentName 변경할 부서명
+     */
+    void updateDepartment(String employeeNumber, String departmentName);
+
+    /**
+     * 직원의 직책을 변경합니다.
+     *
+     * @param employeeNumber 사번
+     * @param jobTitleName 변경할 직책명
+     */
+    void updateJobTitle(String employeeNumber, String jobTitleName);
 }

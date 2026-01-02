@@ -269,5 +269,4 @@ public class PromotionController {
         promotionCommandService.promoteDirectly(userDetails, request);
         return ResponseEntity.ok(CustomResponse.success());
     }
-
 }

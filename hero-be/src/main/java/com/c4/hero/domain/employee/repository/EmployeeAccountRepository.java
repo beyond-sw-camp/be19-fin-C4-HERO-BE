@@ -1,6 +1,7 @@
 package com.c4.hero.domain.employee.repository;
 
 import com.c4.hero.domain.employee.entity.Account;
+import com.c4.hero.domain.employee.entity.Employee;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,9 +14,10 @@ import java.util.Optional;
  * Description: Account 엔티티에 대한 데이터 접근을 위한 Repository
  *
  * History
- * 2025-12-9 (이승건) 최초 작성
- * 2025-12-9 (이승건) findByAccount 메소드 추가
- * 2025-12-29 (승건) 사번으로 계정 조회 메소드 추가
+ * 2025/12/9 (승건) 최초 작성
+ * 2025/12/9 (승건) findByAccount 메소드 추가
+ * 2025/12/29 (승건) 사번으로 계정 조회 메소드 추가
+ * 2025/12/31 (승건) 직원 엔티티로 계정 조회 메소드 추가
  * </pre>
  *
  * @author 이승건
@@ -56,4 +58,12 @@ public interface EmployeeAccountRepository extends JpaRepository<Account, Intege
      * @return Optional<Account>
      */
     Optional<Account> findByEmployee_EmployeeNumber(String employeeNumber);
+
+    /**
+     * 직원 엔티티로 계정 조회
+     *
+     * @param employee 직원 엔티티
+     * @return Optional<Account>
+     */
+    Optional<Account> findByEmployee(Employee employee);
 }

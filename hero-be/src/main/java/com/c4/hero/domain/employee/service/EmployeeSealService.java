@@ -134,9 +134,9 @@ public class EmployeeSealService {
             throw new IllegalArgumentException("파일이 비어있습니다.");
         }
 
-        // 파일 크기 검증 (5MB)
-        if (file.getSize() > 5 * 1024 * 1024) {
-            throw new IllegalArgumentException("파일 크기는 5MB 이하여야 합니다.");
+        // 파일 크기 검증 (2MB)
+        if (file.getSize() > 2 * 1024 * 1024) {
+            throw new IllegalArgumentException("파일 크기는 2MB 이하여야 합니다.");
         }
 
         // 기존 이미지가 있으면 삭제

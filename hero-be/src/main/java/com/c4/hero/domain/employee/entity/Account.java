@@ -136,4 +136,18 @@ public class Account {
         this.passwordChangedAt = LocalDateTime.now();
         this.passwordChangeRequired = false;
     }
+
+    /**
+     * 계정을 비활성화(잠금)합니다.
+     */
+    public void disable() {
+        this.accountStatus = AccountStatus.DISABLED;
+    }
+
+    /**
+     * 계정의 모든 권한을 제거합니다.
+     */
+    public void clearRoles() {
+        this.accountRoles.clear();
+    }
 }

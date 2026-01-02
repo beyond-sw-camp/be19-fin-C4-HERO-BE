@@ -70,6 +70,7 @@
                 LEFT JOIN tbl_grade g ON e.grade_id = g.grade_id
                 LEFT JOIN tbl_job_title jt ON e.job_title_id = jt.job_title_id
                 <where>
+                    e.status != 'R'
                     <if test="params.query != null and params.query != ''">
                         e.employee_name LIKE CONCAT('%', #{params.query}, '%')
                         OR d.department_name LIKE CONCAT('%', #{params.query}, '%')
