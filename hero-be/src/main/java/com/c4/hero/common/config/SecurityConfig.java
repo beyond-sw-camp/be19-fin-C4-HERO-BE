@@ -157,7 +157,8 @@ public class SecurityConfig {
 
         // 허용할 Origin (프론트엔드 주소)
         configuration.setAllowedOrigins(Arrays.asList(
-                "hero-hr.site",
+                "https://hero-hr.site",
+                "https://www.hero-hr.site",
                 "http://localhost:8080" // 개발환경
         ));
 
