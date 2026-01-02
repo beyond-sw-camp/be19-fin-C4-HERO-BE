@@ -672,7 +672,7 @@ public class ApprovalCommandService {
         ApprovalCompletedEvent event = new ApprovalCompletedEvent(
                 document.getDocId(),
                 template.getTemplateKey(),
-  행              document.getDetails(),
+                document.getDetails(),
                 document.getDrafterId(),
                 document.getTitle()
         );
