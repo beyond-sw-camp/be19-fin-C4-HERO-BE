@@ -12,6 +12,7 @@
     2025/12/30 (이지윤) 지연 출근 수정 로직 관련 쿼리문 추가
     2025/12/30 (이지윤) 초과 근무 로직 추가
     2025/12/31 (이지윤) 근무제 변경 로직 추가
+    2026/01/02 (혜원) 근태 관련 알림 로직 추가
     ============================================================
 -->
 
@@ -423,6 +424,32 @@
                )
     </insert>
 
+    <!-- @author 혜원 -->
+    <!-- 출근 버튼 누르고 지각 시에 알림   -->
+    <select id="selectClockInMissingEmployees" resultType="map">
+        SELECT
+            e.employee_id AS employeeId,
+            a.attendance_id AS attendanceId
+        FROM tbl_employee e
+                 LEFT JOIN tbl_attendance a ON e.employee_id = a.employee_id
+            AND a.work_date = #{workDate}
+        WHERE e.status = 'A' -- 재직 중인 사원 중에서
+          AND (
+            a.attendance_id IS NULL -- 오늘 근태 기록 자체가 없거나
+                OR a.start_time IS NULL -- 기록은 있는데 출근 버튼을 안 눌렀을 때
+            )
+    </select>
 
-
+    <!-- 지각알림을 위한 나의 근무제 조회 (데이터 없을 경우 9시 기준) -->
+    <select id="selectCurrentWorkSystem" resultType="map">
+        SELECT
+            /* 템플릿이 없으면 기본 09:00:00으로 지각 판단을 진행함 */
+            COALESCE(wst.start_time, '09:00:00') AS scheduledStartTime,
+            a.attendance_id AS attendanceId
+        FROM tbl_attendance a
+                 LEFT JOIN tbl_work_system_template wst
+                           ON a.work_system_template_id = wst.work_system_template_id
+        WHERE a.employee_id = #{employeeId}
+          AND a.work_date = #{workDate}
+    </select>
 </mapper>
