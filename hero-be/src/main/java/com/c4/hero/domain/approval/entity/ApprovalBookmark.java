@@ -1,4 +1,8 @@
 package com.c4.hero.domain.approval.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+
 /**
  * <pre>
  * Class Name  : ApprovalBookmark
@@ -11,9 +15,6 @@ package com.c4.hero.domain.approval.entity;
  * @author 변민철
  * @version 1.0
  */
-import jakarta.persistence.*;
-import lombok.*;
-
 @Entity
 @Table(name = "tbl_approval_bookmark")
 @Getter

@@ -39,4 +39,12 @@ public interface EmployeeDepartmentRepository extends JpaRepository<EmployeeDepa
     List<EmployeeDepartment> findByParentDepartmentId(Integer parentDepartmentId);
 
     List<EmployeeDepartment> findByDepartmentIdGreaterThan(int id);
+
+    /**
+     * 특정 직원이 부서장으로 있는 부서 목록을 조회합니다.
+     *
+     * @param managerId 부서장 직원 ID
+     * @return 부서 목록
+     */
+    List<EmployeeDepartment> findByManagerId(Integer managerId);
 }

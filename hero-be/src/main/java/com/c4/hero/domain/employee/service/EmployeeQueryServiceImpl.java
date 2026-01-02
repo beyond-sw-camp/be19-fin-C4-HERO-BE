@@ -3,6 +3,7 @@ package com.c4.hero.domain.employee.service;
 import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
 import com.c4.hero.common.response.PageResponse;
+import com.c4.hero.common.s3.S3Service;
 import com.c4.hero.common.util.EncryptionUtil;
 import com.c4.hero.domain.employee.dto.request.EmployeeSearchDTO;
 import com.c4.hero.domain.employee.dto.response.EmployeeDetailResponseDTO;
@@ -42,6 +43,7 @@ public class EmployeeQueryServiceImpl implements EmployeeQueryService {
 
     private final EmployeeMapper employeeMapper;
     private final EncryptionUtil encryptionUtil;
+    private final S3Service s3Service;
 
     /*
     * @Transactional(readOnly = true)
@@ -141,11 +143,13 @@ public class EmployeeQueryServiceImpl implements EmployeeQueryService {
         // 근속 일수 계산
         long daysOfService = 0;
         if (employee.getHireDate() != null) {
-            // ChronoUnit.DAYS.between()을 사용하여 두 날짜 사이의 총 일수를 계산
-            // 당일 포함해서 첫날을 1로 계산
-            daysOfService = ChronoUnit.DAYS.between(employee.getHireDate(), LocalDate.now()) + 1;
+            LocalDate endDate = (employee.getTerminationDate() != null) ? employee.getTerminationDate() : LocalDate.now();
+            daysOfService = ChronoUnit.DAYS.between(employee.getHireDate(), endDate) + 1;
         }
 
+        // S3 URL 변환
+        String imageUrl = s3Service.generatePresignedUrl(employee.getImagePath());
+        String sealUrl = s3Service.generatePresignedUrl(employee.getSealImageUrl());
 
         return EmployeeDetailResponseDTO.builder()
                 .employeeId(employee.getEmployeeId())
@@ -153,8 +157,8 @@ public class EmployeeQueryServiceImpl implements EmployeeQueryService {
                 .employeeName(employee.getEmployeeName())
                 .gender(employee.getGender())
                 .evaluationPoint(employee.getEvaluationPoint())
-                .imagePath(employee.getImagePath())
-                .sealImageUrl(employee.getSealImageUrl())
+                .imagePath(imageUrl)
+                .sealImageUrl(sealUrl)
                 .birthDate(employee.getBirthDate())
                 .contractType(employee.getContractType())
                 .jobTitleName(employee.getJobTitle() != null ? employee.getJobTitle().getJobTitle() : null)
@@ -186,18 +190,21 @@ public class EmployeeQueryServiceImpl implements EmployeeQueryService {
         // 근속 일수 계산
         long daysOfService = 0;
         if (employee.getHireDate() != null) {
-            // ChronoUnit.DAYS.between()을 사용하여 두 날짜 사이의 총 일수를 계산
-            // 당일 포함해서 첫날을 1로 계산
-            daysOfService = ChronoUnit.DAYS.between(employee.getHireDate(), LocalDate.now()) + 1;
+            LocalDate endDate = (employee.getTerminationDate() != null) ? employee.getTerminationDate() : LocalDate.now();
+            daysOfService = ChronoUnit.DAYS.between(employee.getHireDate(), endDate) + 1;
         }
+
+        // S3 URL 변환
+        String imageUrl = s3Service.generatePresignedUrl(employee.getImagePath());
+        String sealUrl = s3Service.generatePresignedUrl(employee.getSealImageUrl());
 
         return MyInfoResponseDTO.builder()
                 .employeeId(employee.getEmployeeId())
                 .employeeNumber(employee.getEmployeeNumber())
                 .employeeName(employee.getEmployeeName())
-                .imagePath(employee.getImagePath())
+                .imagePath(imageUrl)
                 .gender(employee.getGender())
-                .sealImageUrl(employee.getSealImageUrl())
+                .sealImageUrl(sealUrl)
                 .birthDate(employee.getBirthDate())
                 .contractType(employee.getContractType())
                 .jobTitleName(employee.getJobTitle() != null ? employee.getJobTitle().getJobTitle() : null)

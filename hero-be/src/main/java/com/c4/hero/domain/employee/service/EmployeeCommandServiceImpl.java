@@ -2,8 +2,8 @@ package com.c4.hero.domain.employee.service;
 
 import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
+import com.c4.hero.common.s3.S3Service;
 import com.c4.hero.common.util.EncryptionUtil;
-import com.c4.hero.common.util.FileUtil;
 import com.c4.hero.domain.employee.dto.request.SignupRequestDTO;
 import com.c4.hero.domain.employee.entity.*;
 import com.c4.hero.domain.employee.entity.EmployeeDepartment;
@@ -33,7 +33,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.util.Arrays;
@@ -60,6 +59,8 @@ import java.util.stream.IntStream;
 @Slf4j
 public class EmployeeCommandServiceImpl implements EmployeeCommandService {
 
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
     private final EmployeeRepository employeeRepository;
     private final EmployeeDepartmentRepository departmentRepository;
     private final EmployeeGradeRepository gradeRepository;
@@ -71,6 +72,7 @@ public class EmployeeCommandServiceImpl implements EmployeeCommandService {
     private final EmployeeGradeHistoryRepository employeeGradeHistoryRepository;
     private final PasswordEncoder passwordEncoder;
     private final JavaMailSender mailSender;
+    private final S3Service s3Service;
 
     private final EncryptionUtil encryptionUtil;
 
@@ -106,14 +108,15 @@ public class EmployeeCommandServiceImpl implements EmployeeCommandService {
             }
         });
 
-        // 2. 이미지 파일 처리
+        // 2. 이미지 파일 처리 (S3 업로드)
         String imagePath = null;
-        if (request.getImageFile() != null && !request.getImageFile().isEmpty()) {
-            try {
-                imagePath = FileUtil.uploadFile(request.getImageFile(), "employee");
-            } catch (IOException e) {
-                throw new BusinessException(ErrorCode.FILE_UPLOAD_FAILED);
+        MultipartFile imageFile = request.getImageFile();
+        if (imageFile != null && !imageFile.isEmpty()) {
+            // 파일 크기 검증
+            if (imageFile.getSize() > MAX_FILE_SIZE) {
+                throw new BusinessException(ErrorCode.FILE_SIZE_EXCEEDED);
             }
+            imagePath = s3Service.uploadFile(imageFile, "employee");
         }
 
         // 3. DTO -> Employee 엔티티 변환
@@ -211,6 +214,36 @@ public class EmployeeCommandServiceImpl implements EmployeeCommandService {
 
         employeeGradeHistoryRepository.save(newHistory);
     }
+
+    @Override
+    public void updateDepartment(String employeeNumber, String departmentName) {
+        Employee employee = employeeRepository.findByEmployeeNumber(employeeNumber)
+                .orElseThrow(() -> new BusinessException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        EmployeeDepartment newDepartment = departmentRepository.findByDepartmentName(departmentName)
+                .orElseThrow(() -> new BusinessException(ErrorCode.DEPARTMENT_NOT_FOUND));
+
+        // 부서 변경
+        employee.changeDepartment(newDepartment);
+
+        // 이력 저장
+        addDepartmentHistory(employee, ChangeType.TRANSFER, departmentName);
+    }
+
+    @Override
+    public void updateJobTitle(String employeeNumber, String jobTitleName) {
+        Employee employee = employeeRepository.findByEmployeeNumber(employeeNumber)
+                .orElseThrow(() -> new BusinessException(ErrorCode.EMPLOYEE_NOT_FOUND));
+
+        JobTitle newJobTitle = jobTitleRepository.findByJobTitle(jobTitleName)
+                .orElseThrow(() -> new BusinessException(ErrorCode.JOB_TITLE_NOT_FOUND));
+
+        // 직책 변경
+        employee.changeJobTitle(newJobTitle);
+        
+        // 직책 변경 이력은 현재 별도 테이블이 없으므로 생략하거나 필요 시 추가
+    }
+
     /* =================== private =================== */
 
     /**

@@ -6,6 +6,7 @@ import com.c4.hero.domain.promotion.entity.PromotionDetail;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Collection;
+import java.util.Optional;
 
 /**
  * <pre>
@@ -30,4 +31,13 @@ public interface PromotionCandidateRepository extends JpaRepository<PromotionCan
      * @return 조건에 맞는 후보자 수
      */
     long countByPromotionDetailAndStatusIn(PromotionDetail promotionDetail, Collection<PromotionCandidateStatus> statuses);
+
+    /**
+     * 사번과 상태로 승진 후보자를 조회합니다.
+     *
+     * @param employeeNumber 사번
+     * @param status         상태
+     * @return 승진 후보자 (Optional)
+     */
+    Optional<PromotionCandidate> findByEmployee_EmployeeNumberAndStatus(String employeeNumber, PromotionCandidateStatus status);
 }

@@ -18,6 +18,7 @@ import com.c4.hero.domain.evaluation.dto.guide.EvaluationGuideResponseDTO;
 import com.c4.hero.domain.evaluation.dto.guide.EvaluationGuideUpdateDTO;
 import com.c4.hero.domain.evaluation.dto.item.*;
 import com.c4.hero.domain.evaluation.dto.period.EvaluationPeriodRequestDTO;
+import com.c4.hero.domain.evaluation.dto.response.EmployeeEvaluationListResponseDTO;
 import com.c4.hero.domain.evaluation.dto.score.ItemScoreRequestDTO;
 import com.c4.hero.domain.evaluation.dto.score.ItemScoreUpdateDTO;
 import com.c4.hero.domain.evaluation.dto.template.EvaluationTemplateRequestDTO;
@@ -1082,5 +1083,15 @@ public class EvaluationService {
         List<DashBoardResponseDTO> result = dashBoardMapper.selectDashBoard(id);
 
         return result;
+    }
+
+    /**
+     * 특정 직원의 평가 결과 목록을 조회합니다.
+     *
+     * @param employeeId 직원 ID
+     * @return 평가 결과 목록
+     */
+    public List<EmployeeEvaluationListResponseDTO> getEmployeeEvaluationList(Integer employeeId) {
+        return evaluationMapper.findEvaluationFormsByEmployeeId(employeeId);
     }
 }
