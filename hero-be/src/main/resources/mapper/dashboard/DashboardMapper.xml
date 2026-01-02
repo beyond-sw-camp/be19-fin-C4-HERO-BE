@@ -169,7 +169,7 @@
           AND att.work_date BETWEEN #{startDate} AND #{endDate}
     </select>
 
-    <!-- 8) 휴가 현황 조회 (이번 달) -->
+    <!-- 8) 휴가 현황 조회 (이번 년도) -->
     <select id="selectVacationStats" resultType="com.c4.hero.domain.dashboard.dto.VacationStatsDTO" parameterType="map">
         SELECT
             SUM(
@@ -205,14 +205,14 @@
         FROM tbl_vacation_log vlog
                  LEFT JOIN tbl_vacation_type vt ON vlog.vacation_type_id = vt.vacation_type_id
         WHERE vlog.employee_id = #{employeeId}
-          AND vlog.status = 'APPROVED'
-          AND vlog.start_date BETWEEN #{startDate} AND #{endDate}
+                  AND vlog.status = 'APPROVED'
+                  AND YEAR(vlog.start_date) = YEAR(CURDATE())
     </select>
 
     <!-- 9) 결재 현황 조회 -->
     <select id="selectApprovalStats" resultType="com.c4.hero.domain.dashboard.dto.ApprovalStatsDTO" parameterType="map">
         SELECT
-            SUM(CASE WHEN doc.doc_status IN ('INPROGRESSED', 'PENDING') THEN 1 ELSE 0 END) AS pendingCount,
+            SUM(CASE WHEN doc.doc_status IN ('INPROGRESS', 'PENDING') THEN 1 ELSE 0 END) AS pendingCount,
             SUM(CASE WHEN doc.doc_status = 'APPROVED' THEN 1 ELSE 0 END) AS approvedCount,
             SUM(CASE WHEN doc.doc_status = 'REJECTED' THEN 1 ELSE 0 END) AS rejectedCount
         FROM tbl_approval_document doc
