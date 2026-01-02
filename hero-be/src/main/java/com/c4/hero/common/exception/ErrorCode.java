@@ -23,6 +23,7 @@ import org.springframework.http.HttpStatus;
  * 2025-12-22 (승건) 승진 관련 에러 코드 추가
  * 2025-12-26 (혜원) 출퇴근 타각 관련 에러 코드 추가
  * 2025-12-29 (승건) 파일 업로드 실패 추가
+ * 2025-12-31 (승건) 파일 크기 초과 추가
  * </pre>
  *
  * @author 혜원
@@ -83,6 +84,12 @@ public enum ErrorCode {
      */
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "C010", "파일 업로드에 실패했습니다."),
 
+    /**
+     * 파일 크기 초과
+     */
+    FILE_SIZE_EXCEEDED(HttpStatus.PAYLOAD_TOO_LARGE, "C011", "파일 크기가 5MB를 초과할 수 없습니다."),
+
+
     // ===== 사원(Employee) 관련 에러 =====
     /**
      * 부서를 찾을 수 없음
@@ -128,6 +135,11 @@ public enum ErrorCode {
      * 부서장은 해당 부서 소속이어야 함
      */
     MANAGER_NOT_IN_DEPARTMENT(HttpStatus.BAD_REQUEST, "E009", "부서장은 해당 부서의 소속이어야 합니다."),
+
+    /**
+     * 이미 퇴사 처리된 직원
+     */
+    ALREADY_RETIRED(HttpStatus.CONFLICT, "E010", "이미 퇴사 처리된 직원입니다."),
 
 
     // ===== 메일 관련 에러 =====

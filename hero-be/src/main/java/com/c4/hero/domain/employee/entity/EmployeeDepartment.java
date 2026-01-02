@@ -62,4 +62,11 @@ public class EmployeeDepartment {
      */
     @Column(name = "manager_id")
     private Integer managerId;
+
+    /**
+     * 부서장을 해제합니다. (NULL로 설정)
+     */
+    public void removeManager() {
+        this.managerId = null;
+    }
 }

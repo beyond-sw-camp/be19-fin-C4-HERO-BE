@@ -262,6 +262,10 @@ public class ApprovalQueryController {
         return ResponseEntity.ok().body(employees);
     }
 
+    /* ========================================================================= */
+    /* 문서 작성 화면 렌더링용 데이터 조회 API */
+    /* ========================================================================= */
+
     /**
      * 휴가 종류 목록 조회
      *
@@ -270,6 +274,10 @@ public class ApprovalQueryController {
      *
      * @return List<VacationTypeResponseDTO> 휴가 종류 목록
      */
+    @Operation(
+            summary = "휴가 종류 목록 조회",
+            description = "휴가신청서 작성 시 선택 가능한 모든 휴가 종류 목록을 조회함. 연차, 반차, 병가, 공가, 경조사 등의 휴가 유형을 반환함"
+    )
     @GetMapping("/vacation-types")
     public ResponseEntity<List<VacationTypeResponseDTO>> getVacationTypes() {
 
@@ -291,6 +299,10 @@ public class ApprovalQueryController {
      *
      * @return List<WorkSystemTypeResponseDTO> 근무제 템플릿 목록
      */
+    @Operation(
+            summary = "근무제 템플릿 목록 조회",
+            description = "근무변경신청서 작성 시 선택 가능한 모든 근무제 템플릿 목록을 조회함. 표준 근무제, 탄력 근무제, 선택적 근무제 등을 반환함"
+    )
     @GetMapping("/work-system-types")
     public ResponseEntity<List<WorkSystemTypeResponseDTO>> getWorkSystemTypes() {
         List<WorkSystemType> typeEntity = approvalWorkSystemTypeRepository.findAll();
@@ -311,6 +323,10 @@ public class ApprovalQueryController {
      *
      * @return List<ResignTypeResponseDTO> 퇴직 사유 목록
      */
+    @Operation(
+            summary = "퇴직 사유 목록 조회",
+            description = "사직서 작성 시 선택 가능한 모든 퇴직 사유 목록을 조회함. 개인 사정, 이직, 건강, 가족 사정, 기타 등의 사유를 반환함"
+    )
     @GetMapping("/resign-types")
     public ResponseEntity<List<ResignTypeResponseDTO>> getResignTypes() {
         List<ApprovalResignType> typeEntities = approvalResignTypeRepository.findAll();
@@ -332,6 +348,10 @@ public class ApprovalQueryController {
      * @param userDetails 인증된 사용자 정보 (Spring Security)
      * @return BeforePayrollResponseDTO 현재 기본급 정보
      */
+    @Operation(
+            summary = "현재 로그인 사용자의 기본급 조회",
+            description = "급여인상신청서 작성 시 표시할 현재 기본급을 조회함. 인증된 사용자의 직원 정보에서 기본급(baseSalary)을 반환함"
+    )
     @GetMapping("/payroll")
     public ResponseEntity<BeforePayrollResponseDTO> getPayroll(
             @AuthenticationPrincipal CustomUserDetails userDetails
@@ -344,13 +364,19 @@ public class ApprovalQueryController {
 
         return ResponseEntity.ok().body(response);
     }
-    
+
     /**
      * 부서/직급/직책 목록 조회
      *
-     * @param  
-     * @return  
+     * 인사발령신청서 작성 시 드롭다운에 표시할 부서, 직급, 직책 목록을 반환합니다.
+     * 모든 부서, 직급, 직책 정보를 한 번에 조회하여 반환합니다.
+     *
+     * @return PersonnelTypesResponseDTO 부서/직급/직책 목록
      */
+    @Operation(
+            summary = "부서/직급/직책 목록 조회",
+            description = "인사발령신청서 작성 시 선택 가능한 모든 부서, 직급, 직책 목록을 조회함. 세 가지 정보를 한 번에 반환하여 드롭다운 렌더링에 사용함"
+    )
     @GetMapping("/personnel-types")
     public ResponseEntity<PersonnelTypesResponseDTO> getTypesList() {
 
@@ -363,6 +389,6 @@ public class ApprovalQueryController {
                         .grades(grades)
                         .jobTitles(jobTitles)
                         .build()
-        );
+                );
     }
 }

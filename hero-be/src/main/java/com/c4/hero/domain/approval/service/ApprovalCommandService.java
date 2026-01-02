@@ -28,7 +28,16 @@ import java.util.Optional;
 /**
  * <pre>
  * Class Name  : ApprovalCommandService
- * Description : 전자결재 커맨드 관련 서비스 로직 (삽입/수정/삭제)
+ * Description : 전자결재 커맨드 관련 서비스 로직 (CUD: 삽입/수정/삭제)
+ *               CQRS 패턴 적용 - 조회는 ApprovalQueryService에서 처리
+ *
+ * 주요 기능
+ *   - 즐겨찾기 토글
+ *   - 문서 생성 (임시저장/상신)
+ *   - 임시저장 문서 수정/상신
+ *   - 결재 처리 (승인/반려)
+ *   - 문서 회수/삭제
+ *   - 도메인 이벤트 발행 (승인 완료/반려)
  *
  * History
  *   2025/12/25 (민철) CQRS 패턴 적용 및 작성화면 조회 메서드 로직 추가
@@ -37,10 +46,12 @@ import java.util.Optional;
  *   2025/12/31 (민철) 임시저장 문서 수정 및 상신 메서드 추가
  *   2026/01/01 (민철) S3 파일 업로드 방식으로 변경
  *   2026/01/02 (민철) 결재선이 1단계(기안자)일 경우 상신-승인 동시 처리
+ *   2026/01/02 (민철) 문서번호 생성 동시성 처리 (비관적 락 적용)
+ *   2026/01/02 (민철) 메서드 주석 개선
  * </pre>
  *
  * @author 민철
- * @version 2.5
+ * @version 2.6
  */
 @Slf4j
 @Service
@@ -53,19 +64,19 @@ public class ApprovalCommandService {
     private final ApprovalReferenceRepository referenceRepository;
     private final ApprovalBookmarkRepository bookmarkRepository;
     private final ApprovalTemplateRepository templateRepository;
+    private final ApprovalSequenceRepository sequenceRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final S3Service s3Service;
 
-    /* ========================================== */
-    /* 즐겨찾기 */
-    /* ========================================== */
 
     /**
      * 즐겨찾기 토글 (있으면 삭제, 없으면 추가)
-     *
+     * <pre>
+     * 사용자가 자주 사용하는 서식을 즐겨찾기로 등록/해제
+     * </pre>
      * @param empId      사원 ID
      * @param templateId 문서 템플릿 ID
-     * @return 즐겨찾기 상태
+     * @return 즐겨찾기 상태 (true: 등록됨, false: 해제됨)
      */
     @Transactional
     public boolean toggleBookmark(Integer empId, Integer templateId) {
@@ -85,17 +96,23 @@ public class ApprovalCommandService {
         }
     }
 
-    /* ========================================== */
-    /* 문서 생성 (임시저장/상신) */
-    /* ========================================== */
 
     /**
      * 문서 생성 (임시저장 or 상신)
-     *
+     * <pre>
+     * 처리 흐름:
+     * 1. 문서 본문 저장
+     * 2. 결재선 저장 (seq=1 기안자는 APPROVED, 나머지는 PENDING)
+     * 3. 참조자 저장
+     * 4. 첨부파일 S3 업로드 및 DB 저장
+     * 5. 상신(INPROGRESS)인 경우 결재선 확인
+     *    5-1. 결재선이 기안자(seq=1)만 있으면 자동 승인 처리
+     *    5-2. 문서 번호 생성 및 승인 완료 이벤트 발행
+     * </pre>
      * @param employeeId 기안자 ID
      * @param dto        문서 생성 요청 DTO
      * @param files      첨부 파일 목록
-     * @param status     문서 상태 (DRAFT / INPROGRESS)
+     * @param status     문서 상태 (DRAFT: 임시저장 / INPROGRESS: 상신)
      * @return 생성된 문서 ID
      */
     @Transactional
@@ -154,27 +171,59 @@ public class ApprovalCommandService {
         return savedDoc.getDocId();
     }
 
+
     /**
      * 문서 번호 생성 (Format: HERO-yyyy-00001)
-     * 동시성 제어를 위해 synchronized 사용
+     * <pre>
+     * 동시성 제어:
+     * - DB의 비관적 락(Pessimistic Lock)을 사용하여 동시 접근 제어
+     * - SELECT ... FOR UPDATE 쿼리로 다른 트랜잭션의 접근 차단
+     * - 트랜잭션 커밋 시점에 락이 해제됨
+     *
+     * 처리 흐름:
+     * 1. 채번 키 생성 (예: HERO-2026)
+     * 2. 비관적 락으로 시퀀스 조회 (없으면 새로 생성)
+     * 3. 번호 증가 (메모리 상 변경)
+     * 4. 변경 사항 저장 (트랜잭션 커밋 시 DB 반영 및 락 해제)
+     * 5. 포맷팅하여 반환 (HERO-2026-00001)
+     *
+     * 주의사항:
+     * - 이 메서드는 반드시 @Transactional 안에서 호출되어야 락이 유지됨
+     * - 트랜잭션 외부에서 호출 시 락이 즉시 해제되어 동시성 문제 발생 가능
+     * </pre>
+     * @return 생성된 문서 번호 (예: HERO-2026-00001)
      */
-    private synchronized String generateDocNo() {
+    private String generateDocNo() {
+        // 1. 채번 키 생성 (예: HERO-2026)
         String currentYear = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy"));
-        String prefix = "HERO-" + currentYear + "-";
+        String seqType = "HERO-" + currentYear;
 
-        String lastDocNo = documentRepository.findLastDocNoLike(prefix + "%");
+        // 2. 비관적 락을 걸고 시퀀스 조회 (없으면 새로 생성)
+        // findBySeqTypeWithLock 호출 시점부터 SELECT ... FOR UPDATE 쿼리가 실행되어 다른 접근을 막음
+        ApprovalSequence sequence = sequenceRepository.findBySeqTypeWithLock(seqType)
+                .orElseGet(() -> ApprovalSequence.builder()
+                        .seqType(seqType)
+                        .currentVal(0L) // 없으면 0부터 시작
+                        .build());
 
-        int nextSeq = 1;
-        if (lastDocNo != null) {
-            String seqStr = lastDocNo.substring(lastDocNo.lastIndexOf("-") + 1);
-            nextSeq = Integer.parseInt(seqStr) + 1;
-        }
+        // 3. 번호 증가 (메모리 상 변경)
+        sequence.increment();
 
-        return prefix + String.format("%05d", nextSeq);
+        // 4. 변경 사항 저장
+        // (트랜잭션 커밋 시점에 DB에 반영되고 락이 풀림)
+        sequenceRepository.save(sequence);
+
+        // 5. 포맷팅하여 반환 (HERO-2026-00001)
+        return seqType + "-" + String.format("%05d", sequence.getCurrentVal());
     }
 
     /**
      * ApprovalDocument Entity 생성
+     *
+     * @param employeeId 기안자 ID
+     * @param dto        문서 요청 DTO
+     * @param status     문서 상태
+     * @return 생성된 문서 엔티티
      */
     private ApprovalDocument createApprovalDocument(
             Integer employeeId,
@@ -192,15 +241,16 @@ public class ApprovalCommandService {
                 .build();
     }
 
-    /* ========================================== */
-    /* 결재선 저장 */
-    /* ========================================== */
 
     /**
      * 결재선 저장 (기안자 자동 승인)
+     * <pre>
+     * 저장 로직:
      * - seq=1 (기안자): APPROVED 상태로 저장, processDate 자동 설정
      * - seq>1 (결재자들): PENDING 상태로 저장
      *
+     * 이유: 기안자는 문서를 작성하는 순간 승인한 것으로 간주
+     * </pre>
      * @param docId 문서 ID
      * @param lines 결재선 DTO 목록
      */
@@ -226,13 +276,12 @@ public class ApprovalCommandService {
         }
     }
 
-    /* ========================================== */
-    /* 참조자 저장 */
-    /* ========================================== */
 
     /**
      * 참조자 저장
-     *
+     * <pre>
+     * 결재 프로세스에는 참여하지 않지만 문서 완료 시 알림을 받을 직원 목록 저장
+     * </pre>
      * @param docId      문서 ID
      * @param references 참조자 DTO 목록
      */
@@ -248,15 +297,19 @@ public class ApprovalCommandService {
         }
     }
 
-    /* ========================================== */
-    /* 첨부파일 저장 (S3) */
-    /* ========================================== */
+
 
     /**
      * 첨부파일을 S3에 업로드하고 DB에 저장
-     *
+     *  <pre>
+     * 처리 흐름:
+     * 1. S3에 파일 업로드 (S3Service 호출)
+     * 2. 반환된 S3 Key를 DB에 저장
+     * 3. 원본 파일명, 파일 크기 등 메타데이터도 함께 저장
+     * </pre>
      * @param files    업로드할 파일 목록
      * @param document 문서 엔티티
+     * @throws RuntimeException 파일 업로드 실패 시
      */
     private void saveFilesToS3(List<MultipartFile> files, ApprovalDocument document) {
         for (MultipartFile file : files) {
@@ -283,18 +336,28 @@ public class ApprovalCommandService {
         }
     }
 
-    /* ========================================== */
-    /* 임시저장 문서 수정 */
-    /* ========================================== */
 
     /**
      * 임시저장 문서 수정
+     * <pre>
+     * 검증:
+     * - 문서 상태가 DRAFT인지 확인
+     * - 작성자 본인인지 확인
      *
+     * 처리 흐름:
+     * 1. 문서 본문 업데이트
+     * 2. 기존 결재선 삭제 후 재생성
+     * 3. 기존 참조자 삭제 후 재생성
+     * 4. 기존 첨부파일 삭제 (S3 및 DB)
+     * 5. 새 파일 업로드 (S3)
+     * </pre>
      * @param employeeId 사원 ID
      * @param docId      문서 ID
      * @param dto        수정할 내용
      * @param files      새 첨부파일 목록
      * @return 수정된 문서 ID
+     * @throws BusinessException 문서를 찾을 수 없는 경우
+     * @throws IllegalArgumentException 임시저장 상태가 아니거나 작성자가 아닌 경우
      */
     @Transactional
     public Integer updateDraftDocument(
@@ -351,7 +414,14 @@ public class ApprovalCommandService {
 
     /**
      * 문서의 모든 첨부파일 삭제 (S3 및 DB)
+     * <pre>
+     * 처리 흐름:
+     * 1. DB에서 첨부파일 목록 조회
+     * 2. 각 파일에 대해 S3에서 삭제
+     * 3. DB에서 첨부파일 레코드 삭제
      *
+     * 주의: S3 삭제 실패 시에도 DB 삭제는 진행
+     * </pre>
      * @param docId 문서 ID
      */
     private void deleteAttachments(Integer docId) {
@@ -379,14 +449,31 @@ public class ApprovalCommandService {
 
     /**
      * 임시저장 문서를 상신 처리
-     * - DRAFT → INPROGRESS 상태 변경
-     * - 결재선이 1단계(기안)만 있으면 자동 승인 처리
+     * <pre>
+     * 검증:
+     * - 문서 상태가 DRAFT인지 확인
+     * - 작성자 본인인지 확인
      *
+     * 처리 흐름:
+     * 1. 문서 본문 업데이트
+     * 2. 기존 결재선 삭제 후 재생성
+     * 3. 기존 참조자 삭제 후 재생성
+     * 4. 기존 첨부파일 삭제 후 새 파일 업로드
+     * 5. 결재선 확인
+     *    - 결재선이 1단계(기안)만 있으면 자동 승인 처리
+     *    - 2단계 이상이면 INPROGRESS 상태로 변경
+     *
+     * 자동 승인 조건:
+     * - 모든 결재선의 seq가 1인 경우 (기안자만 있는 경우)
+     * - 문서 번호 생성 및 승인 완료 이벤트 발행
+     * </pre>
      * @param employeeId 사원 ID
      * @param docId      문서 ID
      * @param dto        수정할 내용
      * @param files      새 첨부파일 목록
      * @return 상신된 문서 ID
+     * @throws BusinessException 문서를 찾을 수 없는 경우
+     * @throws IllegalArgumentException 임시저장 상태가 아니거나 작성자가 아닌 경우
      */
     @Transactional
     public Integer submitDraftDocument(
@@ -464,16 +551,31 @@ public class ApprovalCommandService {
         return docId;
     }
 
-    /* ========================================== */
-    /* 결재 처리 */
-    /* ========================================== */
 
     /**
      * 결재 처리 (승인/반려)
+     * <pre>
+     * 검증:
+     * - 유효한 액션인지 확인 (APPROVE / REJECT)
+     * - 결재자 본인인지 확인
+     * - 결재선 상태가 PENDING인지 확인
+     * - 문서 상태가 INPROGRESS인지 확인
      *
-     * @param request    결재 처리 요청
+     * 승인 처리 흐름:
+     * 1. 결재선 상태를 APPROVED로 변경
+     * 2. 모든 결재선이 승인되었는지 확인
+     *    - 모두 승인: 문서를 APPROVED로 변경, 승인 완료 이벤트 발행
+     *    - 대기중 있음: 문서를 INPROGRESS 유지
+     *
+     * 반려 처리 흐름:
+     * 1. 결재선 상태를 REJECTED로 변경, 반려 사유 저장
+     * 2. 문서를 REJECTED로 변경
+     * 3. 반려 이벤트 발행
+     * </pre>
+     * @param request    결재 처리 요청 (docId, lineId, action, comment)
      * @param employeeId 결재자 ID
-     * @return 처리 결과
+     * @return 처리 결과 (성공 여부, 메시지, 문서 상태, 문서 번호)
+     * @throws IllegalArgumentException 유효성 검증 실패 시
      */
     @Transactional
     public ApprovalActionResponseDTO processApproval(
@@ -560,6 +662,10 @@ public class ApprovalCommandService {
 
     /**
      * 결재 완료 이벤트 발행
+     * <pre>
+     * 다른 도메인(휴가, 근태 등)에서 이 이벤트를 수신하여 후속 처리 진행
+     * </pre>
+     * @param document 승인 완료된 문서
      */
     private void publishApprovalCompletedEvent(ApprovalDocument document) {
         ApprovalTemplate template = templateRepository.findByTemplateId(document.getTemplateId());
@@ -579,6 +685,11 @@ public class ApprovalCommandService {
 
     /**
      * 결재 반려 이벤트 발행
+     * <pre>
+     * 알림 발송 등의 후속 처리를 위한 이벤트 발행
+     * </pre>
+     * @param document 반려된 문서
+     * @param comment  반려 사유
      */
     private void publishApprovalRejectedEvent(ApprovalDocument document, String comment) {
         ApprovalTemplate template = templateRepository.findByTemplateId(document.getTemplateId());
@@ -596,6 +707,16 @@ public class ApprovalCommandService {
         eventPublisher.publishEvent(event);
     }
 
+    /**
+     * 결재 액션 유효성 검증
+     * <pre>
+     * 검증 항목:
+     * - 액션이 APPROVE 또는 REJECT인지 확인
+     * - REJECT인 경우 반려 사유가 있는지 확인
+     * </pre>
+     * @param request 결재 처리 요청
+     * @throws IllegalArgumentException 유효성 검증 실패 시
+     */
     private void validateApprovalAction(ApprovalActionRequestDTO request) {
         if (!"APPROVE".equals(request.getAction()) && !"REJECT".equals(request.getAction())) {
             throw new IllegalArgumentException("유효하지 않은 결재 액션");
@@ -607,16 +728,19 @@ public class ApprovalCommandService {
         }
     }
 
-    /* ========================================== */
-    /* 문서 회수 */
-    /* ========================================== */
 
     /**
      * 결재 대기 중인 문서 회수
-     * - INPROGRESS 문서를 DRAFT로 변경
+     * <pre>
+     * 용도: 상신한 문서를 다시 임시저장 상태로 되돌림
+     * 조건: INPROGRESS 문서만 회수 가능
      *
-     * @param docId 문서ID
-     * @return message 회수 성공 메시지
+     * 처리: INPROGRESS → DRAFT 상태 변경
+     * </pre>
+     * @param docId 문서 ID
+     * @return 성공 메시지/실패 메시지
+     * @throws BusinessException 문서를 찾을 수 없는 경우
+     * @throws IllegalArgumentException 진행 중인 문서가 아닌 경우
      */
     @Transactional
     public String cancelDocument(Integer docId) {
@@ -630,16 +754,23 @@ public class ApprovalCommandService {
         document.changeStatus("DRAFT");
         log.info("문서 회수 완료 - docId: {}, status: DRAFT", docId);
         documentRepository.save(document);
-        return "성공하였습니다.";
+        return "회수가 완료되었습니다.";
     }
 
     /**
      * 임시저장 문서 삭제
-     * - 첨부파일 S3에서 삭제
-     * - DB에서 문서 및 관련 데이터 삭제
+     * <pre>
+     * 처리 흐름:
+     * 1. 첨부파일 삭제 (S3 및 DB)
+     * 2. 결재선 삭제
+     * 3. 참조자 삭제
+     * 4. 문서 삭제
      *
+     * 주의: 연관된 모든 데이터를 완전히 삭제하며 복구 불가능
+     * </pre>
      * @param docId 문서 ID
-     * @return 삭제 성공 메시지
+     * @return 성공 메시지/실패 메시지
+     * @throws BusinessException 삭제 실패 시
      */
     @Transactional
     public String deleteDocument(Integer docId) {

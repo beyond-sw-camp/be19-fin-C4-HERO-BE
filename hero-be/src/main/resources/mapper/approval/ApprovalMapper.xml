@@ -24,6 +24,17 @@
     </resultMap>
 
     <select id="selectDefaultLines" resultMap="approvalDefaultLineResultMap">
+        -- 기안자 정보 조회 (WITH 절로 미리 가져오기)
+        WITH drafter_info AS (
+            SELECT
+                e.employee_id,
+                e.department_id,
+                d.manager_id,
+                d.parent_department_id
+            FROM tbl_employee e
+                     INNER JOIN tbl_department d ON d.department_id = e.department_id
+            WHERE e.employee_id = #{employeeId}
+        )
         SELECT
             M.employee_id      AS approver_id,
             M.employee_name    AS approver_name,
@@ -33,38 +44,40 @@
             J.job_title        AS job_title_name,
             L.seq              AS seq
         FROM tbl_approval_default_line L
+                 CROSS JOIN drafter_info DI  -- 기안자 정보를 모든 행에서 참조
 
-                 -- 타겟 부서 결정
+        -- 타겟 부서 결정
                  INNER JOIN tbl_department D ON D.department_id = (
             CASE
                 -- 특정 부서 지정
                 WHEN L.department_id > 0 THEN L.department_id
 
-                -- seq=2 (1차 결재): 기안자의 직속부서
+                -- seq=2 (1차 결재): 기안자의 직속부서 또는 상위 부서
                 WHEN L.seq = 2 THEN (
-                    SELECT department_id
-                    FROM tbl_employee
-                    WHERE employee_id = #{employeeId}
-                )
+                    CASE
+                        -- 기안자가 부서장인 경우 → 상위 부서
+                        WHEN DI.employee_id = DI.manager_id THEN DI.parent_department_id
+                        -- 기안자가 일반 직원인 경우 → 현재 부서
+                        ELSE DI.department_id
+                        END
+                    )
 
                 -- seq=3 (2차 결재): 1차 결재자의 상위 부서
                 WHEN L.seq = 3 THEN (
                     SELECT PD.department_id
-                    FROM tbl_employee Me
-                             INNER JOIN tbl_department CD ON CD.department_id = Me.department_id
+                    FROM tbl_department CD
                              INNER JOIN tbl_department PD ON PD.department_id = CD.parent_department_id
-                    WHERE Me.employee_id = #{employeeId}
+                    WHERE CD.department_id = DI.department_id
                 )
 
-                -- seq=4 (3차 결재): 2차 결재자의 상위 부서
-                WHEN L.seq = 4 THEN (
-                    SELECT PPD.department_id
-                    FROM tbl_employee Me
-                             INNER JOIN tbl_department CD ON CD.department_id = Me.department_id
-                             INNER JOIN tbl_department PD ON PD.department_id = CD.parent_department_id
-                             INNER JOIN tbl_department PPD ON PPD.department_id = PD.parent_department_id
-                    WHERE Me.employee_id = #{employeeId}
-                )
+                --                 -- seq=4 (3차 결재): 2차 결재자의 상위 부서
+--                 WHEN L.seq = 4 THEN (
+--                     SELECT PPD.department_id
+--                     FROM tbl_department CD
+--                              INNER JOIN tbl_department PD ON PD.department_id = CD.parent_department_id
+--                              INNER JOIN tbl_department PPD ON PPD.department_id = PD.parent_department_id
+--                     WHERE CD.department_id = DI.department_id
+--                 )
 
                 ELSE NULL
                 END
@@ -79,6 +92,8 @@
 
         WHERE L.template_id = #{templateId}
           AND L.seq > 1
+          -- 기안자와 동일한 결재자 제외 (기안자가 부서장인 경우 자기 자신 제외)
+          AND M.employee_id != #{employeeId}
         ORDER BY L.seq ASC
     </select>
 

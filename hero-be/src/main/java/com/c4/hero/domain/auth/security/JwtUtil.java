@@ -1,5 +1,6 @@
 package com.c4.hero.domain.auth.security;
 
+import com.c4.hero.common.s3.S3Service;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -47,6 +48,7 @@ public class JwtUtil {
     private final Key key;
     private final long accessTokenExpirationTime;
     private final long refreshTokenExpirationTime;
+    private final S3Service s3Service;
 
     public static final String AUTHORIZATION_HEADER = "Authorization";
     public static final String REFRESH_TOKEN_COOKIE_NAME = "refresh_token";
@@ -54,11 +56,13 @@ public class JwtUtil {
 
     public JwtUtil(@Value("${token.secret}") String secretKey,
                    @Value("${token.access-expiration-time}") long accessTokenExpirationTime,
-                   @Value("${token.refresh-expiration-time}") long refreshTokenExpirationTime) {
+                   @Value("${token.refresh-expiration-time}") long refreshTokenExpirationTime,
+                   S3Service s3Service) {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         this.key = Keys.hmacShaKeyFor(keyBytes);
         this.accessTokenExpirationTime = accessTokenExpirationTime;
         this.refreshTokenExpirationTime = refreshTokenExpirationTime;
+        this.s3Service = s3Service;
     }
 
     /**
@@ -88,7 +92,7 @@ public class JwtUtil {
         claims.put("jobTitleId", userDetails.getJobTitleId());
         claims.put("jobTitleName", userDetails.getJobTitleName());
         claims.put("passwordChangeRequired", userDetails.isPasswordChangeRequired());
-        claims.put("imagePath", userDetails.getImagePath());
+        claims.put("imagePath", s3Service.generatePresignedUrl(userDetails.getImagePath()));
 
         return Jwts.builder()
                 .setClaims(claims)

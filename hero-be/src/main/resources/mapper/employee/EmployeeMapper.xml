@@ -80,7 +80,26 @@
 
     <sql id="searchConditions">
         <where>
-            e.status = 'A'
+            <choose>
+                <when test="resigningExpected == 3">
+                    e.status = 'R' <!-- 퇴사자만 조회 -->
+                </when>
+                <otherwise>
+                    e.status = 'A' <!-- 기본적으로 재직자 조회 -->
+                    <choose>
+                        <when test="resigningExpected == 1">
+                            <!-- 미포함: 퇴사 예정이 아닌 직원만 -->
+                            AND e.termination_date IS NULL
+                        </when>
+                        <when test="resigningExpected == 2">
+                            <!-- 퇴사 예정자만 -->
+                            AND e.termination_date IS NOT NULL
+                        </when>
+                        <!-- 그 외(0 또는 null): 모든 재직자(퇴사 예정자 포함) -->
+                    </choose>
+                </otherwise>
+            </choose>
+
             <if test="departmentName != null and departmentName != ''">
                 AND d.department_name LIKE CONCAT('%', #{departmentName}, '%')
             </if>
@@ -93,17 +112,6 @@
             <if test="employeeName != null and employeeName != ''">
                 AND e.employee_name LIKE CONCAT('%', #{employeeName}, '%')
             </if>
-            <choose>
-                <when test="resigningExpected == 1">
-                    <!-- 미포함: 퇴사 예정이 아닌 직원만 -->
-                    AND e.termination_date IS NULL
-                </when>
-                <when test="resigningExpected == 2">
-                    <!-- 퇴사 예정자만 -->
-                    AND e.termination_date IS NOT NULL
-                </when>
-                <!-- 그 외(0 또는 null): 모든 재직자(퇴사 예정자 포함) -->
-            </choose>
         </where>
     </sql>
 
@@ -164,15 +172,24 @@
     </select>
 
     <select id="findAllDepartmentNames" resultType="string">
-        SELECT DISTINCT department_name FROM tbl_department ORDER BY department_name
+        SELECT DISTINCT department_name 
+        FROM tbl_department 
+        WHERE department_id != 0
+        ORDER BY department_name
     </select>
 
     <select id="findAllGradeNames" resultType="string">
-        SELECT DISTINCT grade FROM tbl_grade ORDER BY grade_id
+        SELECT DISTINCT grade 
+        FROM tbl_grade 
+        WHERE grade_id != 0
+        ORDER BY grade_id
     </select>
 
     <select id="findAllJobTitleNames" resultType="string">
-        SELECT DISTINCT job_title FROM tbl_job_title ORDER BY job_title_id
+        SELECT DISTINCT job_title 
+        FROM tbl_job_title 
+        WHERE job_title_id != 0
+        ORDER BY job_title_id
     </select>
 
     <!--

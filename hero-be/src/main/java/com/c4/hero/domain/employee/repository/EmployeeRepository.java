@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,6 +21,7 @@ import java.util.Optional;
  * 2025/12/19 (승건) 승진 후보자 조회 추가
  * 2025/12/22 (혜원) 알림 관련 필요한 엔티티 조회 기능 추가
  * 2025/12/28 (승건) 사번으로 직원 조회 기능 추가
+ * 2025/12/31 (승건) 퇴사자 처리를 위한 조건 검색 기능 추가
  * </pre>
  *
  * @author 이승건
@@ -132,4 +134,21 @@ public interface EmployeeRepository extends JpaRepository<Employee, Integer> {
             @Param("candidateGradeId") Integer candidateGradeId,
             @Param("requiredPoint") Integer requiredPoint
     );
+
+    /**
+     * 퇴사일이 특정 날짜 이전(포함)이고, 상태가 특정 상태가 아닌 직원을 조회합니다.
+     *
+     * @param date 기준 날짜 (이 날짜 포함 이전)
+     * @param status 제외할 상태 (이미 퇴직 처리된 직원 제외용)
+     * @return 직원 목록
+     */
+    List<Employee> findAllByTerminationDateBeforeAndStatusNot(LocalDate date, EmployeeStatus status);
+
+    /**
+     * 개인정보 보관 만료일이 특정 날짜 이전(포함)인 직원을 조회합니다.
+     *
+     * @param date 기준 날짜
+     * @return 직원 목록
+     */
+    List<Employee> findAllByRetentionExpireAtBefore(LocalDate date);
 }
