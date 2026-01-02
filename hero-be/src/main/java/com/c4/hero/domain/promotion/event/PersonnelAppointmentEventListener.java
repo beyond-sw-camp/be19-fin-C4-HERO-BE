@@ -110,7 +110,7 @@ public class PersonnelAppointmentEventListener {
             if ("특별승진".equals(promotionType)) {
                 // 특별 승진 반려 - 별도 처리 필요 없음 (DB에 남는 데이터가 없으므로)
                 log.info("ℹ️ 특별 승진 결재 반려됨 - 별도 처리 없음");
-            } else if ("정기승진".equals(promotionType)) {
+            } else if ("승진".equals(promotionType)) {
                 // 정기 승진 반려 - 후보자 상태 변경 필요
                 String employeeNumber = (String) details.get("employeeNumber");
                 if (employeeNumber != null) {

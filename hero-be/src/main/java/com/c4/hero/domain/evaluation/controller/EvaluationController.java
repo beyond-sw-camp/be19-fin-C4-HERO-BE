@@ -1,5 +1,6 @@
 package com.c4.hero.domain.evaluation.controller;
 
+import com.c4.hero.common.response.CustomResponse;
 import com.c4.hero.common.response.PageResponse;
 import com.c4.hero.domain.evaluation.dto.dashboard.DashBoardResponseDTO;
 import com.c4.hero.domain.evaluation.dto.employee.EmployeeResponseDTO;
@@ -11,6 +12,7 @@ import com.c4.hero.domain.evaluation.dto.form.EvaluationFormUpdateDTO;
 import com.c4.hero.domain.evaluation.dto.guide.EvaluationGuideRequestDTO;
 import com.c4.hero.domain.evaluation.dto.guide.EvaluationGuideResponseDTO;
 import com.c4.hero.domain.evaluation.dto.guide.EvaluationGuideUpdateDTO;
+import com.c4.hero.domain.evaluation.dto.response.EmployeeEvaluationListResponseDTO;
 import com.c4.hero.domain.evaluation.dto.template.EvaluationTemplateRequestDTO;
 import com.c4.hero.domain.evaluation.dto.template.EvaluationTemplateResponseDTO;
 import com.c4.hero.domain.evaluation.dto.template.EvaluationTemplateUpdateDTO;
@@ -38,7 +40,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/evaluation")
 @RequiredArgsConstructor
-@Tag(name = "평가 API", description = "평가 관련 API")
 public class EvaluationController {
 
 
@@ -505,5 +506,21 @@ public class EvaluationController {
         List<DashBoardResponseDTO> result = evaluationService.selectDashBoard(id);
 
         return ResponseEntity.ok(result);
+    }
+
+    /**
+     * 특정 직원의 평가 결과 목록 조회
+     *
+     * @param employeeId 직원 ID
+     * @return 평가 결과 목록
+     */
+    @Operation(
+            summary = "직원별 평가 결과 목록 조회",
+            description = "특정 직원의 평가 결과 목록(evaluationId, 평가명, 등급, 생성일)을 조회한다."
+    )
+    @GetMapping("/evaluation-form/list/{employeeId}")
+    public ResponseEntity<CustomResponse<List<EmployeeEvaluationListResponseDTO>>> getEmployeeEvaluationList(@PathVariable Integer employeeId) {
+        List<EmployeeEvaluationListResponseDTO> result = evaluationService.getEmployeeEvaluationList(employeeId);
+        return ResponseEntity.ok(CustomResponse.success(result));
     }
 }

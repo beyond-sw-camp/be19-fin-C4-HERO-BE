@@ -344,6 +344,11 @@ public class PromotionCommandService {
         // 결재선 설정
         List<ApprovalLineDTO> approvalLines = createApprovalLines(userDetails);
 
+        // 기본 결재선이 없는 경우 관리자에게 상신
+        if(approvalLines.size() == 1) {
+            approvalLines.add(ApprovalLineDTO.builder().seq(2).approverId(1).build());
+        }
+
         // 상세 정보(details) JSON 생성
         Map<String, Object> detailsMap = new HashMap<>();
         detailsMap.put("changeType", "승진");

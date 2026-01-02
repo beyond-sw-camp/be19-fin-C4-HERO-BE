@@ -40,7 +40,7 @@ public class PersonnelAppointmentScheduler {
      * 매일 자정(00:00:00)에 실행되어 발령일이 오늘이거나 과거인 처리 대기 중인 인사 발령을 처리합니다.
      */
     @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
-//    @Scheduled(fixedRate = 120000)  // 2분마다 실행
+//    @Scheduled(fixedRate = 10000)  // 주기적 실행
     @Transactional
     public void processAppointments() {
         LocalDate today = LocalDate.now();

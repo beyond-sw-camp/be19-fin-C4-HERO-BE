@@ -87,7 +87,7 @@ public class PersonnelAppointmentService {
                 log.info("   - 특별 승진: {} -> {}", gradeBeforeName, gradeAfterName);
             }
 
-        } else if ("정기승진".equals(promotionType)) {
+        } else if ("승진".equals(promotionType)) {
             Integer candidateId = promotionCandidateRepository.findByEmployee_EmployeeNumberAndStatus(employeeNumber, PromotionCandidateStatus.REVIEW_PASSED)
                     .map(PromotionCandidate::getCandidateId)
                     .orElseThrow(() -> new BusinessException(ErrorCode.PROMOTION_CANDIDATE_NOT_FOUND));
