@@ -12,6 +12,8 @@ import com.c4.hero.domain.approval.entity.*;
 import com.c4.hero.domain.approval.event.ApprovalCompletedEvent;
 import com.c4.hero.domain.approval.event.ApprovalRejectedEvent;
 import com.c4.hero.domain.approval.repository.*;
+import com.c4.hero.domain.employee.repository.EmployeeRepository;
+import com.c4.hero.domain.notification.event.approval.ApprovalNotificationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -46,12 +48,14 @@ import java.util.Optional;
  *   2025/12/31 (민철) 임시저장 문서 수정 및 상신 메서드 추가
  *   2026/01/01 (민철) S3 파일 업로드 방식으로 변경
  *   2026/01/02 (민철) 결재선이 1단계(기안자)일 경우 상신-승인 동시 처리
+
  *   2026/01/02 (민철) 문서번호 생성 동시성 처리 (비관적 락 적용)
  *   2026/01/02 (민철) 메서드 주석 개선
+ *   2026/01/02 (혜원) 결재 알림 이벤트 발행 추가
  * </pre>
  *
  * @author 민철
- * @version 2.6
+ * @version 3.0
  */
 @Slf4j
 @Service
@@ -67,6 +71,7 @@ public class ApprovalCommandService {
     private final ApprovalSequenceRepository sequenceRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final S3Service s3Service;
+    private final EmployeeRepository employeeRepository;  // 추가
 
 
     /**
@@ -74,6 +79,7 @@ public class ApprovalCommandService {
      * <pre>
      * 사용자가 자주 사용하는 서식을 즐겨찾기로 등록/해제
      * </pre>
+     *
      * @param empId      사원 ID
      * @param templateId 문서 템플릿 ID
      * @return 즐겨찾기 상태 (true: 등록됨, false: 해제됨)
@@ -109,6 +115,7 @@ public class ApprovalCommandService {
      *    5-1. 결재선이 기안자(seq=1)만 있으면 자동 승인 처리
      *    5-2. 문서 번호 생성 및 승인 완료 이벤트 발행
      * </pre>
+     *
      * @param employeeId 기안자 ID
      * @param dto        문서 생성 요청 DTO
      * @param files      첨부 파일 목록
@@ -164,6 +171,16 @@ public class ApprovalCommandService {
 
                 // 승인 완료 이벤트 발행
                 publishApprovalCompletedEvent(savedDoc);
+            } else {
+                // 첫 번째 결재자에게 알림
+                ApprovalLine firstApprover = lines.stream()
+                        .filter(line -> line.getSeq() == 2)
+                        .findFirst()
+                        .orElse(null);
+
+                if (firstApprover != null) {
+                    publishApprovalRequestEvent(savedDoc, firstApprover);
+                }
             }
         }
 
@@ -191,6 +208,7 @@ public class ApprovalCommandService {
      * - 이 메서드는 반드시 @Transactional 안에서 호출되어야 락이 유지됨
      * - 트랜잭션 외부에서 호출 시 락이 즉시 해제되어 동시성 문제 발생 가능
      * </pre>
+     *
      * @return 생성된 문서 번호 (예: HERO-2026-00001)
      */
     private String generateDocNo() {
@@ -251,6 +269,7 @@ public class ApprovalCommandService {
      *
      * 이유: 기안자는 문서를 작성하는 순간 승인한 것으로 간주
      * </pre>
+     *
      * @param docId 문서 ID
      * @param lines 결재선 DTO 목록
      */
@@ -282,6 +301,7 @@ public class ApprovalCommandService {
      * <pre>
      * 결재 프로세스에는 참여하지 않지만 문서 완료 시 알림을 받을 직원 목록 저장
      * </pre>
+     *
      * @param docId      문서 ID
      * @param references 참조자 DTO 목록
      */
@@ -298,15 +318,15 @@ public class ApprovalCommandService {
     }
 
 
-
     /**
      * 첨부파일을 S3에 업로드하고 DB에 저장
-     *  <pre>
+     * <pre>
      * 처리 흐름:
      * 1. S3에 파일 업로드 (S3Service 호출)
      * 2. 반환된 S3 Key를 DB에 저장
      * 3. 원본 파일명, 파일 크기 등 메타데이터도 함께 저장
      * </pre>
+     *
      * @param files    업로드할 파일 목록
      * @param document 문서 엔티티
      * @throws RuntimeException 파일 업로드 실패 시
@@ -351,12 +371,13 @@ public class ApprovalCommandService {
      * 4. 기존 첨부파일 삭제 (S3 및 DB)
      * 5. 새 파일 업로드 (S3)
      * </pre>
+     *
      * @param employeeId 사원 ID
      * @param docId      문서 ID
      * @param dto        수정할 내용
      * @param files      새 첨부파일 목록
      * @return 수정된 문서 ID
-     * @throws BusinessException 문서를 찾을 수 없는 경우
+     * @throws BusinessException        문서를 찾을 수 없는 경우
      * @throws IllegalArgumentException 임시저장 상태가 아니거나 작성자가 아닌 경우
      */
     @Transactional
@@ -422,6 +443,7 @@ public class ApprovalCommandService {
      *
      * 주의: S3 삭제 실패 시에도 DB 삭제는 진행
      * </pre>
+     *
      * @param docId 문서 ID
      */
     private void deleteAttachments(Integer docId) {
@@ -467,12 +489,13 @@ public class ApprovalCommandService {
      * - 모든 결재선의 seq가 1인 경우 (기안자만 있는 경우)
      * - 문서 번호 생성 및 승인 완료 이벤트 발행
      * </pre>
+     *
      * @param employeeId 사원 ID
      * @param docId      문서 ID
      * @param dto        수정할 내용
      * @param files      새 첨부파일 목록
      * @return 상신된 문서 ID
-     * @throws BusinessException 문서를 찾을 수 없는 경우
+     * @throws BusinessException        문서를 찾을 수 없는 경우
      * @throws IllegalArgumentException 임시저장 상태가 아니거나 작성자가 아닌 경우
      */
     @Transactional
@@ -542,6 +565,16 @@ public class ApprovalCommandService {
             publishApprovalCompletedEvent(document);
         } else {
             // 결재선이 2단계 이상인 경우 진행중 상태로 변경
+            // 첫 번째 결재자에게 알림
+            ApprovalLine firstApprover = lines.stream()
+                    .filter(line -> line.getSeq() == 2)
+                    .findFirst()
+                    .orElse(null);
+
+            if (firstApprover != null) {
+                publishApprovalRequestEvent(document, firstApprover);
+            }
+
             document.changeStatus("INPROGRESS");
             documentRepository.save(document);
             log.info("문서 상태 변경 완료 - docId: {}, status: INPROGRESS", docId);
@@ -572,6 +605,7 @@ public class ApprovalCommandService {
      * 2. 문서를 REJECTED로 변경
      * 3. 반려 이벤트 발행
      * </pre>
+     *
      * @param request    결재 처리 요청 (docId, lineId, action, comment)
      * @param employeeId 결재자 ID
      * @return 처리 결과 (성공 여부, 메시지, 문서 상태, 문서 번호)
@@ -613,6 +647,9 @@ public class ApprovalCommandService {
 
             publishApprovalRejectedEvent(document, request.getComment());
 
+            // 반려 알림 이벤트 추가
+            publishApprovalRejectedNotificationEvent(document, request.getComment(), employeeId);
+
             return ApprovalActionResponseDTO.builder()
                     .success(true)
                     .message("반려 처리 완료")
@@ -639,7 +676,9 @@ public class ApprovalCommandService {
                     log.info("최종 승인 완료 - 문서 번호 생성됨: {}", docNo);
                 }
 
-                publishApprovalCompletedEvent(document);
+                publishApprovalCompletedEvent(document); // 결재 완료 발행
+
+                publishApprovalCompletedNotificationEvent(document, employeeId);
 
                 return ApprovalActionResponseDTO.builder()
                         .success(true)
@@ -649,6 +688,16 @@ public class ApprovalCommandService {
                         .build();
             } else {
                 // 아직 대기중인 결재자 있음
+                // 다음 결재자에게 알림
+                ApprovalLine nextApprover = allLines.stream()
+                        .filter(l -> "PENDING".equals(l.getLineStatus()))
+                        .findFirst()
+                        .orElse(null);
+
+                if (nextApprover != null) {
+                    publishApprovalRequestEvent(document, nextApprover);
+                }
+
                 document.changeStatus("INPROGRESS");
 
                 return ApprovalActionResponseDTO.builder()
@@ -665,6 +714,7 @@ public class ApprovalCommandService {
      * <pre>
      * 다른 도메인(휴가, 근태 등)에서 이 이벤트를 수신하여 후속 처리 진행
      * </pre>
+     *
      * @param document 승인 완료된 문서
      */
     private void publishApprovalCompletedEvent(ApprovalDocument document) {
@@ -688,6 +738,7 @@ public class ApprovalCommandService {
      * <pre>
      * 알림 발송 등의 후속 처리를 위한 이벤트 발행
      * </pre>
+     *
      * @param document 반려된 문서
      * @param comment  반려 사유
      */
@@ -714,6 +765,7 @@ public class ApprovalCommandService {
      * - 액션이 APPROVE 또는 REJECT인지 확인
      * - REJECT인 경우 반려 사유가 있는지 확인
      * </pre>
+     *
      * @param request 결재 처리 요청
      * @throws IllegalArgumentException 유효성 검증 실패 시
      */
@@ -737,9 +789,10 @@ public class ApprovalCommandService {
      *
      * 처리: INPROGRESS → DRAFT 상태 변경
      * </pre>
+     *
      * @param docId 문서 ID
      * @return 성공 메시지/실패 메시지
-     * @throws BusinessException 문서를 찾을 수 없는 경우
+     * @throws BusinessException        문서를 찾을 수 없는 경우
      * @throws IllegalArgumentException 진행 중인 문서가 아닌 경우
      */
     @Transactional
@@ -754,7 +807,12 @@ public class ApprovalCommandService {
         document.changeStatus("DRAFT");
         log.info("문서 회수 완료 - docId: {}, status: DRAFT", docId);
         documentRepository.save(document);
+
+        // 회수 완료 알림
+        publishApprovalRecalledEvent(document);
+
         return "회수가 완료되었습니다.";
+
     }
 
     /**
@@ -768,6 +826,7 @@ public class ApprovalCommandService {
      *
      * 주의: 연관된 모든 데이터를 완전히 삭제하며 복구 불가능
      * </pre>
+     *
      * @param docId 문서 ID
      * @return 성공 메시지/실패 메시지
      * @throws BusinessException 삭제 실패 시
@@ -796,5 +855,188 @@ public class ApprovalCommandService {
         }
 
         return "삭제를 성공하였습니다.";
+    }
+    /* ========================================== */
+    /* 신규 추가: 알림 헬퍼 메서드 */
+    /* ========================================== */
+
+    /**
+     * 기안자 이름 조회
+     * <pre>
+     * 알림 메시지에 포함될 기안자 이름을 조회
+     * 조회 실패 시 "알 수 없음" 반환
+     * </pre>
+     *
+     * @param employeeId 사원 ID
+     * @return 사원 이름 (조회 실패 시 "")
+     */
+    private String getDrafterName(Integer employeeId) {
+        return employeeRepository.findById(employeeId)
+                .map(emp -> emp.getEmployeeName())
+                .orElse("");
+    }
+
+    /**
+     * 결재 요청 알림 이벤트 발행 (결재자에게)
+     * <pre>
+     * 호출 시점:
+     * - 문서 상신 시 다음 결재자에게
+     * - 중간 승인 후 다음 결재자에게
+     *
+     * 수신자: 결재 대기중인 다음 결재자
+     * 알림 내용: "OOO님의 'XXX' 문서 결재 요청이 도착했습니다."
+     * </pre>
+     *
+     * @param document 결재 문서
+     * @param approver 결재 대기중인 결재선 (다음 결재자)
+     */
+    private void publishApprovalRequestEvent(ApprovalDocument document, ApprovalLine approver) {
+        ApprovalTemplate template = templateRepository.findByTemplateId(document.getTemplateId());
+
+        ApprovalNotificationEvent.ApprovalRequestEvent event =
+                ApprovalNotificationEvent.ApprovalRequestEvent.builder()
+                        .docId(document.getDocId())
+                        .templateKey(template.getTemplateKey())
+                        .title(document.getTitle())
+                        .drafterId(document.getDrafterId())
+                        .drafterName(getDrafterName(document.getDrafterId()))
+                        .approverId(approver.getApproverId())
+                        .seq(approver.getSeq())
+                        .requestedAt(LocalDateTime.now())
+                        .build();
+
+        log.info("[알림 발행] 결재 요청 - docId: {}, approverId: {}",
+                document.getDocId(), approver.getApproverId());
+
+        eventPublisher.publishEvent(event);
+    }
+
+    /**
+     * 결재 반려 알림 이벤트 발행 (기안자에게)
+     * <pre>
+     * 호출 시점: 결재자가 문서를 반려했을 때
+     *
+     * 수신자: 문서 기안자
+     * 알림 내용: "'XXX' 문서가 반려되었습니다. 사유: OOO"
+     * </pre>
+     *
+     * @param document   반려된 문서
+     * @param comment    반려 사유
+     * @param rejecterId 반려자 ID
+     */
+    private void publishApprovalRejectedNotificationEvent(ApprovalDocument document, String comment, Integer rejecterId) {
+        ApprovalTemplate template = templateRepository.findByTemplateId(document.getTemplateId());
+
+        ApprovalNotificationEvent.ApprovalRejectedEvent event =
+                ApprovalNotificationEvent.ApprovalRejectedEvent.builder()
+                        .docId(document.getDocId())
+                        .templateKey(template.getTemplateKey())
+                        .title(document.getTitle())
+                        .drafterId(document.getDrafterId()) // 수신자: 기안자
+                        .rejecterId(rejecterId)
+                        .rejecterName(getDrafterName(rejecterId))
+                        .comment(comment)
+                        .rejectedAt(LocalDateTime.now())
+                        .build();
+
+        log.info("[알림 발행] 결재 반려 - docId: {}, drafterId: {}",
+                document.getDocId(), document.getDrafterId());
+        eventPublisher.publishEvent(event);
+    }
+
+    /**
+     * 최종 승인 완료 알림 이벤트 발행 (기안자에게)
+     * <pre>
+     * 호출 시점: 모든 결재선이 승인 완료되었을 때
+     *
+     * 수신자: 문서 기안자
+     * 알림 내용: "'XXX' 문서가 최종 승인되었습니다."
+     * </pre>
+     *
+     * @param document        최종 승인된 문서
+     * @param finalApproverId 최종 승인자 ID
+     */
+    private void publishApprovalCompletedNotificationEvent(ApprovalDocument document, Integer finalApproverId) {
+        ApprovalTemplate template = templateRepository.findByTemplateId(document.getTemplateId());
+
+        ApprovalNotificationEvent.ApprovalCompletedEvent event =
+                ApprovalNotificationEvent.ApprovalCompletedEvent.builder()
+                        .docId(document.getDocId())
+                        .templateKey(template.getTemplateKey())
+                        .title(document.getTitle())
+                        .drafterId(document.getDrafterId()) // 수신자: 기안자
+                        .approverId(finalApproverId)
+                        .approverName(getDrafterName(finalApproverId))
+                        .completedAt(LocalDateTime.now())
+                        .build();
+
+        log.info("[알림 발행] 결재 승인 완료 - docId: {}, drafterId: {}",
+                document.getDocId(), document.getDrafterId());
+        eventPublisher.publishEvent(event);
+    }
+
+    /**
+     * 회수 완료 알림 이벤트 발행 (기안자에게)
+     * <pre>
+     * 호출 시점: 기안자가 진행중인 문서를 회수했을 때
+     *
+     * 수신자: 문서 기안자
+     * 알림 내용: "'XXX' 문서가 성공적으로 회수되었습니다."
+     * </pre>
+     *
+     * @param document 회수된 문서
+     */
+    private void publishApprovalRecalledEvent(ApprovalDocument document) {
+        ApprovalTemplate template = templateRepository.findByTemplateId(document.getTemplateId());
+
+        ApprovalNotificationEvent.ApprovalRecalledEvent event =
+                ApprovalNotificationEvent.ApprovalRecalledEvent.builder()
+                        .docId(document.getDocId())
+                        .templateKey(template.getTemplateKey())
+                        .title(document.getTitle())
+                        .drafterId(document.getDrafterId())
+                        .recalledAt(LocalDateTime.now())
+                        .build();
+
+        log.info("[알림 발행] 회수 완료 - docId: {}", document.getDocId());
+        eventPublisher.publishEvent(event);
+    }
+
+    /**
+     * 결재 대기 독촉 알림 이벤트 발행 (결재자에게)
+     * <pre>
+     * 호출 시점:
+     * - 스케줄러가 매일 오전 9시 자동 실행
+     * - N일 이상 대기중인 문서의 결재자에게 발송
+     *
+     * 수신자: 결재 대기중인 결재자
+     * 알림 내용: "OOO님의 'XXX' 문서가 N일째 결재 대기 중입니다."
+     *
+     * 사용처: ApprovalReminderScheduler에서 호출
+     * </pre>
+     *
+     * @param document    대기중인 문서
+     * @param approver    대기중인 결재자
+     * @param waitingDays 대기 일수
+     */
+    public void publishApprovalReminderEvent(ApprovalDocument document, ApprovalLine approver, int waitingDays) {
+        ApprovalTemplate template = templateRepository.findByTemplateId(document.getTemplateId());
+
+        ApprovalNotificationEvent.ApprovalReminderEvent event =
+                ApprovalNotificationEvent.ApprovalReminderEvent.builder()
+                        .docId(document.getDocId())
+                        .templateKey(template.getTemplateKey())
+                        .title(document.getTitle())
+                        .drafterId(document.getDrafterId())
+                        .drafterName(getDrafterName(document.getDrafterId()))
+                        .approverId(approver.getApproverId())
+                        .waitingDays(waitingDays)
+                        .requestedAt(document.getCreatedAt()) // 문서 생성일시 사용
+                        .build();
+
+        log.info("[알림 발행] 결재 독촉 - docId: {}, approverId: {}, waitingDays: {}",
+                document.getDocId(), approver.getApproverId(), waitingDays);
+
+        eventPublisher.publishEvent(event);
     }
 }

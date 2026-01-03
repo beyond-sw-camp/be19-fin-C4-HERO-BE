@@ -5,6 +5,7 @@ import com.c4.hero.domain.notification.dto.NotificationRegistDTO;
 import com.c4.hero.domain.notification.service.NotificationCommandService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -39,7 +40,7 @@ public class NotificationEventListener {
      * @param event NotificationEvent 알림 이벤트
      */
     @Async
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     public void handleNotificationEvent(NotificationEvent event) {
 
         log.info("알림 이벤트 수신: type={}, employeeId={}", event.getType(), event.getEmployeeId());
