@@ -1,5 +1,10 @@
 package com.c4.hero.domain.notification.scheduler.approval;
 
+import com.c4.hero.domain.approval.entity.ApprovalDocument;
+import com.c4.hero.domain.approval.entity.ApprovalLine;
+import com.c4.hero.domain.approval.repository.ApprovalDocumentRepository;
+import com.c4.hero.domain.approval.repository.ApprovalLineRepository;
+import com.c4.hero.domain.approval.service.ApprovalCommandService;
 import com.c4.hero.domain.notification.event.approval.ApprovalNotificationEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +13,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 
@@ -24,35 +30,70 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class ApprovalReminderScheduler {
-
-    private final ApplicationEventPublisher eventPublisher;
-    // TODO: ApprovalMapper 주입 필요
+    private final ApprovalDocumentRepository documentRepository;
+    private final ApprovalLineRepository lineRepository;
+    private final ApprovalCommandService approvalCommandService;
 
     /**
-     * 매일 오전 10시, 3일 이상 미결재 문서 독촉 알림
+     * 매일 오전 10시에 결재 대기 독촉 알림 발송 (3일 이상인 기안자에게)
      */
     @Scheduled(cron = "0 0 10 * * *")
-    public void sendReminderForPendingApprovals() {
-        log.info("[스케줄러] 결재 대기 독촉 알림 시작");
+    public void sendApprovalReminders() {
+        log.info("=== 결재 독촉 스케줄러 시작 ===");
 
-        // TODO: 3일 이상 대기 중인 결재 건 조회
-        // List<Map<String, Object>> pendingApprovals = approvalMapper.selectPendingApprovalsOverDays(3);
+        try {
+            // 1. 진행중인 문서 조회
+            List<ApprovalDocument> inProgressDocs = documentRepository.findByDocStatus("INPROGRESS");
+            log.info("진행중인 문서 수: {}", inProgressDocs.size());
 
-        // for (Map<String, Object> approval : pendingApprovals) {
-        //     eventPublisher.publishEvent(
-        //         ApprovalNotificationEvent.ApprovalReminderEvent.builder()
-        //             .docId((Integer) approval.get("docId"))
-        //             .templateKey((String) approval.get("templateKey"))
-        //             .title((String) approval.get("title"))
-        //             .drafterId((Integer) approval.get("drafterId"))
-        //             .drafterName((String) approval.get("drafterName"))
-        //             .approverId((Integer) approval.get("approverId"))
-        //             .waitingDays((Integer) approval.get("waitingDays"))
-        //             .requestedAt((LocalDateTime) approval.get("requestedAt"))
-        //             .build()
-        //     );
-        // }
+            if (inProgressDocs.isEmpty()) {
+                log.info("진행중인 문서가 없습니다.");
+                return;
+            }
 
-        log.info("[스케줄러] 결재 대기 독촉 알림 완료");
+            int totalReminders = 0;
+
+            for (ApprovalDocument doc : inProgressDocs) {
+                log.info("문서 확인 - docId: {}, 제목: {}, 생성일: {}",
+                        doc.getDocId(), doc.getTitle(), doc.getCreatedAt());
+
+                // 2. 대기중인 결재선 조회
+                List<ApprovalLine> pendingLines = lineRepository.findByDocIdAndLineStatus(
+                        doc.getDocId(), "PENDING");
+
+                log.info("docId: {} - 대기중인 결재선 수: {}", doc.getDocId(), pendingLines.size());
+
+                for (ApprovalLine line : pendingLines) {
+                    // 3. 대기 일수 계산
+                    long waitingDays = ChronoUnit.DAYS.between(
+                            doc.getCreatedAt(),
+                            LocalDateTime.now()
+                    );
+
+                    log.info("결재선 확인 - lineId: {}, approverId: {}, 대기일수: {}일",
+                            line.getLineId(), line.getApproverId(), waitingDays);
+
+                    // 4. 3일 이상이면 바로 독촉
+                    if (waitingDays >= 3) {
+                        approvalCommandService.publishApprovalReminderEvent(
+                                doc,
+                                line,
+                                (int) waitingDays
+                        );
+                        totalReminders++;
+                        log.info("독촉 알림 발송 완료 - docId: {}, approverId: {}, waitingDays: {}일",
+                                doc.getDocId(), line.getApproverId(), waitingDays);
+                    } else {
+                        log.info("대기일수 부족 - docId: {}, waitingDays: {}일",
+                                doc.getDocId(), waitingDays);
+                    }
+                }
+            }
+
+            log.info("=== 결재 독촉 스케줄러 종료 - 총 {}건 발송 ===", totalReminders);
+
+        } catch (Exception e) {
+            log.error("결재 독촉 스케줄러 실행 중 오류 발생", e);
+        }
     }
 }
