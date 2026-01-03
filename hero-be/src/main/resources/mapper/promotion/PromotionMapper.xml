@@ -384,7 +384,7 @@
             pd.promotion_plan_id = #{promotionId}
     </select>
 
-    <!-- 심사용 승진 계획 목록 조회 (추천 마감일 지난 것만) -->
+    <!-- 심사용 승진 계획 목록 조회 (추천 마감일 지난 것만 + 발령일이 지나지 않은 것) -->
     <select id="selectPromotionPlanForReviewList" resultMap="promotionPlanResultMap">
         SELECT
             promotion_plan_id AS promotion_id,
@@ -396,6 +396,7 @@
             tbl_promotion_plan
         WHERE
             nomination_deadline_at &lt; NOW()
+            AND appointment_at &gt; CURDATE()
         ORDER BY
             created_at DESC
     </select>
