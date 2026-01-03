@@ -11,6 +11,7 @@ import org.apache.ibatis.annotations.Param;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * <pre>
@@ -22,6 +23,7 @@ import java.util.List;
  * 2025/12/30 (이지윤) 지연 출근 수정 로직에 관한 mapper 추가
  * 2025/12/30 (이지윤) 초과 근무 로직에 관한 mapper 추가
  * 2025/12/30 (이지윤) 근무제 수정 변경 로직에 관한 mapper 추가
+ * 2026/01/02 (혜원) 알림 감지를 위한 mapper 추가
  * </pre>
  *
  * @author 이지윤
@@ -281,10 +283,10 @@ public interface AttendanceMapper {
      * </p>
      */
 
-    // ✅ (추가) work_system_template_id 또는 work_system_type_id 어떤 값이 와도 이름을 얻기 위한 조회
+    // (추가) work_system_template_id 또는 work_system_type_id 어떤 값이 와도 이름을 얻기 위한 조회
     String selectWorkSystemNameByAnyId(@Param("id") int id);
 
-    // ✅ (추가) 근무제 변경 이력 INSERT
+    // (추가) 근무제 변경 이력 INSERT
     int insertWorkSystemChangeLog(
             @Param("employeeId") int employeeId,
             @Param("date") LocalDate date,
@@ -295,4 +297,15 @@ public interface AttendanceMapper {
             @Param("workSystemTemplateId") int workSystemTemplateId
     );
 
+
+    // @author 헤원
+    /**
+     * [스케줄러] 특정 시점에 출근 기록이 없는 직원 조회 (미체크 알림 발송용)
+     */
+    List<Map<String, Object>> selectClockInMissingEmployees(@Param("workDate") LocalDate workDate);
+
+    /**
+     * [출근 시 즉시 호출] 특정 직원의 출근 예정 시간 및 현재 근태 ID 조회
+     */
+    Map<String, Object> selectCurrentWorkSystem(@Param("employeeId") Integer employeeId, @Param("workDate") LocalDate workDate);
 }

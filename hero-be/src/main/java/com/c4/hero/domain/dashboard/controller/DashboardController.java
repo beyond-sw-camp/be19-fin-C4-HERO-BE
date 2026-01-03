@@ -1,6 +1,7 @@
 package com.c4.hero.domain.dashboard.controller;
 
 import com.c4.hero.common.response.CustomResponse;
+import com.c4.hero.domain.notification.service.AttendanceNotificationEventService;
 import com.c4.hero.domain.auth.security.CustomUserDetails;
 import com.c4.hero.domain.dashboard.dto.ApprovalStatsDTO;
 import com.c4.hero.domain.dashboard.dto.AttendanceStatsDTO;
@@ -45,7 +46,7 @@ import java.time.LocalTime;
 public class DashboardController {
 
     private final DashboardService timeClockService;
-
+    private final AttendanceNotificationEventService attendanceNotificationEventService;
     /**
      * 출근 처리
      * POST /api/dashboard/clock-in
@@ -76,7 +77,7 @@ public class DashboardController {
 
         // 출근 처리
         timeClockService.clockIn(employeeId, departmentId, dto);
-
+        attendanceNotificationEventService.clockIn(employeeId); // 이벤트 서비스 호출
         return ResponseEntity.ok(CustomResponse.success());
     }
 
@@ -108,6 +109,8 @@ public class DashboardController {
 
         // 퇴근 처리
         timeClockService.clockOut(employeeId, dto);
+        attendanceNotificationEventService.clockOut(employeeId); // 이벤트 서비스 호출
+
 
         return ResponseEntity.ok(CustomResponse.success());
     }
