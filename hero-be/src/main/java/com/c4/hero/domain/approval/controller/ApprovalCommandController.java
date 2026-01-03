@@ -42,7 +42,6 @@ public class ApprovalCommandController {
 
     private final ApprovalCommandService approvalCommandService;
 
-
     /**
      * 문서 템플릿 즐겨찾기 토글
      *
@@ -62,7 +61,6 @@ public class ApprovalCommandController {
 
         return ResponseEntity.ok(isBookmarked);
     }
-
 
     /**
      * 임시저장

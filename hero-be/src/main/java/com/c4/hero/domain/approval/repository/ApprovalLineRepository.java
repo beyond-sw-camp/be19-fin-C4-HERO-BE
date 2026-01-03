@@ -15,6 +15,7 @@ import java.util.List;
  * History
  *   2025/12/26 (민철) 최초 작성
  *   2026/01/01 (민철) 메서드 주석 추가
+ *   2026/01/03 (혜원) 알림 독촉을 위해 조회 추가
  * </pre>
  *
  * @author 민철
@@ -39,4 +40,14 @@ public interface ApprovalLineRepository extends JpaRepository<ApprovalLine, Inte
      * @param docId 문서 ID
      */
     void deleteByDocId(Integer docId);
+
+    /**
+     * 문서 ID와 결재선 상태로 결재선 목록 조회
+     *
+     * @param docId 문서 ID
+     * @param lineStatus 결재선 상태 (PENDING / APPROVED / REJECTED)
+     * @return 해당 문서의 특정 상태 결재선 목록
+     */
+    List<ApprovalLine> findByDocIdAndLineStatus(Integer docId, String lineStatus);
+
 }
