@@ -14,6 +14,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
+
 /**
  * <pre>
  * Entity Name: VacationLeave
@@ -21,13 +23,13 @@ import lombok.NoArgsConstructor;
  *
  * History
  * 2025/12/18 (이지윤) 최초 작성 및 코딩 컨벤션 적용
- * </pre>
+ * 2026/01/03 (이지윤) DB 변경데 따라 기능 수정
  *
  * 직원별 연차 부여·사용 현황을 관리하는 테이블에 매핑되며,
  * 휴가 요약(VacationSummaryDTO) 계산의 기초 데이터로 활용됩니다.
  *
  * @author 이지윤
- * @version 1.0
+ * @version 1.1
  */
 @Entity
 @Table(name = "tbl_leave")
@@ -40,6 +42,9 @@ public class VacationLeave {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "leave_id")
     private Integer leaveId;
+
+    @Column(name = "grant_date")
+    private LocalDate grantDate;
 
     /** 부여된 총 연차(휴가) 일수 */
     @Column(name = "grant_days")

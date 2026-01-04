@@ -11,6 +11,7 @@ import com.c4.hero.domain.retirement.entity.Retirement;
 import com.c4.hero.domain.retirement.repository.ExitReasonMasterRepository;
 import com.c4.hero.domain.retirement.repository.RetirementRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +36,7 @@ import java.util.stream.Collectors;
  * @author 승건
  * @version 1.0
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RetirementService {
@@ -153,77 +155,87 @@ public class RetirementService {
 
     /**
      * 퇴사 사유별 통계 데이터를 집계합니다.
+     * (1년 미만 조기 퇴사자 vs 전체 퇴사자)
      *
-     * @return 사유별 퇴직 통계 DTO 리스트
+     * @return 사유별 퇴직 통계 DTO
      */
     @Transactional(readOnly = true)
-    public List<ExitReasonStatDTO> getExitReasonStats() {
-        List<Retirement> retirements = retirementRepository.findAll();
-        // 관리자 제외 (Retirement -> Employee -> Department 확인)
-        Map<String, Long> reasonCounts = retirements.stream()
+    public ExitReasonStatsResponseDTO getExitReasonStats() {
+        List<Retirement> allRetirements = retirementRepository.findAll().stream()
                 .filter(r -> r.getEmployee().getEmployeeDepartment() != null && r.getEmployee().getEmployeeDepartment().getDepartmentId() != 0)
-                .collect(Collectors.groupingBy(r -> r.getExitReason().getReasonName(), Collectors.counting()));
+                .collect(Collectors.toList());
 
-        return reasonCounts.entrySet().stream()
-                .map(entry -> ExitReasonStatDTO.builder()
+        // 1. 1년 미만 조기 퇴사자 통계
+        List<ExitReasonStatsResponseDTO.ExitReasonStat> earlyLeavers = allRetirements.stream()
+                .filter(r -> r.getWorkingDays() < 365)
+                .collect(Collectors.groupingBy(r -> r.getExitReason().getReasonName(), Collectors.counting()))
+                .entrySet().stream()
+                .map(entry -> ExitReasonStatsResponseDTO.ExitReasonStat.builder()
                         .reasonName(entry.getKey())
                         .count(entry.getValue())
                         .build())
                 .collect(Collectors.toList());
+
+        // 2. 전체 퇴사자 통계
+        List<ExitReasonStatsResponseDTO.ExitReasonStat> totalLeavers = allRetirements.stream()
+                .collect(Collectors.groupingBy(r -> r.getExitReason().getReasonName(), Collectors.counting()))
+                .entrySet().stream()
+                .map(entry -> ExitReasonStatsResponseDTO.ExitReasonStat.builder()
+                        .reasonName(entry.getKey())
+                        .count(entry.getValue())
+                        .build())
+                .collect(Collectors.toList());
+
+        return ExitReasonStatsResponseDTO.builder()
+                .earlyLeavers(earlyLeavers)
+                .totalLeavers(totalLeavers)
+                .build();
     }
 
     /**
-     * 근속 기간별 잔존율 통계 데이터를 계산합니다.
-     * 0년 이상부터 10년 이상까지의 잔존율을 계산합니다.
+     * 현재 재직자들의 근속 연수 분포를 계산합니다.
      *
-     * @return 근속 기간별 잔존율 DTO 리스트
+     * @return 근속 연수별 인원 비율 DTO 리스트
      */
     @Transactional(readOnly = true)
-    public List<TenureRetentionDTO> getTenureRetentionStats() {
+    public List<TenureDistributionDTO> getTenureDistributionStats() {
         // 관리자 제외
-        List<Employee> allEmployees = employeeRepository.findAll().stream()
+        List<Employee> activeEmployees = employeeRepository.findAll().stream()
+                .filter(e -> e.getStatus() != EmployeeStatus.RETIRED)
                 .filter(e -> e.getEmployeeDepartment() != null && e.getEmployeeDepartment().getDepartmentId() != 0)
                 .collect(Collectors.toList());
                 
-        List<TenureRetentionDTO> stats = new ArrayList<>();
-        LocalDate today = LocalDate.now();
+        long totalActiveEmployees = activeEmployees.size();
+        if (totalActiveEmployees == 0) return new ArrayList<>();
 
-        for (int i = 0; i <= 10; i++) {
+        Map<Long, Long> tenureCounts = activeEmployees.stream()
+                .collect(Collectors.groupingBy(
+                        e -> ChronoUnit.YEARS.between(e.getHireDate(), LocalDate.now()),
+                        Collectors.counting()
+                ));
+
+        List<TenureDistributionDTO> stats = new ArrayList<>();
+        for (long i = 0; i < 10; i++) { // 0~9년차
             long year = i;
-            // 기준일: 오늘로부터 'year'년 전
-            LocalDate targetHireDate = today.minusYears(year);
-
-            // 분모: 최소 'year'년 전에 입사한 직원 수 (N년 이상 근무할 기회가 있었던 사람)
-            long eligibleEmployees = allEmployees.stream()
-                    .filter(e -> !e.getHireDate().isAfter(targetHireDate))
-                    .count();
-
-            if (eligibleEmployees == 0) {
-                stats.add(TenureRetentionDTO.builder()
-                        .tenureRange(year + "년 이상")
-                        .retentionRate(0.0)
-                        .build());
-                continue;
-            }
-
-            // 분자: 그들 중 실제 근속 기간이 'year'년 이상인 사람
-            long retainedEmployees = allEmployees.stream()
-                    .filter(e -> !e.getHireDate().isAfter(targetHireDate))
-                    .filter(e -> {
-                        LocalDate endDate = (e.getStatus() == EmployeeStatus.RETIRED && e.getTerminationDate() != null)
-                                ? e.getTerminationDate()
-                                : today;
-                        return ChronoUnit.YEARS.between(e.getHireDate(), endDate) >= year;
-                    })
-                    .count();
-
-            double rate = (double) retainedEmployees / eligibleEmployees * 100.0;
-
-            stats.add(TenureRetentionDTO.builder()
-                    .tenureRange(year + "년 이상")
-                    .retentionRate(Math.round(rate * 100.0) / 100.0)
+            long count = tenureCounts.getOrDefault(year, 0L);
+            double rate = (double) count / totalActiveEmployees * 100.0;
+            stats.add(TenureDistributionDTO.builder()
+                    .tenureRange(year + "년차")
+                    .percentage(Math.round(rate * 100.0) / 100.0)
                     .build());
         }
+
+        // 10년차 이상 그룹
+        long countOver10 = tenureCounts.entrySet().stream()
+                .filter(entry -> entry.getKey() >= 10)
+                .mapToLong(Map.Entry::getValue)
+                .sum();
+        
+        double rateOver10 = (double) countOver10 / totalActiveEmployees * 100.0;
+        stats.add(TenureDistributionDTO.builder()
+                .tenureRange("10년차 이상")
+                .percentage(Math.round(rateOver10 * 100.0) / 100.0)
+                .build());
 
         return stats;
     }
@@ -318,6 +330,7 @@ public class RetirementService {
     @Transactional(readOnly = true)
     public List<DepartmentTurnoverDTO> getDepartmentTurnoverStats() {
         List<Employee> allEmployees = employeeRepository.findAll();
+        LocalDate today = LocalDate.now();
 
         Map<String, List<Employee>> employeesByDept = allEmployees.stream()
                 .filter(e -> e.getEmployeeDepartment() != null)
@@ -330,7 +343,13 @@ public class RetirementService {
                     String deptName = entry.getKey();
                     List<Employee> deptEmployees = entry.getValue();
                     long total = deptEmployees.size();
-                    long retired = deptEmployees.stream().filter(e -> e.getStatus() == EmployeeStatus.RETIRED).count();
+                    
+                    // 퇴사자 수 계산: status가 'R'이거나, terminationDate가 오늘 이전인 경우
+                    long retired = deptEmployees.stream()
+                            .filter(e -> e.getStatus() == EmployeeStatus.RETIRED || 
+                                         (e.getTerminationDate() != null && !e.getTerminationDate().isAfter(today)))
+                            .count();
+                            
                     long current = total - retired;
                     double turnoverRate = total > 0 ? (double) retired / total * 100 : 0;
 

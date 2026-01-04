@@ -1,5 +1,6 @@
 package com.c4.hero.domain.payroll.allowance.controller;
 
+import com.c4.hero.domain.auth.security.PayrollAdminOnly;
 import com.c4.hero.domain.payroll.allowance.dto.AllowanceCreateRequestDTO;
 import com.c4.hero.domain.payroll.allowance.dto.AllowanceResponseDTO;
 import com.c4.hero.domain.payroll.allowance.entity.Allowance;
@@ -31,12 +32,14 @@ import java.util.List;
  *
  * History
  *   2025/12/22 - 동근 최초 작성
+ *   2026/01/03 - 동근 권한 인가 정책 추가
  * </pre>
  *
  * @author 동근
- * @version 1.0
+ * @version 1.1
  */
 
+@PayrollAdminOnly
 @RestController
 @RequestMapping("/api/admin/payroll/allowances")
 @RequiredArgsConstructor

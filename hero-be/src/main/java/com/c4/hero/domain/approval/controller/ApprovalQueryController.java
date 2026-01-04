@@ -21,6 +21,7 @@ import com.c4.hero.domain.employee.repository.EmployeeGradeRepository;
 import com.c4.hero.domain.employee.repository.EmployeeJobTitleRepository;
 import com.c4.hero.domain.vacation.entity.VacationType;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -54,6 +55,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @RestController
+@Tag(name = "결재 API")
 @RequestMapping("/api/approval")
 @RequiredArgsConstructor
 public class ApprovalQueryController {

@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 /**
  * <pre>
  * Interface Name : VacationSummaryRepository
@@ -13,6 +15,7 @@ import org.springframework.data.repository.query.Param;
  *
  * History
  * 2025/12/21 (이지윤) 최초 작성
+ * 2025/12/21 (이지윤) DB 변경에 따라 수정
  * </pre>
  */
 public interface VacationSummaryRepository extends JpaRepository<VacationLeave, Integer> {
@@ -36,6 +39,7 @@ public interface VacationSummaryRepository extends JpaRepository<VacationLeave, 
         )
         from VacationLeave l
         where l.employee.employeeId = :employeeId
+        order by l.grantDate desc, l.leaveId desc
         """)
-    VacationSummaryDTO findSummaryByEmployeeId(@Param("employeeId") Integer employeeId);
+    List<VacationSummaryDTO> findSummaryByEmployeeId(@Param("employeeId") Integer employeeId);
 }

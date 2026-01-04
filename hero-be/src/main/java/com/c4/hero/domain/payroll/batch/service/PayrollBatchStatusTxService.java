@@ -2,6 +2,7 @@ package com.c4.hero.domain.payroll.batch.service;
 
 import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
+import com.c4.hero.domain.auth.security.PayrollAdminOnly;
 import com.c4.hero.domain.payroll.batch.entity.PayrollBatch;
 import com.c4.hero.domain.payroll.batch.repository.BatchRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,11 +17,13 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * History
  *  2025/12/18 - 동근 최초 작성
+ *  2026/01/03 - 동근 권한 인가 정책 추가
  * </pre>
  *
  * @author 동근
- * @version 1.0
+ * @version 1.1
  */
+@PayrollAdminOnly
 @Service
 @RequiredArgsConstructor
 public class PayrollBatchStatusTxService {

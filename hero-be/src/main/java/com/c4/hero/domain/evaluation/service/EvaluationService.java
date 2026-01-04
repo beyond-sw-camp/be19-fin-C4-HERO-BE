@@ -27,11 +27,14 @@ import com.c4.hero.domain.evaluation.dto.template.EvaluationTemplateUpdateDTO;
 import com.c4.hero.domain.evaluation.entity.*;
 import com.c4.hero.domain.evaluation.mapper.*;
 import com.c4.hero.domain.evaluation.repository.*;
+import com.c4.hero.domain.notification.event.evaluation.EvaluationNotificationEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -41,6 +44,7 @@ import java.util.List;
  *
  * History
  * 2025/12/07 (김승민) 최초 작성
+ * 2026/01/03 (혜원) 알림 발송 로직 추가
  * </pre>
  *
  * @author 김승민
@@ -99,6 +103,9 @@ public class EvaluationService {
 
     /** 대시보드 데이터 mapper 의존성 주입 */
     private final DashBoardMapper dashBoardMapper;
+
+    /** */
+    private final ApplicationEventPublisher eventPublisher;  // 추가!
 
     /**
      * 평가 템플릿 생성 로직
@@ -574,6 +581,9 @@ public class EvaluationService {
         evaluationRepository.save(evaluation);
         Integer evaluationId = evaluation.getEvaluationId();
 
+        // 피평가자 ID 목록 (알림 발송용)
+        List<Integer> employeeIds = new ArrayList<>();
+
         /** 평가 선택 항목 저장 */
         if (evaluationDTO.getSelectedItems() != null) {
             for (SelectedItemRequestDTO itemDTO : evaluationDTO.getSelectedItems()) {
@@ -596,8 +606,14 @@ public class EvaluationService {
                 evaluatee.setStatus(evaluateeDTO.getEvaluateeStatus());
 
                 evaluateeRepository.save(evaluatee);
+
+                // 피평가자 ID 추가 (알림 발송용)
+                employeeIds.add(evaluateeDTO.getEvaluateeEmployeeId());
             }
         }
+
+        // 평가 시작 알림 발행
+        publishEvaluationStartedEvent(evaluationId, evaluationDTO, employeeIds);
 
         return evaluationId;
     }
@@ -971,6 +987,9 @@ public class EvaluationService {
                     else f.setTotalRank("F");
 
                     formRepository.save(f);
+
+                    // 각 피평가자에게 평가 결과 알림 발행
+                    publishEvaluationGradedEvent(f, evaluationId);
                     index++;
                 }
 
@@ -1093,5 +1112,72 @@ public class EvaluationService {
      */
     public List<EmployeeEvaluationListResponseDTO> getEmployeeEvaluationList(Integer employeeId) {
         return evaluationMapper.findEvaluationFormsByEmployeeId(employeeId);
+    }
+
+    /* ========================================== */
+    /* 평가 알림 헬퍼 메서드 */
+    /* ========================================== */
+
+    /**
+     * 평가 시작 알림 이벤트 발행 (피평가자들에게)
+     * <pre>
+     * 호출 시점: 평가 생성 시
+     * 수신자: 모든 피평가자
+     * 알림 내용: "'XXX' 평가가 시작되었습니다."
+     * </pre>
+     * @param evaluationId 평가 ID
+     * @param requestDTO 평가 생성 요청 DTO
+     * @param employeeIds 피평가자 ID 목록
+     */
+    private void publishEvaluationStartedEvent(
+            Integer evaluationId,
+            EvaluationRequestDTO requestDTO,
+            List<Integer> employeeIds
+    ) {
+        // 평가 기간 정보 조회
+        EvaluationPeriod period = evaluationPeriodRepository.findById(
+                requestDTO.getEvaluationEvaluationPeriodId()
+        ).orElse(null);
+
+        EvaluationNotificationEvent.EvaluationStartedEvent event =
+                EvaluationNotificationEvent.EvaluationStartedEvent.builder()
+                        .evaluationId(evaluationId)
+                        .evaluationName(requestDTO.getEvaluationName())
+                        .employeeIds(employeeIds)
+                        .startDate(period != null ? period.getStart() : LocalDateTime.now())
+                        .endDate(period != null ? period.getEnd() : null)
+                        .build();
+
+        eventPublisher.publishEvent(event);
+    }
+
+    /**
+     * 평가 결과 등록 알림 이벤트 발행 (피평가자에게)
+     * <pre>
+     * 호출 시점: 평가서 채점 완료 시
+     * 수신자: 피평가자
+     * 알림 내용: "'XXX' 평가 결과가 등록되었습니다. (등급: A)"
+     * </pre>
+     * @param form 채점 완료된 평가서
+     * @param evaluationId 평가 ID
+     */
+    private void publishEvaluationGradedEvent(EvaluationForm form, Integer evaluationId) {
+        // 평가 정보 조회
+        Evaluation evaluation = evaluationRepository.findById(evaluationId)
+                .orElseThrow(() -> new BusinessException(
+                        ErrorCode.ENTITY_NOT_FOUND, "평가를 찾을 수 없습니다."
+                ));
+
+        EvaluationNotificationEvent.EvaluationGradedEvent event =
+                EvaluationNotificationEvent.EvaluationGradedEvent.builder()
+                        .formId(form.getFormId())
+                        .evaluationId(evaluationId)
+                        .evaluationName(evaluation.getName())
+                        .employeeId(form.getEmployeeId())
+                        .grade(form.getTotalRank())
+                        .gradedAt(LocalDateTime.now())
+                        .build();
+
+        eventPublisher.publishEvent(event);
     }
 }

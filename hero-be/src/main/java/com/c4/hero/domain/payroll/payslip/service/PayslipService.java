@@ -1,5 +1,6 @@
 package com.c4.hero.domain.payroll.payslip.service;
 
+import com.c4.hero.domain.auth.security.LoginOnly;
 import com.c4.hero.domain.payroll.payslip.dto.PayslipBaseDTO;
 import com.c4.hero.domain.payroll.payslip.dto.PayslipDetailDTO;
 import com.c4.hero.domain.payroll.payslip.mapper.PayslipQueryMapper;
@@ -25,13 +26,14 @@ import java.util.List;
  *  - 수당/공제 항목: EmployeePayrollReportMapper 재사용 (items)
  *
  * History
- * 2025/12/14 동근 report 도메인에서 payslip 도메인으로 분리
+ * 2025/12/14 - 동근 report 도메인에서 payslip 도메인으로 분리
+ * 2026/01/03 - 동근 권한 인가 정책 추가
  * </pre>
  *
  * @author 동근
- * @version 1.0
+ * @version 1.1
  */
-
+@LoginOnly
 @Service
 @RequiredArgsConstructor
 public class PayslipService {

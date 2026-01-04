@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+  <pre>
+  Mapper Name : PayrollAnalyticsMapper
+  Description : 급여 분석(Overview) 조회 전용 MyBatis 매퍼 XML
+
+  History
+   2026/01/02 - 동근 최초 작성
+  </pre>
+-->
+<mapper namespace="com.c4.hero.domain.payroll.analytics.mapper.PayrollAnalyticsMapper">
+
+    <!-- TAB1 KPI 집계 -->
+    <select id="selectOverviewAgg"
+            resultType="com.c4.hero.domain.payroll.analytics.dto.PayrollAnalyticsOverviewRows$OverviewAggRow">
+        SELECT
+            COUNT(*) AS headcount,
+
+            CAST(COALESCE(SUM(
+                                  p.base_salary
+                                      + p.allowance_total
+                                      + p.overtime_pay
+                                      + p.bonus
+                          ), 0) AS SIGNED) AS grossTotal,
+
+            CAST(COALESCE(SUM(p.deduction_total), 0) AS SIGNED) AS deductionTotal,
+            CAST(COALESCE(SUM(
+                                  p.base_salary
+                                      + p.allowance_total
+                                      + p.overtime_pay
+                                      + p.bonus
+                          ), 0) AS SIGNED) AS laborCostTotal
+
+        FROM tbl_payroll p
+                 JOIN tbl_payroll_batch b ON b.batch_id = p.batch_id
+        WHERE p.salary_month = #{month}
+          AND b.salary_month = #{month}
+          AND p.status IN ('CONFIRMED','PAID')
+          AND b.status IN ('CONFIRMED','PAID');
+    </select>
+
+    <select id="selectNetPayStats"
+            resultType="com.c4.hero.domain.payroll.analytics.dto.PayrollAnalyticsOverviewRows$NetPayStatsRow">
+        SELECT
+            CAST(COALESCE(AVG(net_pay), 0) AS SIGNED) AS avgNetPay,
+            CAST(COALESCE((
+                              SELECT AVG(x.net_pay) FROM (
+                                                             SELECT
+                                                                 (p2.base_salary + p2.allowance_total + p2.overtime_pay + p2.bonus - p2.deduction_total) AS net_pay,
+                                                                 ROW_NUMBER() OVER (
+                            ORDER BY (p2.base_salary + p2.allowance_total + p2.overtime_pay + p2.bonus - p2.deduction_total)
+                        ) AS rn,
+                                                                 COUNT(*) OVER () AS cnt
+                                                             FROM tbl_payroll p2
+                                                                      JOIN tbl_payroll_batch b2 ON b2.batch_id = p2.batch_id
+                                                             WHERE p2.salary_month = #{month}
+                                                               AND b2.salary_month = #{month}
+                                                               AND p2.status IN ('CONFIRMED','PAID')
+                                                               AND b2.status IN ('CONFIRMED','PAID')
+                                                         ) x
+                              WHERE x.rn IN (FLOOR((x.cnt + 1)/2), FLOOR((x.cnt + 2)/2))
+                          ), 0) AS SIGNED) AS medianNetPay
+        FROM (
+                 SELECT
+                     (p.base_salary + p.allowance_total + p.overtime_pay + p.bonus - p.deduction_total) AS net_pay
+                 FROM tbl_payroll p
+                          JOIN tbl_payroll_batch b ON b.batch_id = p.batch_id
+                 WHERE p.salary_month = #{month}
+                   AND b.salary_month = #{month}
+                   AND p.status IN ('CONFIRMED','PAID')
+                   AND b.status IN ('CONFIRMED','PAID')
+             ) t;
+    </select>
+
+    <!-- 전월 평균 실지급 -->
+    <select id="selectPrevMonthAvgNetPay" resultType="int">
+        SELECT CAST(COALESCE(AVG(net_pay), 0) AS SIGNED)
+        FROM (
+                 SELECT
+                     (p.base_salary + p.allowance_total + p.overtime_pay + p.bonus - p.deduction_total) AS net_pay
+                 FROM tbl_payroll p
+                          JOIN tbl_payroll_batch b ON b.batch_id = p.batch_id
+                 WHERE p.salary_month = #{prevMonth}
+                   AND b.salary_month = #{prevMonth}
+                   AND p.status IN ('CONFIRMED','PAID')
+                   AND b.status IN ('CONFIRMED','PAID')
+             ) t;
+    </select>
+
+    <!-- 월별 총 인건비(=gross) 추이 -->
+    <select id="selectLaborCostTrend"
+            resultType="com.c4.hero.domain.payroll.analytics.dto.PayrollAnalyticsOverviewRows$TrendAggRow">
+        SELECT
+            p.salary_month AS month,
+            CAST(COALESCE(SUM(
+                p.base_salary
+                + p.allowance_total
+                + p.overtime_pay
+                + p.bonus
+            ), 0) AS SIGNED) AS laborCostTotal
+        FROM tbl_payroll p
+            JOIN tbl_payroll_batch b ON b.batch_id = p.batch_id
+        WHERE p.salary_month <![CDATA[>=]]> #{fromMonth}
+          AND p.salary_month <![CDATA[<=]]> #{toMonth}
+          AND p.status IN ('CONFIRMED','PAID')
+          AND b.status IN ('CONFIRMED','PAID')
+        GROUP BY p.salary_month
+        ORDER BY p.salary_month ASC;
+    </select>
+</mapper>
