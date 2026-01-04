@@ -2,6 +2,7 @@ package com.c4.hero.domain.payroll.batch.service;
 
 import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
+import com.c4.hero.domain.auth.security.PayrollAdminOnly;
 import com.c4.hero.domain.payroll.batch.dto.PayrollBatchTargetEmployeeResponseDTO;
 import com.c4.hero.domain.payroll.batch.entity.Payroll;
 import com.c4.hero.domain.payroll.batch.entity.PayrollBatch;
@@ -39,12 +40,13 @@ import java.util.List;
  *  2025/12/15 - 동근 최초 작성
  *  2025/12/18 - 동근 급여 지급(pay) 로직 및 PaymentHistory 연동 추가
  *             - 클래스 레벨 트랜잭션 제거 및 상태 전이 트랜잭션 분리
+ *  2026/01/03 - 동근 권한 인가 정책 추가
  * </pre>
  *
  *  @author 동근
- *  @version 1.1
+ *  @version 1.2
  */
-
+@PayrollAdminOnly
 @Service
 @RequiredArgsConstructor
 public class PayrollBatchService {

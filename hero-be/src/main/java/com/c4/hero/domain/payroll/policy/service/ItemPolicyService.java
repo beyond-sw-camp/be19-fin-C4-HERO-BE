@@ -1,5 +1,6 @@
 package com.c4.hero.domain.payroll.policy.service;
 
+import com.c4.hero.domain.auth.security.PayrollAdminOnly;
 import com.c4.hero.domain.payroll.common.type.BaseAmountType;
 import com.c4.hero.domain.payroll.common.type.ItemType;
 import com.c4.hero.domain.payroll.common.type.RoundingModeType;
@@ -29,11 +30,13 @@ import java.util.stream.Collectors;
  *
  * History
  *  2025/12/24 - 동근 최초 작성
+ *  2026/01/03 - 동근 권한 인가 정책 추가
  * </pre>
  *
  * @author 동근
- * @version 1.0
+ * @version 1.1
  */
+@PayrollAdminOnly
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)

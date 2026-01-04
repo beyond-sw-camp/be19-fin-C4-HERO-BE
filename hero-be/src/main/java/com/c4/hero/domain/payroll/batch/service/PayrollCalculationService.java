@@ -1,5 +1,6 @@
 package com.c4.hero.domain.payroll.batch.service;
 
+import com.c4.hero.domain.auth.security.PayrollAdminOnly;
 import com.c4.hero.domain.payroll.batch.entity.PayrollBatch;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,12 +18,13 @@ import java.util.List;
  *  2025/12/15 - 동근 최초 작성
  *  2025/12/18 - 동근 사원 단위 계산/Tx를 PayrollEmployeeCalculateTxService 로 분리
  *             - 클래스 레벨 트랜잭션 제거
+ *  2026/01/03 - 동근 권한 인가 정책 추가
  * </pre>
  *
  *  @author 동근
- *  @version 1.1
+ *  @version 1.2
  */
-
+@PayrollAdminOnly
 @Service
 @RequiredArgsConstructor
 public class PayrollCalculationService {

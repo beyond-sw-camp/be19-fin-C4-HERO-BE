@@ -1,5 +1,7 @@
 package com.c4.hero.domain.payroll.bankaccount.controller;
 
+import com.c4.hero.domain.auth.security.CustomUserDetails;
+import com.c4.hero.domain.auth.security.LoginOnly;
 import com.c4.hero.domain.payroll.bankaccount.dto.BankAccountCreateRequestDTO;
 import com.c4.hero.domain.payroll.bankaccount.dto.BankAccountDTO;
 import com.c4.hero.domain.payroll.bankaccount.service.BankAccountService;
@@ -11,9 +13,16 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.security.Principal;
 import java.util.List;
 
 /**
@@ -22,14 +31,16 @@ import java.util.List;
  * Description: 사원 계좌 관련 컨트롤러
  *
  * History
- * 2025/12/08 동근 최초 작성
- * 2025/12/19 동근 swagger 문서화 주석 추가
+ * 2025/12/08 - 동근 최초 작성
+ * 2025/12/19 - 동근 swagger 문서화 주석 추가
+ * 2026/01/03 - 동근 권한 인가 정책 추가
  * </pre>
  *
  * @author 동근
- * @version 1.1
+ * @version 1.2
  */
 
+@LoginOnly
 @RestController
 @RequestMapping("/api/me/payroll")
 @RequiredArgsConstructor
@@ -37,14 +48,6 @@ import java.util.List;
 public class BankAccountController {
 
     private final BankAccountService bankAccountService;
-
-
-    // @param EmployeeId = 사용자 id 1으로 하드코딩
-    private Integer getEmployeeId(Principal principal) {
-        // 테스트용으로 1번 사원 고정
-        return 1;
-    }
-
 
     /*
     내 계좌 목록 조회
@@ -59,8 +62,10 @@ public class BankAccountController {
             @ApiResponse(responseCode = "403", description = "권한 없음", content = @Content)
     })
     @GetMapping("/bank-accounts")
-    public ResponseEntity<List<BankAccountDTO>> getMyBankAccounts(Principal principal) {
-        Integer employeeId = getEmployeeId(principal);
+    public ResponseEntity<List<BankAccountDTO>> getMyBankAccounts(
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
+        Integer employeeId = user.getEmployeeId();
         List<BankAccountDTO> accounts = bankAccountService.getMyBankAccounts(employeeId);
         return ResponseEntity.ok(accounts);
     }
@@ -83,9 +88,8 @@ public class BankAccountController {
     @PostMapping("/bank-accounts")
     public ResponseEntity<BankAccountDTO> createMyBankAccount(
             @RequestBody BankAccountCreateRequestDTO request,
-            Principal principal
-    ) {
-        Integer employeeId = getEmployeeId(principal);
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {Integer employeeId = user.getEmployeeId();
         BankAccountDTO created = bankAccountService.createMyBankAccount(employeeId, request);
         return ResponseEntity.ok(created);
     }
@@ -107,9 +111,9 @@ public class BankAccountController {
     @PutMapping("/bank-accounts/{bankAccountId}/primary")
     public ResponseEntity<Void> setPrimaryBankAccount(
             @PathVariable Integer bankAccountId,
-            Principal principal
+            @AuthenticationPrincipal CustomUserDetails user
     ) {
-        Integer employeeId = getEmployeeId(principal);
+        Integer employeeId = user.getEmployeeId();
         bankAccountService.setPrimaryBankAccount(employeeId, bankAccountId);
         return ResponseEntity.noContent().build();
     }
@@ -133,9 +137,9 @@ public class BankAccountController {
     public ResponseEntity<Void> updateMyBankAccount(
             @PathVariable Integer bankAccountId,
             @RequestBody BankAccountCreateRequestDTO request,
-            Principal principal
+            @AuthenticationPrincipal CustomUserDetails user
     ) {
-        Integer employeeId = getEmployeeId(principal);
+        Integer employeeId = user.getEmployeeId();
         bankAccountService.updateMyBankAccount(employeeId, bankAccountId, request);
         return ResponseEntity.noContent().build();
     }
@@ -155,9 +159,9 @@ public class BankAccountController {
     @DeleteMapping("/bank-accounts/{bankAccountId}")
     public ResponseEntity<Void> deleteMyBankAccount(
             @PathVariable Integer bankAccountId,
-            Principal principal
+            @AuthenticationPrincipal CustomUserDetails user
     ) {
-        Integer employeeId = getEmployeeId(principal);
+        Integer employeeId = user.getEmployeeId();
         bankAccountService.deleteMyBankAccount(employeeId, bankAccountId);
         return ResponseEntity.noContent().build();
     }

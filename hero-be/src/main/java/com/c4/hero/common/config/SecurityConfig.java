@@ -41,14 +41,15 @@ import java.util.List;
  * 2025/12/09 (승건) 토큰 필터 추가
  * 2025/12/11 (혜원) WebSocket 설정 추가
  * 2025/12/14 (혜원) 개발 편의성을 위해 모든 시큐리티 허용
+ * 2026/01/03 (동근) 급여 도메인 권한 인가 정책 구조 추가
  * </pre>
  *
  * @author 혜원
- * @version 1.1
+ * @version 1.4
  */
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -101,7 +102,14 @@ public class SecurityConfig {
 //                                .requestMatchers("/api/auth/test").hasRole("EMPLOYEE")
                                 .anyRequest().permitAll()
 //                        .requestMatchers("/api/public/**").permitAll()    // 공개 API 허용
-//                        .requestMatchers("/api/me/payroll/**").permitAll() // 급여 조회 개발용 허용
+                        //급여 권한 인가 처리 할때 요부분부터 (주석 해제할때 해당 텍스트 제거)
+//                        .requestMatchers("/api/admin/payroll/**")
+//                        .hasAnyAuthority("SYSTEM_ADMIN", "HR_MANAGER", "HR_PAYROLL") 관리자만 접근가능
+//                        .requestMatchers("/api/settings/payroll/**")
+//                        .hasAnyAuthority("SYSTEM_ADMIN", "HR_MANAGER", "HR_PAYROLL") 관리자만 접근가능
+//                        .requestMatchers("/api/me/payroll/**")
+//                        .authenticated() 로그인해야 접근 가능
+                        // 급여 권한 인가 처리 할때 요기까지 (주석 해제할때 해당 텍스트 제거)
 //                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // 관리자만 접근
 //                        .anyRequest().authenticated()                      // 나머지는 인증 필요
                 )

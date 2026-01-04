@@ -2,6 +2,8 @@ package com.c4.hero.domain.payroll.bankaccount.service;
 
 import com.c4.hero.common.exception.BusinessException;
 import com.c4.hero.common.exception.ErrorCode;
+import com.c4.hero.domain.auth.security.LoginOnly;
+import com.c4.hero.domain.auth.security.PayrollAdminOnly;
 import com.c4.hero.domain.payroll.bankaccount.dto.BankAccountCreateRequestDTO;
 import com.c4.hero.domain.payroll.bankaccount.dto.BankAccountDTO;
 import com.c4.hero.domain.payroll.bankaccount.entity.BankAccount;
@@ -19,12 +21,14 @@ import java.util.List;
  * Description: 사원 급여 계좌 서비스 계층
  *
  * History
- * 2025/12/08 동근 최초 작성
+ * 2025/12/08 - 동근 최초 작성
+ * 2026/01/03 - 동근 권한 인가 정책 추가
  * </pre>
  *
  * @author 동근
  * @version 1.0
  */
+@LoginOnly
 @Service
 @RequiredArgsConstructor
 @Transactional

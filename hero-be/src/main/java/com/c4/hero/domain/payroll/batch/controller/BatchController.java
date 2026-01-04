@@ -3,6 +3,7 @@ package com.c4.hero.domain.payroll.batch.controller;
 
 import com.c4.hero.common.response.CustomResponse;
 import com.c4.hero.domain.auth.security.CustomUserDetails;
+import com.c4.hero.domain.auth.security.PayrollAdminOnly;
 import com.c4.hero.domain.payroll.batch.dto.PayrollBatchDetailResponseDTO;
 import com.c4.hero.domain.payroll.batch.dto.PayrollBatchListResponseDTO;
 import com.c4.hero.domain.payroll.batch.dto.PayrollBatchTargetEmployeeResponseDTO;
@@ -37,11 +38,13 @@ import java.util.List;
  *  2025/12/15 - 동근 최초 작성
  *  2025/12/18 - 동근 지급(pay) API 추가
  *             - swagger 문서화 주석 추가
+ *  2026/01/03 - 동근 권한 인가 정책 추가
  * </pre>
  *
  *  @author 동근
- *  @version 1.1
+ *  @version 1.2
  */
+@PayrollAdminOnly
 @RequestMapping("/api/admin/payroll/batches")
 @RequiredArgsConstructor
 @RestController
