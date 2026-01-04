@@ -66,20 +66,20 @@ public class RetirementController {
      * @return 사유별 퇴직 통계 리스트
      */
     @GetMapping("/stats/reason")
-    @Operation(summary = "사유별 퇴직 통계 조회", description = "퇴사 사유별 통계 데이터를 조회합니다. (막대 그래프용)")
-    public ResponseEntity<CustomResponse<List<ExitReasonStatDTO>>> getExitReasonStats() {
+    @Operation(summary = "사유별 퇴직 통계 조회", description = "퇴사 사유별 통계 데이터를 조회합니다.")
+    public ResponseEntity<CustomResponse<ExitReasonStatsResponseDTO>> getExitReasonStats() {
         return ResponseEntity.ok(CustomResponse.success(retirementService.getExitReasonStats()));
     }
 
     /**
-     * 근속 기간별 잔존율 통계 데이터를 조회합니다.
+     * 근속 연수별 인력 분포 통계 데이터를 조회합니다.
      *
-     * @return 근속 기간별 잔존율 리스트
+     * @return 근속 연수별 인력 분포 리스트
      */
     @GetMapping("/stats/tenure")
-    @Operation(summary = "근속 기간별 잔존율 조회", description = "근속 기간별 잔존율 데이터를 조회합니다. n년 전 입사자 중에 현재 까지 남아 있는 사람의 %")
-    public ResponseEntity<CustomResponse<List<TenureRetentionDTO>>> getTenureRetentionStats() {
-        return ResponseEntity.ok(CustomResponse.success(retirementService.getTenureRetentionStats()));
+    @Operation(summary = "근속 연수별 인력 분포 조회", description = "현재 재직자들의 근속 연수별 인원 비율을 조회합니다.")
+    public ResponseEntity<CustomResponse<List<TenureDistributionDTO>>> getTenureDistributionStats() {
+        return ResponseEntity.ok(CustomResponse.success(retirementService.getTenureDistributionStats()));
     }
 
     /**
@@ -88,7 +88,7 @@ public class RetirementController {
      * @return 신입 정착률 및 이직률 리스트
      */
     @GetMapping("/stats/new-hire")
-    @Operation(summary = "신입 정착률 및 이직률 조회", description = "분기별 신입 사원의 정착률과 이직률을 조회합니다. (막대 + 선형 그래프용)")
+    @Operation(summary = "신입 정착률 및 이직률 조회", description = "분기별 신입 사원의 정착률과 이직률을 조회합니다.")
     public ResponseEntity<CustomResponse<List<NewHireStatDTO>>> getNewHireStats() {
         return ResponseEntity.ok(CustomResponse.success(retirementService.getNewHireStats()));
     }
@@ -99,7 +99,7 @@ public class RetirementController {
      * @return 부서별 이직률 리스트
      */
     @GetMapping("/stats/department")
-    @Operation(summary = "부서별 이직률 조회", description = "부서별 현재 인원, 퇴사 인원, 이직률을 조회합니다. (리스트용)")
+    @Operation(summary = "부서별 이직률 조회", description = "부서별 현재 인원, 퇴사 인원, 이직률을 조회합니다.")
     public ResponseEntity<CustomResponse<List<DepartmentTurnoverDTO>>> getDepartmentTurnoverStats() {
         return ResponseEntity.ok(CustomResponse.success(retirementService.getDepartmentTurnoverStats()));
     }

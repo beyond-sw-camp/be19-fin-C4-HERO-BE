@@ -128,6 +128,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, Integer> {
             "WHERE e.employeeDepartment.departmentId IN :departmentIds " +
             "  AND e.grade.gradeId = :candidateGradeId " +
             "  AND e.evaluationPoint >= :requiredPoint " +
+            "  AND e.status = com.c4.hero.domain.employee.type.EmployeeStatus.ACTIVE " +
             "ORDER BY e.evaluationPoint DESC")
     List<Employee> findPromotionCandidates(
             @Param("departmentIds") List<Integer> departmentIds,
