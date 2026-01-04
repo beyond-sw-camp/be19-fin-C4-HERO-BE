@@ -17,13 +17,14 @@ import java.time.LocalDate;
  *
  * History
  * 2025/12/10 (이지윤) 부서 근태 현황 조회 메서드 추가 및 컨벤션 적용
+ * 2025/12/10 (이지윤) DB 변경에 따라 코드 수정
  * </pre>
  *
  * Attendance 엔티티를 기본으로 다루며,
  * 부서별 근무제/근태 현황 조회와 같이 JPA로 처리 가능한 조회 로직을 제공합니다.
  *
  * @author 이지윤
- * @version 1.1
+ * @version 1.2
  */
 public interface DeptWorkSystemRepository extends JpaRepository<Attendance, Integer> {
 
@@ -44,40 +45,39 @@ public interface DeptWorkSystemRepository extends JpaRepository<Attendance, Inte
      */
     @Query(
             value = """
-                select new com.c4.hero.domain.attendance.dto.DeptWorkSystemDTO(
-                    e.employeeId,
-                    d.departmentId,
-                    e.employeeName,
-                    a.state,
-                    jt.jobTitle,
-                    wst.workSystemName,
-                    tmpl.startTime ,
-                    tmpl.endTime
-                )
-                from Attendance a
-                    join a.employee e
-                    join e.employeeDepartment d
-                    left join e.jobTitle jt
-                    join a.workSystemType wst
-                    join WorkSystemTemplate tmpl
-                        on tmpl.workSystemType = wst
-                where a.workDate = :workDate
-                  and d.departmentId = :departmentId
-                  and e.employeeId <> :employeeId
-                order by e.employeeName asc
-                """,
+            select new com.c4.hero.domain.attendance.dto.DeptWorkSystemDTO(
+                e.employeeId,
+                d.departmentId,
+                e.employeeName,
+                a.state,
+                jt.jobTitle,
+                wst.workSystemName,
+                tmpl.startTime,
+                tmpl.endTime
+            )
+            from Attendance a
+                join a.employee e
+                join e.employeeDepartment d
+                left join e.jobTitle jt
+                join a.workSystemType wst
+                join WorkSystemTemplate tmpl
+                    on tmpl.workSystemType = wst
+            where a.workDate = :workDate
+              and d.departmentId = :departmentId
+              and e.employeeId <> :employeeId
+            order by e.employeeName asc
+            """,
             countQuery = """
-                select count(a)
-                from Attendance a
-                    join a.employee e
-                    join e.employeeDepartment d
-                where a.workDate = :workDate
-                  and d.departmentId = :departmentId
-                  and e.employeeId <> :employeeId
-                """
+            select count(a)
+            from Attendance a
+                join a.employee e
+                join e.employeeDepartment d
+            where a.workDate = :workDate
+              and d.departmentId = :departmentId
+              and e.employeeId <> :employeeId
+            """
     )
     Page<DeptWorkSystemDTO> findDeptWorkSystemRows(
-
             @Param("employeeId") Integer employeeId,
             @Param("departmentId") Integer departmentId,
             @Param("workDate") LocalDate workDate,

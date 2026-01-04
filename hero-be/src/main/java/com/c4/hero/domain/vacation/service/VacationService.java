@@ -16,6 +16,7 @@ import com.c4.hero.domain.vacation.type.VacationStatus;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,7 @@ import java.util.List;
  * @author 이지윤
  * @version 1.2
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class VacationService {
@@ -117,7 +119,21 @@ public class VacationService {
      * 직원의 휴가 요약 정보를 조회합니다.
      */
     public VacationSummaryDTO findVacationLeaves(Integer employeeId) {
-        return vacationSummaryRepository.findSummaryByEmployeeId(employeeId);
+        List<VacationSummaryDTO> results =
+                vacationSummaryRepository.findSummaryByEmployeeId(employeeId);
+
+        if (results == null || results.isEmpty()) {
+            // 요약 데이터가 아예 없으면 null 리턴 (프론트에서 null 처리)
+            return null;
+        }
+
+        if (results.size() > 1) {
+            log.warn("휴가 요약이 여러 건 조회되었습니다. employeeId={}, count={}",
+                    employeeId, results.size());
+        }
+
+        // grant_date desc 로 정렬되어 있으니까 0번이 가장 최신
+        return results.get(0);
     }
 
     /**

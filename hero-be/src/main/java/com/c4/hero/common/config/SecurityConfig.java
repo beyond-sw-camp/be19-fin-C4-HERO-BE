@@ -102,12 +102,14 @@ public class SecurityConfig {
 //                                .requestMatchers("/api/auth/test").hasRole("EMPLOYEE")
                                 .anyRequest().permitAll()
 //                        .requestMatchers("/api/public/**").permitAll()    // 공개 API 허용
+                        //급여 권한 인가 처리 할때 요부분부터 (주석 해제할때 해당 텍스트 제거)
 //                        .requestMatchers("/api/admin/payroll/**")
 //                        .hasAnyAuthority("SYSTEM_ADMIN", "HR_MANAGER", "HR_PAYROLL") 관리자만 접근가능
 //                        .requestMatchers("/api/settings/payroll/**")
 //                        .hasAnyAuthority("SYSTEM_ADMIN", "HR_MANAGER", "HR_PAYROLL") 관리자만 접근가능
 //                        .requestMatchers("/api/me/payroll/**")
 //                        .authenticated() 로그인해야 접근 가능
+                        // 급여 권한 인가 처리 할때 요기까지 (주석 해제할때 해당 텍스트 제거)
 //                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // 관리자만 접근
 //                        .anyRequest().authenticated()                      // 나머지는 인증 필요
                 )
@@ -163,6 +165,7 @@ public class SecurityConfig {
 
         // 허용할 Origin (프론트엔드 주소)
         configuration.setAllowedOrigins(Arrays.asList(
+
                 "https://hero-hr.site",
                 "http://localhost:8080" // 개발환경
         ));

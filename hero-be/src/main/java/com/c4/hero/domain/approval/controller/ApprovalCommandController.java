@@ -6,6 +6,7 @@ import com.c4.hero.domain.approval.dto.response.ApprovalActionResponseDTO;
 import com.c4.hero.domain.approval.service.ApprovalCommandService;
 import com.c4.hero.domain.auth.security.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -36,6 +37,7 @@ import java.util.List;
  */
 @Slf4j
 @RestController
+@Tag(name = "결재 API")
 @RequestMapping("/api/approval")
 @RequiredArgsConstructor
 public class ApprovalCommandController {
