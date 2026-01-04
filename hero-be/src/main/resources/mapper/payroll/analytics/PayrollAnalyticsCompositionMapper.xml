@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+  <pre>
+  Mapper Name : PayrollAnalyticsCompositionMapper
+  Description : 급여 구성(Composition) 분석 조회 전용 MyBatis 매퍼 XML
+
+  History
+   2026/01/02 - 동근 최초 작성
+  </pre>
+-->
+
+<mapper namespace="com.c4.hero.domain.payroll.analytics.mapper.PayrollAnalyticsCompositionMapper">
+
+    <!-- 부서별 인건비(=총급여) 합계 -->
+    <select id="selectDeptShareAgg"
+            resultType="com.c4.hero.domain.payroll.analytics.dto.PayrollAnalyticsCompositionRows$DeptShareAggRow">
+        SELECT
+            d.department_id AS departmentId,
+            d.department_name AS departmentName,
+            CAST(COALESCE(SUM(
+                                  p.base_salary + p.allowance_total + p.overtime_pay + p.bonus
+                          ), 0) AS SIGNED) AS laborCostTotal
+        FROM tbl_department d
+                 LEFT JOIN tbl_employee e ON e.department_id = d.department_id
+                 LEFT JOIN tbl_payroll p ON p.employee_id = e.employee_id
+            AND p.salary_month = #{month}
+            AND p.status IN ('CALCULATED','CONFIRMED','PAID')
+        GROUP BY d.department_id, d.department_name
+        ORDER BY laborCostTotal DESC;
+    </select>
+
+
+    <!-- 항목별 요약(수당/공제) - payroll_item 기준 -->
+    <select id="selectItemAgg"
+            resultType="com.c4.hero.domain.payroll.analytics.dto.PayrollAnalyticsCompositionRows$ItemAggRow">
+        SELECT
+            pi.item_code AS itemCode,
+            pi.item_name AS itemName,
+            CAST(COALESCE(SUM(pi.amount), 0) AS SIGNED) AS amountTotal
+        FROM tbl_payroll_item pi
+                 JOIN tbl_payroll p ON p.payroll_id = pi.payroll_id
+        WHERE p.salary_month = #{month}
+          AND p.status IN ('CALCULATED','CONFIRMED','PAID')
+          AND pi.item_type = #{itemType}
+        GROUP BY pi.item_code, pi.item_name
+        ORDER BY amountTotal DESC;
+    </select>
+
+
+    <!-- 부담 종류 표(보험 공제만) -->
+    <select id="selectBurdenAgg"
+            resultType="com.c4.hero.domain.payroll.analytics.dto.PayrollAnalyticsCompositionRows$BurdenAggRow">
+        SELECT
+            pi.deduction_id AS deductionId,
+            MAX(pi.item_name) AS deductionName,
+            CAST(COALESCE(SUM(pi.amount), 0) AS SIGNED) AS employeeAmount,
+            CAST(COALESCE(SUM(
+                                  CASE
+                                      WHEN ir.employee_rate IS NULL OR ir.employee_rate = 0 THEN 0
+                                      ELSE pi.amount * (ir.employer_rate / ir.employee_rate)
+                                      END
+                          ), 0) AS SIGNED) AS employerAmount,
+            CAST(COALESCE(SUM(pi.amount), 0) AS SIGNED)
+                + CAST(COALESCE(SUM(
+                                        CASE
+                                            WHEN ir.employee_rate IS NULL OR ir.employee_rate = 0 THEN 0
+                                            ELSE pi.amount * (ir.employer_rate / ir.employee_rate)
+                                            END
+                                ), 0) AS SIGNED) AS totalAmount
+        FROM tbl_payroll_item pi
+                 JOIN tbl_payroll p ON p.payroll_id = pi.payroll_id
+                 JOIN tbl_insurance_rate ir ON ir.deduction_id = pi.deduction_id
+        WHERE p.salary_month = #{month}
+          AND p.status IN ('CALCULATED','CONFIRMED','PAID')
+          AND pi.item_type = 'DEDUCTION'
+          AND pi.deduction_id IS NOT NULL
+        GROUP BY pi.deduction_id
+        ORDER BY totalAmount DESC;
+    </select>
+
+
+    <!-- 월별 구성 변화(스택) -->
+    <select id="selectStackTrend"
+            resultType="com.c4.hero.domain.payroll.analytics.dto.PayrollAnalyticsCompositionRows$MonthStackAggRow">
+        SELECT
+            p.salary_month AS month,
+            CAST(COALESCE(SUM(p.base_salary), 0) AS SIGNED) AS baseTotal,
+            CAST(COALESCE(SUM(p.allowance_total), 0) AS SIGNED) AS allowanceTotal,
+            CAST(COALESCE(SUM(p.overtime_pay), 0) AS SIGNED) AS overtimeTotal,
+            CAST(COALESCE(SUM(p.bonus), 0) AS SIGNED) AS bonusTotal,
+            CAST(COALESCE(SUM(p.deduction_total), 0) AS SIGNED) AS deductionTotal,
+            CAST(COALESCE(SUM(p.base_salary + p.allowance_total + p.overtime_pay + p.bonus), 0) AS SIGNED) AS laborCostTotal
+        FROM tbl_payroll p
+        WHERE p.salary_month <![CDATA[>=]]> #{fromMonth}
+          AND p.salary_month <![CDATA[<=]]> #{toMonth}
+          AND p.status IN ('CALCULATED','CONFIRMED','PAID')
+        GROUP BY p.salary_month
+        ORDER BY p.salary_month ASC;
+    </select>
+
+</mapper>

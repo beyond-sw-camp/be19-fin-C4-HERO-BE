@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+<pre>
+ Class Name: EvaluationFormMapper.xml
+ Description: 평가서 관련 Mybatis Mapper
+
+ History
+ 2025/12/1 (김승민) 최초 작성
+</pre>
+
+@author 김승민
+-->
+
+<mapper namespace="com.c4.hero.domain.evaluation.mapper.EvaluationFormMapper">
+
+
+    <resultMap id="EvaluationFormMap" type="com.c4.hero.domain.evaluation.dto.form.EvaluationFormResponseDTO">
+        <id property="evaluationFormFormId" column="form_id"/>
+        <result property="evaluationFormEvaluationId" column="evaluation_id"/>
+        <result property="evaluationFormEvaluationName" column="evaluation_name"/>
+        <result property="evaluationFormEvaluationEmployeeId" column="evaluation_employee_id"/>
+        <result property="evaluationFormEvaluationEmployeeName" column="evaluation_employee_name"/>
+        <result property="evaluationFormEmployeeId" column="employee_id"/>
+        <result property="evaluationFormEmployeeName" column="employee_name"/>
+        <result property="evaluationFormDepartmentId" column="department_id"/>
+        <result property="evaluationFormDepartmentName" column="department_name"/>
+        <result property="evaluationFormCreatedAt" column="created_at"/>
+        <result property="evaluationFormGradeId" column="grade_id"/>
+        <result property="evaluationFormGrade" column="grade"/>
+        <result property="evaluationFormTotal" column="total"/>
+        <result property="evaluationFormTotalRank" column="total_rank"/>
+        <result property="evaluationFormTotalScore" column="total_score"/>
+        <result property="evaluationFormEvaluationPeriodId" column="evaluation_period_id"/>
+        <result property="evaluationFormEvaluationPeriodName" column="evaluation_period_name"/>
+        <result property="evaluationFormEvaluationPeriodStart" column="evaluation_period_start"/>
+        <result property="evaluationFormEvaluationPeriodEnd" column="evaluation_period_end"/>
+
+
+        <collection property="formItems" ofType="com.c4.hero.domain.evaluation.dto.item.FormItemResponseDTO">
+            <id property="formItemFormItemId" column="form_item_id"/>
+            <result property="formItemFormId" column="form_item_form_id"/>
+            <result property="formItemSelectedItemId" column="selected_item_id"/>
+            <result property="formItemSelectedItemItemName" column="selected_item_name"/>
+            <result property="formItemSelectedItemItemDescription" column="selected_item_description"/>
+            <result property="formItemWeight" column="form_item_weight"/>
+            <result property="formItemDescription" column="form_item_description"/>
+
+            <association property="itemScore" javaType="com.c4.hero.domain.evaluation.dto.score.ItemScoreResponseDTO">
+                <id property="itemScoreItemScoreId" column="item_score_id"/>
+                <result property="itemScoreFormItemId" column="item_score_form_item_id"/>
+                <result property="itemScoreScore" column="score"/>
+                <result property="itemScoreDescription" column="item_score_description"/>
+                <result property="itemScoreRank" column="item_score_rank"/>
+            </association>
+
+            <collection property="criterias" ofType="com.c4.hero.domain.evaluation.dto.criteria.CriteriaResponseDTO">
+                <id property="criteriaCriteriaId" column="criteria_id"/>
+                <result property="criteriaItemId" column="criteria_item_id"/>
+                <result property="criteriaRank" column="rank"/>
+                <result property="criteriaDescription" column="criteria_description"/>
+                <result property="criteriaMinScore" column="min_score"/>
+                <result property="criteriaMaxScore" column="max_score"/>
+            </collection>
+        </collection>
+    </resultMap>
+
+    <select id="selectAllForm" resultMap="EvaluationFormMap">
+        SELECT
+            f.form_id AS form_id,
+            e.evaluation_id AS evaluation_id,
+            e.name AS evaluation_name,
+            e.employee_id AS evaluation_employee_id,
+            ee2.employee_name AS evaluation_employee_name,
+            ee.employee_id AS employee_id,
+            ee.employee_name AS employee_name,
+            d.department_id AS department_id,
+            d.department_name AS department_name,
+            f.created_at AS created_at,
+            g.grade_id AS grade_id,
+            g.grade AS grade,
+            f.total AS total,
+            f.total_rank AS total_rank,
+            f.total_score AS total_score,
+            p.evaluation_period_id AS evaluation_period_id,
+            p.name AS evaluation_period_name,
+            p.start AS evaluation_period_start,
+            p.end AS evaluation_period_end,
+
+            ff.form_item_id AS form_item_id,
+            f.form_id AS form_item_form_id,
+            s.selected_item_id AS selected_item_id,
+            t.item AS selected_item_name,
+            t.description AS selected_item_description,
+            ff.weight AS form_item_weight,
+            ff.description AS form_item_description,
+
+            ss.item_score_id AS item_score_id,
+            ss.form_item_id AS item_score_form_item_id,
+            ss.score AS score,
+            ss.description AS item_score_description,
+            ss.rank AS item_score_rank,
+
+            c.criteria_id AS criteria_id,
+            t.item_id AS criteria_item_id,
+            c.rank AS rank,
+            c.description AS criteria_description,
+            c.min_score AS min_score,
+            c.max_score AS max_score
+        FROM tbl_evaluation_form f
+        JOIN tbl_evaluation e ON e.evaluation_id = f.evaluation_id
+        JOIN tbl_evaluation_period p ON p.evaluation_period_id = e.evaluation_period_id
+        JOIN tbl_employee ee ON ee.employee_id = f.employee_id
+        JOIN tbl_employee ee2 ON e.employee_id = ee2.employee_id
+        JOIN tbl_department d ON d.department_id = ee.department_id
+        JOIN tbl_grade g ON g.grade_id = ee.grade_id
+        JOIN tbl_form_item ff ON ff.form_id = f.form_id
+        JOIN tbl_selected_item s on s.selected_item_id = ff.selected_item_id
+        JOIN tbl_template_item t ON t.item_id = s.item_id
+        JOIN tbl_item_score ss ON ss.form_item_id = ff.form_item_id
+        JOIN tbl_criteria c ON c.item_id = t.item_id
+    </select>
+
+    <select id="selectForm" parameterType="int" resultMap="EvaluationFormMap">
+        SELECT
+            f.form_id AS form_id,
+            e.evaluation_id AS evaluation_id,
+            e.name AS evaluation_name,
+            e.employee_id AS evaluation_employee_id,
+            ee2.employee_name AS evaluation_employee_name,
+            ee.employee_id AS employee_id,
+            ee.employee_name AS employee_name,
+            d.department_id AS department_id,
+            d.department_name AS department_name,
+            f.created_at AS created_at,
+            g.grade_id AS grade_id,
+            g.grade AS grade,
+            f.total AS total,
+            f.total_rank AS total_rank,
+            f.total_score AS total_score,
+            p.evaluation_period_id AS evaluation_period_id,
+            p.name AS evaluation_period_name,
+            p.start AS evaluation_period_start,
+            p.end AS evaluation_period_end,
+
+            ff.form_item_id AS form_item_id,
+            f.form_id AS form_item_form_id,
+            s.selected_item_id AS selected_item_id,
+            t.item AS selected_item_name,
+            t.description AS selected_item_description,
+            ff.weight AS form_item_weight,
+            ff.description AS form_item_description,
+
+            ss.item_score_id AS item_score_id,
+            ss.form_item_id AS item_score_form_item_id,
+            ss.score AS score,
+            ss.description AS item_score_description,
+            ss.rank AS item_score_rank,
+
+            c.criteria_id AS criteria_id,
+            t.item_id AS criteria_item_id,
+            c.rank AS rank,
+            c.description AS criteria_description,
+            c.min_score AS min_score,
+            c.max_score AS max_score
+        FROM tbl_evaluation_form f
+                 JOIN tbl_evaluation e ON e.evaluation_id = f.evaluation_id
+                 JOIN tbl_evaluation_period p ON p.evaluation_period_id = e.evaluation_period_id
+                 JOIN tbl_employee ee ON ee.employee_id = f.employee_id
+                 JOIN tbl_employee ee2 ON e.employee_id = ee2.employee_id
+                 JOIN tbl_department d ON d.department_id = ee.department_id
+                 JOIN tbl_grade g ON g.grade_id = ee.grade_id
+                 JOIN tbl_form_item ff ON ff.form_id = f.form_id
+                 JOIN tbl_selected_item s on s.selected_item_id = ff.selected_item_id
+                 JOIN tbl_template_item t ON t.item_id = s.item_id
+                 JOIN tbl_item_score ss ON ss.form_item_id = ff.form_item_id
+                 JOIN tbl_criteria c ON c.item_id = t.item_id
+        WHERE e.evaluation_id = #{evaluationId}
+          AND ee.employee_id = #{employeeId}
+    </select>
+</mapper>

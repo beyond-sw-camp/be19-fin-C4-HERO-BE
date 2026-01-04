@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+ * 급여 리포트 조회용 MyBatis Mapper
+ * <pre>
+ * Class Name: PayrollReportQueryMapper
+ * Description: 내 급여 요약, 이력 관련 조회 SQL 매퍼
+ *
+ * History
+ * 2025/12/08 동근 최초 작성
+ * 2025/12/14 동근 report에서 payslip 조회 쿼리 분리 (payslip 패키지로 이동)
+ * </pre>
+ *
+ * @author 동근
+ * @version 1.1
+-->
+
+<mapper namespace="com.c4.hero.domain.payroll.report.mapper.EmployeePayrollReportMapper">
+
+    <!-- 내 급여 요약 -->
+    <select id="selectMyPayrollSummary"
+            parameterType="map"
+            resultType="com.c4.hero.domain.payroll.report.dto.MyPaySummaryCoreDTO">
+        SELECT
+            p.salary_month       AS salaryMonth,
+            p.base_salary AS baseSalary,
+            p.total_pay          AS netPay,
+            (p.base_salary + p.overtime_pay + p.bonus + p.allowance_total) AS grossPay,
+            p.deduction_total    AS totalDeduction,
+            IFNULL(a.work_days, 0)    AS workDays,
+            IFNULL(a.work_hours, 0)   AS workHours,
+            IFNULL(a.overtime_hours, 0) AS overtimeHours,
+            '매월 25일'          AS payDayLabel,
+            ba.bank_name         AS bankName,
+            ba.account_number    AS bankAccountNumber,
+            ba.account_holder    AS accountHolder
+        FROM tbl_payroll p
+                 LEFT JOIN (
+            SELECT
+                employee_id,
+                DATE_FORMAT(work_date, '%Y-%m') AS ym,
+                COUNT(*)                        AS work_days,
+                SUM(TIMESTAMPDIFF(HOUR, start_time, end_time)) AS work_hours,
+                0                               AS overtime_hours  -- 규칙 정해지면 수정
+            FROM tbl_attendance
+            WHERE employee_id = #{employeeId}
+            GROUP BY employee_id, DATE_FORMAT(work_date, '%Y-%m')
+        ) a
+                           ON a.employee_id = p.employee_id
+                               AND a.ym = p.salary_month
+                 LEFT JOIN tbl_bank_account ba
+                           ON ba.employee_id = p.employee_id
+                               AND ba.is_primary = 1
+        WHERE p.employee_id = #{employeeId}
+          AND p.salary_month = #{salaryMonth}
+    </select>
+
+    <!-- 지급 항목 -->
+    <select id="selectAllowanceItems"
+            parameterType="map"
+            resultType="com.c4.hero.domain.payroll.report.dto.PayItemDTO">
+        SELECT
+            item_name AS name,
+            amount    AS amount
+        FROM tbl_payroll_item
+        WHERE payroll_id = (
+            SELECT payroll_id
+            FROM tbl_payroll
+            WHERE employee_id = #{employeeId}
+              AND salary_month = #{salaryMonth}
+        )
+          AND item_type IN ('ALLOWANCE','BONUS')
+        ORDER BY sort_order
+    </select>
+
+    <!-- 공제 항목 -->
+    <select id="selectDeductionItems"
+            parameterType="map"
+            resultType="com.c4.hero.domain.payroll.report.dto.PayItemDTO">
+        SELECT
+            item_name AS name,
+            amount    AS amount
+        FROM tbl_payroll_item
+        WHERE payroll_id = (
+            SELECT payroll_id
+            FROM tbl_payroll
+            WHERE employee_id = #{employeeId}
+              AND salary_month = #{salaryMonth}
+        )
+          AND item_type IN ('DEDUCTION','TAX')
+        ORDER BY sort_order
+    </select>
+
+    <!-- 근무 요약 -->
+    <select id="selectAttendanceSummary"
+            parameterType="map"
+            resultType="com.c4.hero.domain.payroll.integration.attendance.dto.AttendanceSummaryDto">
+        SELECT
+            COUNT(*)                                   AS workDays,
+            SUM(TIMESTAMPDIFF(HOUR, start_time, end_time)) AS workHours,
+            0 AS overtimeHours
+        FROM tbl_attendance
+        WHERE employee_id = #{employeeId}
+          AND DATE_FORMAT(work_date, '%Y-%m') = #{salaryMonth}
+    </select>
+
+    <!-- 최근 12개월 급여 이력 -->
+    <select id="selectPayHistory"
+            parameterType="map"
+            resultType="com.c4.hero.domain.payroll.report.dto.PayHistoryRowDTO">
+        SELECT
+            p.salary_month   AS salaryMonth,
+            p.base_salary    AS baseSalary,
+            p.allowance_total AS allowanceTotal,
+            p.deduction_total AS deductionTotal,
+            p.total_pay      AS netPay,
+            ''               AS remark
+        FROM tbl_payroll p
+        WHERE p.employee_id = #{employeeId}
+          AND p.salary_month BETWEEN #{fromMonth} AND #{toMonth}
+        ORDER BY p.salary_month
+    </select>
+
+
+</mapper>

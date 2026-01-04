@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+  <pre>
+  Xml Name: NotificationSettingsMapper
+  Description: 알림 설정 Mybatis Mapper
+
+  History
+  2025/12/17 (혜원) 최초 작성
+  </pre>
+
+  @author 혜원
+  @version 1.0
+-->
+<mapper namespace="com.c4.hero.domain.notification.mapper.NotificationSettingsMapper">
+
+    <resultMap id="NotificationSettingsResultMap"
+               type="com.c4.hero.domain.notification.dto.NotificationSettingsDTO">
+        <id property="settingId" column="setting_id"/>
+        <result property="employeeId" column="employee_id"/>
+        <result property="attendanceEnabled" column="attendance_enabled"/>
+        <result property="payrollEnabled" column="payroll_enabled"/>
+        <result property="approvalEnabled" column="approval_enabled"/>
+        <result property="leaveEnabled" column="leave_enabled"/>
+        <result property="evaluationEnabled" column="evaluation_enabled"/>
+        <result property="systemEnabled" column="system_enabled"/>
+        <result property="browserNotification" column="browser_notification"/>
+        <result property="emailNotification" column="email_notification"/>
+        <result property="smsNotification" column="sms_notification"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <!-- 알림 설정 조회 -->
+    <select id="selectSettingsByEmployeeId"
+            resultMap="NotificationSettingsResultMap">
+        SELECT
+            setting_id,
+            employee_id,
+            attendance_enabled,
+            payroll_enabled,
+            approval_enabled,
+            leave_enabled,
+            evaluation_enabled,
+            system_enabled,
+            browser_notification,
+            email_notification,
+            sms_notification,
+            created_at,
+            updated_at
+        FROM tbl_notification_settings
+        WHERE employee_id = #{employeeId}
+    </select>
+
+    <!-- 알림 설정 생성 -->
+    <insert id="insertSettings"
+            parameterType="com.c4.hero.domain.notification.dto.NotificationSettingsDTO"
+            useGeneratedKeys="true"
+            keyProperty="settingId">
+        INSERT INTO tbl_notification_settings (
+            employee_id,
+            attendance_enabled,
+            payroll_enabled,
+            approval_enabled,
+            leave_enabled,
+            evaluation_enabled,
+            system_enabled,
+            browser_notification,
+            email_notification,
+            sms_notification
+        ) VALUES (
+                     #{employeeId},
+                     #{attendanceEnabled},
+                     #{payrollEnabled},
+                     #{approvalEnabled},
+                     #{leaveEnabled},
+                     #{evaluationEnabled},
+                     #{systemEnabled},
+                     #{browserNotification},
+                     #{emailNotification},
+                     #{smsNotification}
+                 )
+    </insert>
+
+    <!-- 알림 설정 수정 -->
+    <update id="updateSettings"
+            parameterType="com.c4.hero.domain.notification.dto.NotificationSettingsDTO">
+        UPDATE tbl_notification_settings
+        SET
+            attendance_enabled = #{attendanceEnabled},
+            payroll_enabled = #{payrollEnabled},
+            approval_enabled = #{approvalEnabled},
+            leave_enabled = #{leaveEnabled},
+            evaluation_enabled = #{evaluationEnabled},
+            system_enabled = #{systemEnabled},
+            browser_notification = #{browserNotification},
+            email_notification = #{emailNotification},
+            sms_notification = #{smsNotification}
+        WHERE employee_id = #{employeeId}
+    </update>
+
+    <!-- 알림 설정 존재 여부 확인 -->
+    <select id="existsByEmployeeId" resultType="int">
+        SELECT COUNT(*)
+        FROM tbl_notification_settings
+        WHERE employee_id = #{employeeId}
+    </select>
+
+</mapper>

@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.c4.hero.domain.settings.mapper.SettingsMapper">
+
+    <!-- 만약 설정값이 없다면 5를 반환 -->
+    <select id = "selectPolicy" resultType="int">
+        SELECT IFNULL(
+            (SELECT
+                    l.value
+               FROM tbl_login_policies AS l
+              WHERE l.login_policy_id = 1)
+          , 5
+        )
+    </select>
+
+    <resultMap id="permissionsResultMap" type="com.c4.hero.domain.settings.dto.response.SettingsPermissionsResponseDTO">
+        <id property="employeeId" column="employeeId"/>
+        <result property="employeeName" column="employee_name"/>
+        <result property="employeeNumber" column="employee_number"/>
+        <result property="department" column="department"/>
+        <result property="grade" column="grade"/>
+        <result property="jobTitle" column="jobTitle"/>
+        <collection property="role" ofType="java.lang.String">
+            <result column="roleName"/>
+        </collection>
+    </resultMap>
+
+    <!-- =========================
+        근태 설정 - 근무제 템플릿 조회 (WSTAttResDTO)
+     ========================= -->
+    <resultMap id="wstAttResultMap" type="com.c4.hero.domain.settings.dto.response.SettingWorkSystemResponseDTO">
+        <id property="workSystemTemplateId" column="work_system_template_id"/>
+        <result property="startTime" column="start_time"/>
+        <result property="endTime" column="end_time"/>
+        <result property="breakMinMinutes" column="break_min_minutes"/>
+        <result property="reason" column="reason"/>
+        <result property="workSystemTypeId" column="work_system_type_id"/>
+    </resultMap>
+
+    <select id="findEmployeePermissions" resultMap="permissionsResultMap">
+        SELECT
+            e.employee_id AS employeeId,
+            e.employee_name,
+            e.employee_number,
+            d.department_name AS department,
+            g.grade AS grade,
+            jt.job_title AS jobTitle,
+            r.role AS roleName
+        FROM
+            tbl_employee e
+        LEFT JOIN
+            tbl_department d ON e.department_id = d.department_id
+        LEFT JOIN
+            tbl_grade g ON e.grade_id = g.grade_id
+        LEFT JOIN
+            tbl_job_title jt ON e.job_title_id = jt.job_title_id
+        LEFT JOIN
+            tbl_account a ON e.employee_id = a.employee_id
+        LEFT JOIN
+            tbl_account_role ar ON a.account_id = ar.account_id
+        LEFT JOIN
+            tbl_roles r ON ar.role_id = r.role_id
+        WHERE e.employee_id IN (
+            SELECT employee_id FROM (
+                SELECT DISTINCT e.employee_id
+                FROM tbl_employee e
+                LEFT JOIN tbl_department d ON e.department_id = d.department_id
+                LEFT JOIN tbl_grade g ON e.grade_id = g.grade_id
+                LEFT JOIN tbl_job_title jt ON e.job_title_id = jt.job_title_id
+                <where>
+                    e.status != 'R'
+                    <if test="params.query != null and params.query != ''">
+                        e.employee_name LIKE CONCAT('%', #{params.query}, '%')
+                        OR d.department_name LIKE CONCAT('%', #{params.query}, '%')
+                        OR g.grade LIKE CONCAT('%', #{params.query}, '%')
+                        OR jt.job_title LIKE CONCAT('%', #{params.query}, '%')
+                    </if>
+                </where>
+                ORDER BY e.employee_id
+                LIMIT #{pageable.pageSize} OFFSET #{pageable.offset}
+            ) as t
+        )
+        ORDER BY
+            e.employee_id
+    </select>
+
+    <select id="countEmployeePermissions" resultType="int">
+        SELECT
+            COUNT(DISTINCT e.employee_id)
+        FROM
+            tbl_employee e
+        LEFT JOIN
+            tbl_department d ON e.department_id = d.department_id
+        LEFT JOIN
+            tbl_grade g ON e.grade_id = g.grade_id
+        LEFT JOIN
+            tbl_job_title jt ON e.job_title_id = jt.job_title_id
+        <where>
+            <if test="params.query != null and params.query != ''">
+                e.employee_name LIKE CONCAT('%', #{params.query}, '%')
+                OR d.department_name LIKE CONCAT('%', #{params.query}, '%')
+                OR g.grade LIKE CONCAT('%', #{params.query}, '%')
+                OR jt.job_title LIKE CONCAT('%', #{params.query}, '%')
+            </if>
+        </where>
+    </select>
+
+    <!-- 알림 -->
+    <!-- 알림 발송 이력 조회 -->
+    <select id="findNotificationHistory" resultType="com.c4.hero.domain.settings.dto.response.SettingsNotificationHistoryResponseDTO">
+        SELECT
+        nh.history_id AS historyId,
+        nh.title,
+        nh.message,
+        nh.type,
+        nh.scope,
+        nh.target_count AS targetCount,
+        nh.success_count AS successCount,
+        nh.failure_count AS failureCount,
+        e.employee_name AS senderName,
+        nh.sent_at AS sentAt
+        FROM tbl_notification_history nh
+        LEFT JOIN tbl_employee e ON nh.sender_id = e.employee_id
+        <where>
+            <if test="params.startDate != null and params.startDate != ''">
+                AND DATE(nh.sent_at) >= #{params.startDate}
+            </if>
+            <if test="params.endDate != null and params.endDate != ''">
+                AND DATE(nh.sent_at) &lt;= #{params.endDate}
+            </if>
+            <if test="params.type != null and params.type != ''">
+                AND nh.type = #{params.type}
+            </if>
+        </where>
+        ORDER BY nh.sent_at DESC
+        LIMIT #{pageable.offset}, #{pageable.pageSize}
+    </select>
+
+    <!-- 알림 발송 이력 총 개수 -->
+    <select id="countNotificationHistory" resultType="int">
+        SELECT COUNT(*)
+        FROM tbl_notification_history nh
+        <where>
+            <if test="params.startDate != null and params.startDate != ''">
+                AND DATE(nh.sent_at) >= #{params.startDate}
+            </if>
+            <if test="params.endDate != null and params.endDate != ''">
+                AND DATE(nh.sent_at) &lt;= #{params.endDate}
+            </if>
+            <if test="params.type != null and params.type != ''">
+                AND nh.type = #{params.type}
+            </if>
+        </where>
+    </select>
+
+    <!-- 알림 발송 통계 조회 -->
+    <select id="selectNotificationStatistics" resultType="com.c4.hero.domain.settings.dto.response.SettingsNotificationStatisticsResponseDTO">
+        SELECT
+            COALESCE(SUM(CASE WHEN DATE(sent_at) = CURDATE() THEN 1 ELSE 0 END), 0) AS todayCount,
+            COALESCE(SUM(CASE WHEN YEARWEEK(sent_at, 1) = YEARWEEK(CURDATE(), 1) THEN 1 ELSE 0 END), 0) AS weekCount,
+            COALESCE(SUM(CASE WHEN YEAR(sent_at) = YEAR(CURDATE()) AND MONTH(sent_at) = MONTH(CURDATE()) THEN 1 ELSE 0 END), 0) AS monthCount,
+            COUNT(*) AS totalCount,
+            COALESCE(AVG(CASE WHEN target_count > 0 THEN (success_count * 100.0 / target_count) ELSE 0 END), 0) AS averageSuccessRate
+        FROM tbl_notification_history
+    </select>
+
+    <!-- 가장 많이 발송된 알림 타입 조회 -->
+    <select id="findMostSentType" resultType="String">
+        SELECT type
+        FROM tbl_notification_history
+        GROUP BY type
+        ORDER BY COUNT(*) DESC
+            LIMIT 1
+    </select>
+
+    <!-- 근무제 템플릿 전체 조회 -->
+    <select id="selectWorkSystemTemplates" resultMap="wstAttResultMap">
+        SELECT
+            wst.work_system_template_id,
+            wst.start_time,
+            wst.end_time,
+            wst.break_min_minutes,
+            wst.reason,
+            wst.work_system_type_id
+        FROM tbl_work_system_template wst
+        ORDER BY wst.work_system_template_id
+    </select>
+</mapper>

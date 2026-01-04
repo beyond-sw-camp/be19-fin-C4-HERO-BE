@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+<pre>
+ Class Name: EvaluationTemplateMapper.xml
+ Description: 평가 템플릿 관련 Mybatis Mapper
+
+ History
+ 2025/12/07 (김승민) 최초 작성
+</pre>
+
+@author 김승민
+-->
+
+<mapper namespace="com.c4.hero.domain.evaluation.mapper.EvaluationTemplateMapper">
+
+    <resultMap id="AllEvaluationTemplateMap" type="com.c4.hero.domain.evaluation.dto.template.EvaluationTemplateResponseDTO">
+        <id property="evaluationTemplateTemplateId" column="template_id"/>
+        <result property="evaluationTemplateName" column="template_name"/>
+        <result property="evaluationTemplateCreatedAt" column="created_at"/>
+        <result property="evaluationTemplateEmployeeId" column="employee_id"/>
+        <result property="evaluationTemplateEmployeeName" column="employee_name"/>
+        <result property="evaluationTemplateDepartmentId" column="department_id"/>
+        <result property="evaluationTemplateDepartmentName" column="department_name"/>
+        <result property="evaluationTemplateGradeId" column="grade_id"/>
+        <result property="evaluationTemplateGrade" column="grade"/>
+        <result property="evaluationTemplateType" column="type"/>
+        <result property="evaluationPeriodEvaluationPeriodId" column="evaluation_period_id"/>
+        <result property="evaluationPeriodName" column="period_name"/>
+        <result property="evaluationPeriodStart" column="start"/>
+        <result property="evaluationPeriodEnd" column="end"/>
+
+        <!-- Item and Criteria Mapping -->
+        <collection property="templateItems" ofType="com.c4.hero.domain.evaluation.dto.item.TemplateItemResponseDTO">
+            <id property="templateItemItemId" column="item_id"/>
+            <result property="templateItemItem" column="item"/>
+            <result property="templateItemDescription" column="item_description"/>
+
+            <collection property="criterias" ofType="com.c4.hero.domain.evaluation.dto.criteria.CriteriaResponseDTO">
+                <id property="criteriaCriteriaId" column="criteria_id"/>
+                <result property="criteriaRank" column="rank"/>
+                <result property="criteriaDescription" column="criteria_description"/>
+                <result property="criteriaMinScore" column="min_score"/>
+                <result property="criteriaMaxScore" column="max_score"/>
+            </collection>
+        </collection>
+    </resultMap>
+
+    <select id="selectTemplateIdsWithPaging" resultType="int">
+        SELECT template_id
+        FROM tbl_evaluation_template
+        ORDER BY template_id DESC
+            LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="selectTemplatesByIds" resultMap="AllEvaluationTemplateMap">
+        SELECT
+        t.template_id AS template_id,
+        t.name AS template_name,
+        t.created_at AS created_at,
+        e.employee_id AS employee_id,
+        e.employee_name AS employee_name,
+        d.department_id AS department_id,
+        d.department_name AS department_name,
+        g.grade_id AS grade_id,
+        g.grade AS grade,
+        t.type AS type,
+        p.evaluation_period_id AS evaluation_period_id,
+        p.name AS period_name,
+        p.start AS start,
+        p.end AS end,
+
+        i.item_id AS item_id,
+        i.item AS item,
+        i.description AS item_description,
+
+        c.criteria_id AS criteria_id,
+        c.rank AS rank,
+        c.description AS criteria_description,
+        c.min_score AS min_score,
+        c.max_score AS max_score
+        FROM tbl_evaluation_template t
+        JOIN tbl_employee e ON t.employee_id = e.employee_id
+        JOIN tbl_department d ON e.department_id = d.department_id
+        JOIN tbl_grade g ON e.grade_id = g.grade_id
+        JOIN tbl_evaluation_period p ON t.template_id = p.template_id
+        JOIN tbl_template_item i ON t.template_id = i.template_id
+        JOIN tbl_criteria c ON i.item_id = c.item_id
+        WHERE t.template_id IN
+        <foreach collection="templateIds" item="id" open="(" close=")" separator=",">
+            #{id}
+        </foreach>
+        ORDER BY FIELD(
+        t.template_id,
+        <foreach collection="templateIds" item="id" separator=",">
+            #{id}
+        </foreach>
+        )
+    </select>
+
+    <select id="countAllTemplates" resultType="long">
+        SELECT COUNT(*)
+        FROM tbl_evaluation_template
+    </select>
+
+    <select id="selectAllTemplate" resultMap="AllEvaluationTemplateMap">
+        SELECT
+            t.template_id AS template_id,
+            t.name AS template_name,
+            t.created_at AS created_at,
+            e.employee_id AS employee_id,
+            e.employee_name AS employee_name,
+            d.department_id AS department_id,
+            d.department_name AS department_name,
+            g.grade_id AS grade_id,
+            g.grade AS grade,
+            t.type AS type,
+            p.evaluation_period_id AS evaluation_period_id,
+            p.name AS period_name,
+            p.start AS start,
+            p.end AS end,
+
+            i.item_id AS item_id,
+            i.item AS item,
+            i.description AS item_description,
+
+            c.criteria_id AS criteria_id,
+            c.rank AS rank,
+            c.description AS criteria_description,
+            c.min_score AS min_score,
+            c.max_score AS max_score
+
+        FROM tbl_evaluation_template t
+        JOIN tbl_employee e ON t.employee_id = e.employee_id
+        JOIN tbl_department d ON e.department_id = d.department_id
+        JOIN tbl_grade g ON e.grade_id = g.grade_id
+        JOIN tbl_evaluation_period p ON t.template_id = p.template_id
+        JOIN tbl_template_item i ON t.template_id = i.template_id
+        JOIN tbl_criteria c ON i.item_id = c.item_id
+    </select>
+
+
+    <select id="selectTemplate" parameterType="int" resultMap="AllEvaluationTemplateMap">
+        SELECT
+            t.template_id AS template_id,
+            t.name AS template_name,
+            t.created_at AS created_at,
+            e.employee_id AS employee_id,
+            e.employee_name AS employee_name,
+            d.department_id AS department_id,
+            d.department_name AS department_name,
+            g.grade_id AS grade_id,
+            g.grade AS grade,
+            t.type AS type,
+            p.evaluation_period_id AS evaluation_period_id,
+            p.name AS period_name,
+            p.start AS start,
+            p.end AS end,
+
+            i.item_id AS item_id,
+            i.item AS item,
+            i.description AS item_description,
+
+            c.criteria_id AS criteria_id,
+            c.rank AS rank,
+            c.description AS criteria_description,
+            c.min_score AS min_score,
+            c.max_score AS max_score
+
+        FROM tbl_evaluation_template t
+        JOIN tbl_employee e ON t.employee_id = e.employee_id
+        JOIN tbl_department d ON e.department_id = d.department_id
+        JOIN tbl_grade g ON e.grade_id = g.grade_id
+        JOIN tbl_evaluation_period p ON t.template_id = p.template_id
+        JOIN tbl_template_item i ON t.template_id = i.template_id
+        JOIN tbl_criteria c ON i.item_id = c.item_id
+        WHERE t.template_id = #{templateId}
+    </select>
+
+</mapper>
+
+

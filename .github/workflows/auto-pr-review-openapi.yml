@@ -1,0 +1,79 @@
+#name: Code Review
+#
+## GitHub 저장소 읽기 및 PR 쓰기 권한을 설정
+#permissions:
+#  contents: read
+#  pull-requests: write
+#
+## PR 이벤트 관련해서 워크플로우 실행
+#on:
+#  pull_request:
+#    types: [opened]
+#
+## 워크플로우 실행 작업 정의
+#jobs:
+#  test:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v4
+#
+#      - name: Set up JDK 17
+#        uses: actions/setup-java@v4
+#        with:
+#          java-version: '17'
+#          distribution: 'corretto'
+#
+#      - name: Grant execute permission for gradlew
+#        run: chmod +x gradlew
+#        working-directory: ./hero-be
+#        shell: bash
+#
+#      ##############################################################
+#      # 이후 이 부분은 envsubst가 추가될 예정
+#      ##############################################################
+#
+#      - name: Build with Gradle
+#        run: ./gradlew clean build -x test
+#        working-directory: ./hero-be
+#        shell: bash
+#        # run: ./gradlew clean build
+#
+#      - name: Get current time
+#        uses: 1466587594/get-current-time@v2
+#        id: current-time
+#        with:
+#          format: YYYY-MM-DDTHH-mm-ss
+#          utcOffset: "+09:00"
+#
+#      - name: Show Current Time
+#        run: echo "CurrentTime=${{steps.current-time.outputs.formattedTime}}"
+#        shell: bash
+#
+#      - name: ChatGPT codeReviewer
+#        uses: anc95/ChatGPT-CodeReview@main
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+#
+#          # optional
+#          MODEL: gpt-4o-mini # https://platform.openai.com/docs/models
+#          MAX_PATCH_TOKENS: 4096         # (선택) 처리할 코드 조각의 최대 토큰 제한 (길이가 긴 PR의 비용 방지)
+#          EXCLUDE_PATTERNS: |            # (선택) 리뷰에서 제외할 파일 패턴 (예: 설정 파일, 마크다운)
+#            **/*.md
+#            **/*.yml
+#            **/*.yaml
+#            **/build/**
+#          OPENAI_API_ENDPOINT: https://api.openai.com/v1
+#          LANGUAGE: Korean
+#          PROMPT: |
+#            이 PR을 Google/Meta/Stripe 수준의 엄격한 코드 리뷰 관점으로 분석해주세요:
+#
+#            피드백은:
+#              - P0(반드시 수정)/P1(중요)/P2(권장) 우선순위로 분류
+#              - 문제보다 해결책 중심으로 제시
+#              - 구체적인 코드 예시 포함
+#              - "왜" 변경이 필요한지 원칙과 함께 설명
+#
+#            최고 수준의 코드만 승인하고, "잘 돌아가니까 괜찮아"는 수용하지 않음.
+#            응답 코드는 pr 코드 리뷰에 반드시 이모지를 항상 활용할 것(특히 상대방이 기분나쁘지 않게)

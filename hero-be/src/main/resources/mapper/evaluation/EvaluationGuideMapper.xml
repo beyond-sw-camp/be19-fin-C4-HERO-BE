@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+<pre>
+ Class Name: EvaluationGuideMapper.xml
+ Description: 평가 가이드 관련 Mybatis Mapper
+
+ History
+ 2025/12/10 (김승민) 최초 작성
+</pre>
+
+@author 김승민
+-->
+
+<mapper namespace="com.c4.hero.domain.evaluation.mapper.EvaluationGuideMapper">
+
+    <resultMap id="EvaluationGuideMap" type="com.c4.hero.domain.evaluation.dto.guide.EvaluationGuideResponseDTO">
+        <id property="evaluationGuideEvaluationGuideId" column="evaluation_guide_id"/>
+        <result property="evaluationGuideName" column="name"/>
+        <result property="evaluationGuideContent" column="content"/>
+        <result property="evaluationGuideCreatedAt" column="created_at"/>
+        <result property="evaluationGuideEmployeeId" column="employee_Id"/>
+        <result property="evaluationGuideEmployeeName" column="employee_name"/>
+        <result property="evaluationGuideDepartmentId" column="department_id"/>
+        <result property="evaluationGuideDepartmentName" column="department_name"/>
+        <result property="evaluationGuideGradeId" column="grade_id"/>
+        <result property="evaluationGuideGrade" column="grade"/>
+    </resultMap>
+
+    <select id="selectGuideIdsWithPaging" resultType="int">
+        <![CDATA[
+                SELECT evaluation_guide_id
+                FROM tbl_evaluation_guide
+                ORDER BY evaluation_guide_id DESC
+                    LIMIT #{size} OFFSET #{offset}
+        ]]>
+    </select>
+
+    <select id="selectGuidesByIds" resultMap="EvaluationGuideMap">
+        <![CDATA[
+            SELECT
+                g.evaluation_guide_id AS evaluation_guide_id,
+                g.name AS name,
+                g.content AS content,
+                g.created_at AS created_at,
+                e.employee_id AS employee_id,
+                e.employee_name AS employee_name,
+                d.department_id AS department_id,
+                d.department_name AS department_name,
+                t.grade_id AS grade_id,
+                t.grade AS grade
+            FROM tbl_evaluation_guide g
+            JOIN tbl_employee e ON g.employee_id = e.employee_id
+            JOIN tbl_department d ON d.department_id = e.department_id
+            JOIN tbl_grade t ON t.grade_id = e.grade_id
+            WHERE g.evaluation_guide_id IN
+        ]]>
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        ORDER BY FIELD(
+        g.evaluation_guide_id,
+        <foreach collection="ids" item="id" separator=",">
+            #{id}
+        </foreach>
+        )
+    </select>
+
+    <select id="countAllGuides" resultType="long">
+        SELECT COUNT(*) FROM tbl_evaluation_guide
+    </select>
+
+    <select id="selectAllGuide" resultMap="EvaluationGuideMap">
+        SELECT
+            g.evaluation_guide_id AS evaluation_guide_id,
+            g.name AS name,
+            g.content AS content,
+            g.created_at AS created_at,
+            e.employee_id AS employee_id,
+            e.employee_name AS employee_name,
+            d.department_id AS department_id,
+            d.department_name AS department_name,
+            t.grade_id AS grade_id,
+            t.grade AS grade
+        FROM tbl_evaluation_guide g
+        JOIN tbl_employee e ON g.employee_id = e.employee_id
+        JOIN tbl_department d ON d.department_id = e.department_id
+        JOIN tbl_grade t ON t.grade_id = e.grade_id
+    </select>
+
+    <select id="selectGuide" parameterType="int" resultMap="EvaluationGuideMap">
+        SELECT
+            g.evaluation_guide_id AS evaluation_guide_id,
+            g.name AS name,
+            g.content AS content,
+            g.created_at AS created_at,
+            e.employee_id AS employee_id,
+            e.employee_name AS employee_name,
+            d.department_id AS department_id,
+            d.department_name AS department_name,
+            t.grade_id AS grade_id,
+            t.grade AS grade
+        FROM tbl_evaluation_guide g
+            JOIN tbl_employee e ON g.employee_id = e.employee_id
+            JOIN tbl_department d ON d.department_id = e.department_id
+            JOIN tbl_grade t ON t.grade_id = e.grade_id
+        WHERE g.evaluation_guide_id = #{guideId}
+    </select>
+
+</mapper>

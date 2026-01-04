@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+ * <pre>
+ * Mapper Name : PaymentHistoryMapper
+ * Description : 급여 지급 이력 조회 & 사원 급여 조회 전용 매퍼
+ *
+ * History
+ *  2025/12/15 - 동근 최초 작성
+ *  2025/12/28 - 동근 급여 조회 쿼리 추가
+ * </pre>
+ *
+ *  @author 동근
+ *  @version 1.1
+ -->
+<mapper namespace="com.c4.hero.domain.payroll.payment.mapper.PaymentHistoryMapper">
+
+    <!--
+    * 급여 지급 이력 존재 여부 조회
+    *
+    * @param bankAccountId 급여 계좌 ID
+    * @return 존재 여부 (1: 존재함, 0: 존재하지 않음)
+    -->
+   <select id="existsByBankAccountId" parameterType="int" resultType="int">
+       SELECT CASE WHEN EXISTS (
+           SELECT 1
+           FROM tbl_payment_history
+           WHERE bank_account_id = #{bankAccountId}
+           LIMIT 1
+       ) THEN 1 ELSE 0 END
+   </select>
+
+    <select id="countPayrollSearch" resultType="int">
+        SELECT COUNT(*)
+        FROM tbl_payroll p
+        JOIN tbl_employee e ON e.employee_id = p.employee_id
+        <where>
+            p.salary_month = #{req.salaryMonth}
+
+            <if test="req.departmentId != null">
+                AND e.department_id = #{req.departmentId}
+            </if>
+
+            <if test="req.jobTitleId != null">
+                AND e.job_title_id = #{req.jobTitleId}
+            </if>
+
+            <if test="req.keyword != null and req.keyword != ''">
+                AND (
+                e.employee_number LIKE CONCAT('%', #{req.keyword}, '%')
+                OR e.employee_name LIKE CONCAT('%', #{req.keyword}, '%')
+                )
+            </if>
+        </where>
+    </select>
+
+
+    <select id="selectPayrollSearch"
+            resultType="com.c4.hero.domain.payroll.payment.dto.PayrollPaymentSearchRowResponseDTO">
+        SELECT
+        p.payroll_id AS payrollId,
+        e.employee_id AS employeeId,
+        e.employee_number AS employeeNumber,
+        e.employee_name AS employeeName,
+        d.department_name AS departmentName,
+        jt.job_title AS jobTitleName,
+        p.base_salary AS baseSalary,
+        p.allowance_total AS allowanceTotal,
+        p.deduction_total AS deductionTotal,
+        (p.total_pay - p.deduction_total) AS netPay,
+        p.status AS payrollStatus,
+        p.salary_month AS salaryMonth
+        FROM tbl_payroll p
+        JOIN tbl_employee e ON e.employee_id = p.employee_id
+        LEFT JOIN tbl_department d ON d.department_id = e.department_id
+        LEFT JOIN tbl_job_title jt ON jt.job_title_id = e.job_title_id
+        <where>
+            p.salary_month = #{req.salaryMonth}
+
+            <if test="req.departmentId != null">
+                AND e.department_id = #{req.departmentId}
+            </if>
+
+            <if test="req.jobTitleId != null">
+                AND e.job_title_id = #{req.jobTitleId}
+            </if>
+
+            <if test="req.keyword != null and req.keyword != ''">
+                AND (
+                e.employee_number LIKE CONCAT('%', #{req.keyword}, '%')
+                OR e.employee_name LIKE CONCAT('%', #{req.keyword}, '%')
+                )
+            </if>
+        </where>
+        ORDER BY e.employee_number ASC
+        LIMIT #{offset}, #{limit}
+    </select>
+
+
+    <select id="selectPayrollDetail"
+            resultType="com.c4.hero.domain.payroll.payment.dto.PayrollPaymentDetailSummaryResponseDTO">
+        SELECT
+            p.payroll_id AS payrollId,
+            p.salary_month AS salaryMonth,
+            p.status AS payrollStatus,
+
+            e.employee_id AS employeeId,
+            e.employee_number AS employeeNumber,
+            e.employee_name AS employeeName,
+            d.department_name AS departmentName,
+            jt.job_title AS jobTitleName,
+
+            p.base_salary AS baseSalary,
+            p.allowance_total AS allowanceTotal,
+            p.deduction_total AS deductionTotal,
+            p.total_pay AS totalPay,
+            (p.total_pay - p.deduction_total) AS netPay
+        FROM tbl_payroll p
+                 JOIN tbl_employee e ON e.employee_id = p.employee_id
+                 LEFT JOIN tbl_department d ON d.department_id = e.department_id
+                 LEFT JOIN tbl_job_title jt ON jt.job_title_id = e.job_title_id
+        WHERE p.payroll_id = #{payrollId}
+    </select>
+
+
+    <select id="selectPayrollItems"
+            resultType="com.c4.hero.domain.payroll.payment.dto.PayrollPaymentDetailResponseDTO$PayrollItemRow">
+        SELECT
+            pi.payroll_item_id AS payrollItemId,
+            pi.item_type AS itemType,
+            COALESCE(pi.allowance_id, pi.deduction_id) AS itemId,
+            pi.item_name AS itemName,
+            pi.amount AS amount,
+            pi.sort_order AS sortOrder
+        FROM tbl_payroll_item pi
+        WHERE pi.payroll_id = #{payrollId}
+        ORDER BY pi.sort_order ASC, pi.payroll_item_id ASC
+    </select>
+
+</mapper>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+ * 급여 명세서 조회용 MyBatis Mapper
+ * <pre>
+ * Class Name: PayslipQueryMapper
+ * Description: 사원의 급여명세서(PDF) 기본 정보 조회 SQL 매퍼
+ *              - 명세서 기본 정보(사원/부서/급여 요약)
+ *              - PDF URL 조회
+ *
+ * History
+ * 2025/12/14 동근 report에서 payslip 조회 쿼리 분리 (payslip 패키지로 이동)
+ * </pre>
+ *
+ * @author 동근
+ * @version 1.0
+-->
+
+<mapper namespace="com.c4.hero.domain.payroll.payslip.mapper.PayslipQueryMapper">
+
+    <!--     명세서 기본 정보 + PDF URL
+      - employeeId: 사원 ID
+      - salaryMonth: 급여월(YYYY-MM)
+     -->
+    <select id="selectPayslipBase"
+            parameterType="map"
+            resultType="com.c4.hero.domain.payroll.payslip.dto.PayslipBaseDTO">
+        SELECT
+            ps.salary_month   AS salaryMonth,
+            e.employee_name   AS employeeName,
+            d.department_name AS departmentName,
+            ps.base_salary    AS baseSalary,
+            ps.gross_pay      AS grossPay,
+            ps.total_deduction AS totalDeduction,
+            ps.net_pay        AS netPay,
+            ps.pdf_url        AS pdfUrl
+        FROM tbl_payslip ps
+                 JOIN tbl_employee e ON e.employee_id = ps.employee_id
+                 LEFT JOIN tbl_department d ON d.department_id = e.department_id
+        WHERE ps.employee_id = #{employeeId}
+          AND ps.salary_month = #{salaryMonth}
+    </select>
+
+</mapper>
