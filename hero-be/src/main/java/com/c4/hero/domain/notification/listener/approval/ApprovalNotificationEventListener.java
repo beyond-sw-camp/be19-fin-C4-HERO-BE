@@ -40,7 +40,7 @@ public class ApprovalNotificationEventListener {
                 .title("새로운 결재 요청")
                 .message(String.format("%s님의 '%s' 문서 결재 요청이 도착했습니다.",
                         event.getDrafterName(), event.getTitle()))
-                .link("/approval/detail/" + event.getDocId())
+                .link("/approval/documents/" + event.getDocId())
                 .documentId(event.getDocId())
                 .build();
 
@@ -61,7 +61,7 @@ public class ApprovalNotificationEventListener {
                 .type("approval")
                 .title("결재 승인 완료")
                 .message(String.format("'%s' 문서가 최종 승인되었습니다.", event.getTitle()))
-                .link("/approval/detail/" + event.getDocId())
+                .link("/approval/documents/" + event.getDocId())
                 .documentId(event.getDocId())
                 .build();
 
@@ -85,7 +85,7 @@ public class ApprovalNotificationEventListener {
                 .type("approval")
                 .title("결재 반려")
                 .message(message)
-                .link("/approval/detail/" + event.getDocId())
+                .link("/approval/documents/" + event.getDocId())
                 .documentId(event.getDocId())
                 .build();
 
@@ -106,7 +106,7 @@ public class ApprovalNotificationEventListener {
                 .type("approval")
                 .title("결재 회수 완료")
                 .message(String.format("'%s' 문서가 성공적으로 회수되었습니다.", event.getTitle()))
-                .link("/approval/detail/" + event.getDocId())
+                .link("/approval/documents/" + event.getDocId())
                 .documentId(event.getDocId())
                 .build();
 
@@ -130,7 +130,7 @@ public class ApprovalNotificationEventListener {
                 .type("approval")
                 .title("결재 대기 독촉")
                 .message(message)
-                .link("/approval/detail/" + event.getDocId())
+                .link("/approval/documents/" + event.getDocId())
                 .documentId(event.getDocId())
                 .build();
 
