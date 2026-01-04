@@ -3,6 +3,7 @@ package com.c4.hero.domain.payroll.payment.service;
 import com.c4.hero.common.pagination.PageCalculator;
 import com.c4.hero.common.pagination.PageInfo;
 import com.c4.hero.common.response.PageResponse;
+import com.c4.hero.domain.auth.security.PayrollAdminOnly;
 import com.c4.hero.domain.payroll.payment.dto.PayrollPaymentDetailResponseDTO;
 import com.c4.hero.domain.payroll.payment.dto.PayrollPaymentDetailSummaryResponseDTO;
 import com.c4.hero.domain.payroll.payment.dto.PayrollPaymentSearchRequestDTO;
@@ -21,11 +22,13 @@ import java.util.List;
  *
  * History
  *  2025/12/28 - 동근 최초 작성
+ *  2026/01/03 - 동근 권한 인가 정책 추가
  * </pre>
  *
  * @author 동근
- * @version 1.0
+ * @version 1.1
  */
+@PayrollAdminOnly
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)

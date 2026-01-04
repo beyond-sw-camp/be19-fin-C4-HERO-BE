@@ -1,6 +1,7 @@
 package com.c4.hero.domain.payroll.policy.controller;
 
 import com.c4.hero.common.response.CustomResponse;
+import com.c4.hero.domain.auth.security.PayrollAdminOnly;
 import com.c4.hero.domain.payroll.common.type.ItemType;
 import com.c4.hero.domain.payroll.policy.dto.request.PolicyCopyRequestDTO;
 import com.c4.hero.domain.payroll.policy.dto.request.PolicyUpdateRequestDTO;
@@ -46,15 +47,17 @@ import java.util.List;
  *
  * History
  *  2025/12/24 - 동근 최초 작성
+ *  2026/01/03 - 동근 권한 인가 정책 추가
  * </pre>
  *
  * @author 동근
- * @version 1.0
+ * @version 1.1
  */
 @Tag(
         name = "급여 정책 관리 (Admin)",
         description = "관리자용 급여 정책(Policy), 설정(Config), 항목 정책(Item Policy)을 관리하는 API"
 )
+@PayrollAdminOnly
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/settings/payroll/policies")

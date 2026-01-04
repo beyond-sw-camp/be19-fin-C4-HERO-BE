@@ -2,6 +2,7 @@ package com.c4.hero.domain.payroll.payment.controller;
 
 import com.c4.hero.common.response.CustomResponse;
 import com.c4.hero.common.response.PageResponse;
+import com.c4.hero.domain.auth.security.PayrollAdminOnly;
 import com.c4.hero.domain.payroll.payment.dto.PayrollPaymentDetailResponseDTO;
 import com.c4.hero.domain.payroll.payment.dto.PayrollPaymentSearchRequestDTO;
 import com.c4.hero.domain.payroll.payment.dto.PayrollPaymentSearchRowResponseDTO;
@@ -26,12 +27,14 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * History
  *  2025/12/28 - 동근 최초 작성
+ *  2026/01/03 - 동근 권한 인가 정책 추가
  * </pre>
  *
  * @author 동근
- * @version 1.0
+ * @version 1.1
  */
 @Tag(name = "급여 조회 (Admin)", description = "관리자용 급여 조회 및 상세 조회 API")
+@PayrollAdminOnly
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admin/payroll/payments")

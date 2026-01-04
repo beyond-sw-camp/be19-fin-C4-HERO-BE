@@ -1,6 +1,7 @@
 package com.c4.hero.domain.payroll.policy.controller;
 
 import com.c4.hero.common.response.CustomResponse;
+import com.c4.hero.domain.auth.security.PayrollAdminOnly;
 import com.c4.hero.domain.payroll.allowance.dto.AllowanceResponseDTO;
 import com.c4.hero.domain.payroll.allowance.service.AllowanceService;
 import com.c4.hero.domain.payroll.deduction.dto.DeductionResponseDTO;
@@ -25,15 +26,17 @@ import java.util.List;
  *
  * History
  *  2025/12/24 - 동근 최초 작성
+ *  2026/01/03 - 동근 권한 인가 정책 추가
  * </pre>
  *
  *  @author 동근
- *  @version 1.0
+ *  @version 1.1
  */
 @Tag(
         name = "급여 정책 설정 참조 (Admin)",
         description = "설정 화면에서 선택/참조할 마스터 데이터(수당/공제) 조회 API"
 )
+@PayrollAdminOnly
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/settings/payroll")

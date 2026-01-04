@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!--
+  <pre>
+  Mapper Name : PayrollAnalyticsOrgMapper
+  Description : 급여 조직 분석(Organization) 조회 전용 MyBatis 매퍼 XML
+
+  History
+   2026/01/02 - 동근 최초 작성
+  </pre>
+-->
+
+<mapper namespace="com.c4.hero.domain.payroll.analytics.mapper.PayrollAnalyticsOrgMapper">
+
+    <!-- 전체 인건비(비중 계산용) -->
+    <select id="selectTotalLaborCost" resultType="int">
+        SELECT CAST(COALESCE(SUM(p.base_salary + p.allowance_total + p.overtime_pay + p.bonus),0) AS SIGNED)
+        FROM tbl_payroll p
+        WHERE p.salary_month = #{month}
+        AND p.status IN ('CALCULATED','CONFIRMED','PAID');
+    </select>
+
+    <!-- KPI: 전체 -->
+    <select id="selectOrgKpiAll"
+            resultType="com.c4.hero.domain.payroll.analytics.dto.PayrollAnalyticsOrgResponse$OrgKpi">
+        SELECT
+        COUNT(*) AS headcount,
+        CAST(COALESCE(SUM(p.base_salary + p.allowance_total + p.overtime_pay + p.bonus),0) AS SIGNED) AS laborCostTotal,
+        CAST(COALESCE(AVG(p.base_salary + p.allowance_total + p.overtime_pay + p.bonus - p.deduction_total),0) AS SIGNED) AS avgNetPay,
+        NULL AS laborCostSharePct
+        FROM tbl_payroll p
+        WHERE p.salary_month = #{month}
+        AND p.status IN ('CALCULATED','CONFIRMED','PAID');
+    </select>
+
+    <!-- KPI: 선택 부서 -->
+    <select id="selectOrgKpiByDept"
+            resultType="com.c4.hero.domain.payroll.analytics.dto.PayrollAnalyticsOrgResponse$OrgKpi">
+        SELECT
+        COUNT(*) AS headcount,
+        CAST(COALESCE(SUM(p.base_salary + p.allowance_total + p.overtime_pay + p.bonus),0) AS SIGNED) AS laborCostTotal,
+        CAST(COALESCE(AVG(p.base_salary + p.allowance_total + p.overtime_pay + p.bonus - p.deduction_total),0) AS SIGNED) AS avgNetPay,
+        NULL AS laborCostSharePct
+        FROM tbl_payroll p
+        JOIN tbl_employee e ON e.employee_id = p.employee_id
+        WHERE p.salary_month = #{month}
+        AND p.status IN ('CALCULATED','CONFIRMED','PAID')
+        AND e.department_id = #{deptId};
+    </select>
+
+    <!-- 부서 테이블 (전월 대비: netTotal 기준) -->
+    <select id="selectDeptTable"
+            resultType="com.c4.hero.domain.payroll.analytics.dto.PayrollAnalyticsOrgResponse$DeptRow">
+        SELECT
+        d.department_id AS departmentId,
+        d.department_name AS departmentName,
+        CAST(COALESCE(COUNT(p.employee_id),0) AS SIGNED) AS headcount,
+        CAST(COALESCE(SUM(p.base_salary + p.allowance_total + p.overtime_pay + p.bonus),0) AS SIGNED) AS grossTotal,
+        CAST(COALESCE(SUM(p.deduction_total),0) AS SIGNED) AS deductionTotal,
+        CAST(COALESCE(SUM((p.base_salary + p.allowance_total + p.overtime_pay + p.bonus) - p.deduction_total),0) AS SIGNED) AS netTotal,
+        (
+        <![CDATA[
+        CASE
+            WHEN (
+            SELECT COALESCE(SUM((pp.base_salary+pp.allowance_total+pp.overtime_pay+pp.bonus)-pp.deduction_total),0)
+            FROM tbl_payroll pp
+            JOIN tbl_employee ee ON ee.employee_id = pp.employee_id
+            WHERE pp.salary_month = #{prevMonth}
+            AND pp.status IN ('CALCULATED','CONFIRMED','PAID')
+            AND ee.department_id = d.department_id
+            ) <= 0 THEN NULL
+            ELSE (
+           (
+             SELECT COALESCE(SUM((pp2.base_salary+pp2.allowance_total+pp2.overtime_pay+pp2.bonus)-pp2.deduction_total),0)
+            FROM tbl_payroll pp2
+            JOIN tbl_employee ee2 ON ee2.employee_id = pp2.employee_id
+            WHERE pp2.salary_month = #{month}
+            AND pp2.status IN ('CALCULATED','CONFIRMED','PAID')
+            AND ee2.department_id = d.department_id
+                )
+            -
+          (
+              SELECT COALESCE(SUM((pp3.base_salary+pp3.allowance_total+pp3.overtime_pay+pp3.bonus)-pp3.deduction_total),0)
+             FROM tbl_payroll pp3
+               JOIN tbl_employee ee3 ON ee3.employee_id = pp3.employee_id
+               WHERE pp3.salary_month = #{prevMonth}
+              AND pp3.status IN ('CALCULATED','CONFIRMED','PAID')
+               AND ee3.department_id = d.department_id
+             )
+           )
+            /
+               (
+           SELECT COALESCE(SUM((pp4.base_salary+pp4.allowance_total+pp4.overtime_pay+pp4.bonus)-pp4.deduction_total),0)
+             FROM tbl_payroll pp4
+               JOIN tbl_employee ee4 ON ee4.employee_id = pp4.employee_id
+             WHERE pp4.salary_month = #{prevMonth}
+            AND pp4.status IN ('CALCULATED','CONFIRMED','PAID')
+            AND ee4.department_id = d.department_id
+          ) * 100
+         END
+        ]]>
+        ) AS momChangeRate
+        FROM tbl_department d
+        LEFT JOIN tbl_employee e ON e.department_id = d.department_id
+        LEFT JOIN tbl_payroll p ON p.employee_id = e.employee_id
+        AND p.salary_month = #{month}
+        AND p.status IN ('CALCULATED','CONFIRMED','PAID')
+        GROUP BY d.department_id, d.department_name
+        ORDER BY grossTotal DESC;
+    </select>
+
+    <!-- 부서별 스택 차트 -->
+    <select id="selectDeptStacks"
+            resultType="com.c4.hero.domain.payroll.analytics.dto.PayrollAnalyticsOrgResponse$DeptStackRow">
+        SELECT
+        d.department_id AS departmentId,
+        d.department_name AS departmentName,
+        CAST(COALESCE(SUM(p.base_salary),0) AS SIGNED) AS baseTotal,
+        CAST(COALESCE(SUM(p.allowance_total),0) AS SIGNED) AS allowanceTotal,
+        CAST(COALESCE(SUM(p.overtime_pay),0) AS SIGNED) AS overtimeTotal,
+        CAST(COALESCE(SUM(p.bonus),0) AS SIGNED) AS bonusTotal,
+        CAST(COALESCE(SUM(p.deduction_total),0) AS SIGNED) AS deductionTotal,
+        CAST(COALESCE(SUM(p.base_salary + p.allowance_total + p.overtime_pay + p.bonus),0) AS SIGNED) AS laborCostTotal
+        FROM tbl_department d
+        LEFT JOIN tbl_employee e ON e.department_id = d.department_id
+        LEFT JOIN tbl_payroll p ON p.employee_id = e.employee_id
+        AND p.salary_month = #{month}
+        AND p.status IN ('CALCULATED','CONFIRMED','PAID')
+        GROUP BY d.department_id, d.department_name
+        ORDER BY laborCostTotal DESC;
+    </select>
+
+    <!-- Top 10 -->
+    <select id="selectNetPayTop10"
+            resultType="com.c4.hero.domain.payroll.analytics.dto.PayrollAnalyticsOrgResponse$PersonRow">
+        SELECT
+        e.employee_id AS employeeId,
+        e.employee_name AS employeeName,
+        d.department_name AS departmentName,
+        CAST((p.base_salary + p.allowance_total + p.overtime_pay + p.bonus - p.deduction_total) AS SIGNED) AS netPay
+        FROM tbl_payroll p
+        JOIN tbl_employee e ON e.employee_id = p.employee_id
+        JOIN tbl_department d ON d.department_id = e.department_id
+        WHERE p.salary_month = #{month}
+        AND p.status IN ('CALCULATED','CONFIRMED','PAID')
+        <if test="deptId != null">
+            AND e.department_id = #{deptId}
+        </if>
+        ORDER BY netPay DESC
+        LIMIT 10;
+    </select>
+
+    <select id="selectNetPayBottom10"
+            resultType="com.c4.hero.domain.payroll.analytics.dto.PayrollAnalyticsOrgResponse$PersonRow">
+        SELECT
+        e.employee_id AS employeeId,
+        e.employee_name AS employeeName,
+        d.department_name AS departmentName,
+        CAST((p.base_salary + p.allowance_total + p.overtime_pay + p.bonus - p.deduction_total) AS SIGNED) AS netPay
+        FROM tbl_payroll p
+        JOIN tbl_employee e ON e.employee_id = p.employee_id
+        JOIN tbl_department d ON d.department_id = e.department_id
+        WHERE p.salary_month = #{month}
+        AND p.status IN ('CALCULATED','CONFIRMED','PAID')
+        <if test="deptId != null">
+            AND e.department_id = #{deptId}
+        </if>
+        ORDER BY netPay ASC
+        LIMIT 10;
+    </select>
+
+    <select id="selectDeductionRateTop10"
+            resultType="com.c4.hero.domain.payroll.analytics.dto.PayrollAnalyticsOrgResponse$DeductionRateRow">
+        SELECT
+        e.employee_id AS employeeId,
+        e.employee_name AS employeeName,
+        d.department_name AS departmentName,
+        ROUND(
+        <![CDATA[
+        CASE
+            WHEN (p.base_salary+p.allowance_total+p.overtime_pay+p.bonus) <= 0 THEN 0
+            ELSE (p.deduction_total / (p.base_salary+p.allowance_total+p.overtime_pay+p.bonus)) * 100
+        END
+        ]]>, 2
+        ) AS deductionRatePct,
+        CAST((p.base_salary+p.allowance_total+p.overtime_pay+p.bonus) AS SIGNED) AS grossPay,
+        CAST(p.deduction_total AS SIGNED) AS deductionTotal
+        FROM tbl_payroll p
+        JOIN tbl_employee e ON e.employee_id = p.employee_id
+        JOIN tbl_department d ON d.department_id = e.department_id
+        WHERE p.salary_month = #{month}
+        AND p.status IN ('CALCULATED','CONFIRMED','PAID')
+        <if test="deptId != null">
+            AND e.department_id = #{deptId}
+        </if>
+        ORDER BY deductionRatePct DESC
+        LIMIT 10;
+    </select>
+</mapper>

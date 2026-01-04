@@ -1,6 +1,7 @@
 package com.c4.hero.domain.payroll.report.service;
 
 
+import com.c4.hero.domain.auth.security.LoginOnly;
 import com.c4.hero.domain.payroll.report.dto.MyPaySummaryCoreDTO;
 import com.c4.hero.domain.payroll.report.dto.MyPaySummaryDTO;
 import com.c4.hero.domain.payroll.report.dto.PayHistoryChartPointDTO;
@@ -26,13 +27,15 @@ import java.util.List;
  *
  *
  * History
- * 2025/12/08 동근 최초 작성
- * 2025/12/14 동근 payslip 조회 로직 제거 및 report 역할 명확화
+ * 2025/12/08 - 동근 최초 작성
+ * 2025/12/14 - 동근 payslip 조회 로직 제거 및 report 역할 명확화
+ * 2026/01/03 - 동근 권한 인가 정책 추가
  * </pre>
  *
  * @author 동근
- * @version 1.1
+ * @version 1.2
  */
+@LoginOnly
 @Service
 @RequiredArgsConstructor
 public class ReportService {
