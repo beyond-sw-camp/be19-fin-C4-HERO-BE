@@ -166,13 +166,13 @@
                     AND NOT (D.doc_status = 'DRAFT' AND D.drafter_id != #{employeeId})
                 </when>
 
-                <!-- 요청: 본인이 상신한 문서 -->
+                <!-- 대기: 본인이 상신한 진행중인 문서 -->
                 <when test="tab == 'que'">
                     D.drafter_id = #{employeeId}
-                    AND D.doc_status != 'DRAFT'
+                    AND D.doc_status = 'INPROGRESS'
                 </when>
 
-                <!-- 대기: 결재 대기 중인 문서 (본인이 결재해야 하는 문서) -->
+                <!-- 요청: 결재 대기 중인 문서 (본인이 결재해야 하는 문서) -->
                 <when test="tab == 'request'">
                     EXISTS (
                     SELECT 1 FROM tbl_approval_line AL
@@ -299,13 +299,13 @@
                     AND NOT (D.doc_status = 'DRAFT' AND D.drafter_id != #{employeeId})
                 </when>
 
-                <!-- 요청: 본인이 상신한 문서 -->
+                <!-- 대기: 본인이 상신한 문서 -->
                 <when test="tab == 'que'">
                     D.drafter_id = #{employeeId}
-                    AND D.doc_status != 'DRAFT'
+                    AND D.doc_status = 'INPROGRESS'
                 </when>
 
-                <!-- 대기: 결재 대기 중인 문서 (본인이 결재해야 하는 문서) -->
+                <!-- 요청: 결재 대기 중인 문서 (본인이 결재해야 하는 문서) -->
                 <when test="tab == 'request'">
                     EXISTS (
                     SELECT 1 FROM tbl_approval_line AL
