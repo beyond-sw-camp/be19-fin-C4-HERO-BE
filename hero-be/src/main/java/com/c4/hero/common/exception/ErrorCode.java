@@ -24,6 +24,7 @@ import org.springframework.http.HttpStatus;
  * 2025-12-26 (혜원) 출퇴근 타각 관련 에러 코드 추가
  * 2025-12-29 (승건) 파일 업로드 실패 추가
  * 2025-12-31 (승건) 파일 크기 초과 추가
+ * 2026-01-05 (민철) 결재 관련 에러 코드 추가
  * </pre>
  *
  * @author 혜원
@@ -280,7 +281,30 @@ public enum ErrorCode {
     /**
      * 퇴근 처리 실패
      */
-    CLOCK_OUT_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "TC005", "퇴근 처리에 실패했습니다.");
+    CLOCK_OUT_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "TC005", "퇴근 처리에 실패했습니다."),
+
+    // ===== 결재 관련 에러 =====
+
+    /* 2. 결재 - 문서/템플릿 존재 여부 */
+    DOCUMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "A001", "문서를 찾을 수 없습니다."),
+    TEMPLATE_NOT_FOUND(HttpStatus.NOT_FOUND, "A002", "서식을 찾을 수 없습니다."),
+    LINE_NOT_FOUND(HttpStatus.NOT_FOUND, "A003", "결재선을 찾을 수 없습니다."),
+
+    /* 3. 결재 - 권한 */
+    NOT_THE_DRAFTER(HttpStatus.FORBIDDEN, "A010", "문서 작성자만 수정/상신할 수 있습니다."),
+    NOT_THE_APPROVER(HttpStatus.FORBIDDEN, "A011", "결재 권한이 없습니다."),
+
+    /* 4. 결재 - 상태/로직 위반 */
+    DOCUMENT_NOT_DRAFT(HttpStatus.BAD_REQUEST, "A020", "임시저장 상태의 문서만 수정 가능합니다."),
+    DOCUMENT_NOT_IN_PROGRESS(HttpStatus.BAD_REQUEST, "A021", "진행 중인 문서가 아닙니다."),
+    ALREADY_PROCESSED_APPROVAL(HttpStatus.BAD_REQUEST, "A022", "이미 처리된 결재입니다."),
+    MISSING_REJECTION_COMMENT(HttpStatus.BAD_REQUEST, "A023", "반려 시 사유는 필수입니다."),
+    INVALID_ACTION(HttpStatus.BAD_REQUEST, "A024", "유효하지 않은 결재 액션입니다."),
+
+    /* 5. 파일/시스템 */
+    FILE_UPLOAD_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "F001", "파일 업로드에 실패했습니다."),
+    FILE_DELETE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "F002", "파일 삭제에 실패했습니다."),
+    DOC_NO_GENERATION_ERROR(HttpStatus.CONFLICT, "S001", "문서 번호 생성 중 충돌이 발생했습니다.");
 
 
     /** HTTP 상태 코드 */
