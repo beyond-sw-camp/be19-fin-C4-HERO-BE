@@ -11,9 +11,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationServiceException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.io.IOException;
@@ -59,9 +62,13 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
             // -> 내부적으로 UserDetailsService의 loadUserByUsername 실행
             return authenticationManager.authenticate(authenticationToken);
 
-        } catch (IOException e) {
+        } catch (AuthenticationException e) {
+            // AuthenticationException은 그대로 던져서 unsuccessfulAuthentication이 처리하도록 함
+            throw e;
+        } catch (Exception e) {
+            // 그 외 모든 예외(IOException, RuntimeException 등)는 AuthenticationServiceException으로 감싸서 던짐
             log.error("로그인 요청 처리 중 오류 발생", e);
-            throw new RuntimeException(e);
+            throw new AuthenticationServiceException("로그인 처리 중 시스템 오류가 발생했습니다.", e);
         }
     }
 
@@ -99,11 +106,20 @@ public class AuthenticationFilter extends UsernamePasswordAuthenticationFilter {
     protected void unsuccessfulAuthentication(HttpServletRequest request, HttpServletResponse response, AuthenticationException failed) throws IOException, ServletException {
         log.warn("로그인 실패: {}", failed.getMessage());
 
+        String errorMessage = "로그인 실패";
+        if (failed instanceof BadCredentialsException || failed.getCause() instanceof UsernameNotFoundException) {
+            errorMessage = "아이디 또는 비밀번호가 일치하지 않습니다.";
+        } else if (failed instanceof AuthenticationServiceException) {
+            errorMessage = "시스템 오류로 인해 로그인을 처리할 수 없습니다.";
+        } else {
+            errorMessage = failed.getMessage();
+        }
+
         // 401 Unauthorized 에러 응답
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
-        response.getWriter().write("{\"error\": \"로그인 실패\", \"message\": \"" + failed.getMessage() + "\"}");
+        response.getWriter().write("{\"error\": \"로그인 실패\", \"message\": \"" + errorMessage + "\"}");
     }
 
     /**
