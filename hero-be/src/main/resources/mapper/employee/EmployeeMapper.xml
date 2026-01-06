@@ -122,7 +122,8 @@
         <include refid="employeeJoins"/>
         <include refid="searchConditions"/>
         ORDER BY
-        e.hire_date DESC
+                 e.grade_id DESC,
+                 e.hire_date ASC
         LIMIT #{size} OFFSET #{offset}
     </select>
 

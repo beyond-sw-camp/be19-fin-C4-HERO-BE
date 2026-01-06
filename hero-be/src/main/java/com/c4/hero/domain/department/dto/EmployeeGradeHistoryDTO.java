@@ -32,6 +32,6 @@ public class EmployeeGradeHistoryDTO {
     private Integer employeeId;
     private Integer changedBy;
     private LocalDateTime changedAt;
-    private ChangeType changeType;
+    private String changeType;
     private String gradeName;
 }
