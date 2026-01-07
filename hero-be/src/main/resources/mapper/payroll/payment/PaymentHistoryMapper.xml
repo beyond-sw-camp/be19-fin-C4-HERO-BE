@@ -69,7 +69,8 @@
         p.base_salary AS baseSalary,
         p.allowance_total AS allowanceTotal,
         p.deduction_total AS deductionTotal,
-        (p.total_pay - p.deduction_total) AS netPay,
+        (p.base_salary + p.allowance_total + p.overtime_pay + p.bonus) AS totalPay,
+        ((p.base_salary + p.allowance_total + p.overtime_pay + p.bonus) - p.deduction_total) AS netPay,
         p.status AS payrollStatus,
         p.salary_month AS salaryMonth
         FROM tbl_payroll p
@@ -115,8 +116,8 @@
             p.base_salary AS baseSalary,
             p.allowance_total AS allowanceTotal,
             p.deduction_total AS deductionTotal,
-            p.total_pay AS totalPay,
-            (p.total_pay - p.deduction_total) AS netPay
+            (p.base_salary + p.allowance_total + p.overtime_pay + p.bonus) AS totalPay,
+            ((p.base_salary + p.allowance_total + p.overtime_pay + p.bonus) - p.deduction_total) AS netPay
         FROM tbl_payroll p
                  JOIN tbl_employee e ON e.employee_id = p.employee_id
                  LEFT JOIN tbl_department d ON d.department_id = e.department_id

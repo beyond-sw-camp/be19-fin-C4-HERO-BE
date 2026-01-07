@@ -10,6 +10,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalTime;
+
 /**
  * <pre>
  * Entity Name: WorkSystemType
@@ -40,4 +42,33 @@ public class WorkSystemType {
     /** 근무제 유형 이름 (예: 기본 근무제, 시차 출퇴근제 등) */
     @Column(name = "name")
     private String workSystemName;
+
+    @Column(name = "flex_start_min", nullable = false)
+    private LocalTime flexStartMin;
+
+    @Column(name = "flex_start_max", nullable = false)
+    private LocalTime flexStartMax;
+
+    @Column(name = "is_fixed_schedule", nullable = false)
+    private Boolean isFixedSchedule;
+
+    /**
+     * 신규 WorkSystemType 생성
+     */
+    public static WorkSystemType create(String name, LocalTime flexStartMin,
+                                        LocalTime flexStartMax, Boolean isFixedSchedule) {
+        WorkSystemType type = new WorkSystemType();
+        type.workSystemName = name;
+        type.flexStartMin = flexStartMin;
+        type.flexStartMax = flexStartMax;
+        type.isFixedSchedule = isFixedSchedule;
+        return type;
+    }
+
+    /**
+     * 근무제 타입명 수정
+     */
+    public void updateName(String name) {
+        this.workSystemName = name;
+    }
 }

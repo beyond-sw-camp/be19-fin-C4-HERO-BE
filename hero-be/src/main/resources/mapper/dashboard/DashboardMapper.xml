@@ -17,7 +17,8 @@
 
 <mapper namespace="com.c4.hero.domain.dashboard.mapper.DashboardMapper">
 
-    <!-- 1) 출퇴근 상태 ResultMap - ClockStatusDTO 매핑 정의-->
+    <!-- 1) 출퇴근 상태 ResultMap - 사용하지 않으므로 삭제하거나 주석 처리 -->
+    <!--
     <resultMap id="ClockStatusMap" type="com.c4.hero.domain.dashboard.dto.ClockStatusDTO">
         <result property="attendanceId" column="attendance_id"/>
         <result property="workDate"     column="work_date"/>
@@ -27,56 +28,48 @@
         <result property="isClockedIn"  column="is_clocked_in"/>
         <result property="isClockedOut" column="is_clocked_out"/>
         <result property="workDuration" column="work_duration"/>
+        <result property="workSystemTemplateId" column="work_system_template_id"/>
     </resultMap>
+    -->
 
     <!-- 2) 출근 기록 INSERT -->
     <insert id="insertClockIn" parameterType="map">
         INSERT INTO tbl_attendance (
-            employee_id,
-            department_id,
-            work_date,
-            start_time,
-            end_time,
-            state,
-            work_system_type_id
+        employee_id,
+        department_id,
+        work_date,
+        start_time,
+        end_time,
+        state,
+        work_system_type_id,
+        work_system_template_id  <!-- 이 줄이 있나요? -->
         ) VALUES (
-                     #{employeeId},
-                     #{departmentId},
-                     #{dto.workDate},
-                     CAST(#{dto.startTime} AS TIME),
-                     NULL,
-                     CASE
-                         WHEN CAST(#{dto.startTime} AS TIME) >
-                              COALESCE(
-                                      (SELECT wst.start_time
-                                       FROM tbl_work_system_template wst
-                                       WHERE wst.work_system_type_id = #{dto.workSystemTypeId}
-                                      LIMIT 1),
-                     CAST('09:00:00' AS TIME)
-                 )
-                             THEN '지각'
-                         ELSE '정상'
-                         END,
-                     #{dto.workSystemTypeId}
-                 )
+        #{employeeId},
+        #{departmentId},
+        #{dto.workDate},
+        CAST(#{dto.startTime} AS TIME),
+        NULL,
+        CASE
+        WHEN CAST(#{dto.startTime} AS TIME) > CAST('09:00:00' AS TIME) THEN '지각'
+        ELSE '정상'
+        END,
+        #{dto.workSystemTypeId},           <!-- workSystemTypeId -->
+        #{dto.workSystemTemplateId}        <!-- workSystemTemplateId ← 이게 있나요? -->
+        )
     </insert>
 
-    <!-- 3) 퇴근 시각 UPDATE + 근무시간 자동 계산 -->
+    <!-- 3) 퇴근 시각 UPDATE + 근무시간 저장 (휴게시간 차감 포함) -->
     <update id="updateClockOut" parameterType="map">
         UPDATE tbl_attendance att
             LEFT JOIN tbl_work_system_template wst
-        ON wst.work_system_type_id = att.work_system_type_id
+        ON att.work_system_template_id = wst.work_system_template_id
             SET
                 att.end_time = CAST(#{dto.endTime} AS TIME),
-                att.work_duration = TIMESTAMPDIFF(MINUTE, att.start_time, CAST(#{dto.endTime} AS TIME)),
+                att.work_duration = #{dto.workDuration},
                 att.state = CASE
                 WHEN att.start_time IS NULL THEN '결근'
-                WHEN att.start_time >
-                COALESCE(wst.start_time, CAST('09:00:00' AS TIME))
-                THEN '지각'
-                WHEN CAST(#{dto.endTime} AS TIME) &lt;
-                COALESCE(wst.end_time, CAST('18:00:00' AS TIME))
-                THEN '조퇴'
+                WHEN att.start_time > COALESCE(wst.start_time, CAST('09:00:00' AS TIME)) THEN '지각'
+                WHEN CAST(#{dto.endTime} AS TIME) &lt; COALESCE(wst.end_time, CAST('18:00:00' AS TIME)) THEN '조퇴'
                 ELSE '정상'
         END
         WHERE att.employee_id = #{employeeId}
@@ -84,25 +77,30 @@
         AND att.attendance_id = #{dto.attendanceId}
     </update>
 
-
     <!-- 4) 오늘 출퇴근 상태 조회 -->
-    <select id="selectTodayStatus" resultMap="ClockStatusMap" parameterType="map">
+    <select id="selectTodayStatus" resultType="com.c4.hero.domain.dashboard.dto.ClockStatusDTO">
         SELECT
-            att.attendance_id,
-            att.work_date,
-            att.start_time,
-            att.end_time,
-            att.state,
-            att.work_duration,
-            CASE WHEN att.start_time IS NOT NULL THEN TRUE ELSE FALSE END AS is_clocked_in,
-            CASE WHEN att.end_time IS NOT NULL THEN TRUE ELSE FALSE END AS is_clocked_out
-        FROM tbl_attendance att
-        WHERE att.employee_id = #{employeeId}
-          AND att.work_date = #{workDate}
-            LIMIT 1
+            attendance_id AS attendanceId,
+            work_date AS workDate,
+            start_time AS startTime,
+            end_time AS endTime,
+            work_duration AS workDuration,
+            state,
+            CASE
+                WHEN start_time IS NOT NULL THEN TRUE
+                ELSE FALSE
+                END AS isClockedIn,
+            CASE
+                WHEN end_time IS NOT NULL THEN TRUE
+                ELSE FALSE
+                END AS isClockedOut,
+            work_system_template_id AS workSystemTemplateId
+        FROM tbl_attendance
+        WHERE employee_id = #{employeeId}
+          AND work_date = #{workDate}
     </select>
 
-    <!-- 5) 이번 주 근무 통계 조회 (오늘 근무 중인 시간 포함) -->
+    <!-- 5) 이번 주 근무 통계 조회 -->
     <select id="selectWeeklyStats" resultType="com.c4.hero.domain.dashboard.dto.WeeklyStatsDTO" parameterType="map">
         SELECT
             COALESCE(SUM(att.work_duration), 0) AS totalWorkMinutes,
@@ -157,7 +155,7 @@
                                AND vlog.start_date BETWEEN month_range.month_start AND month_range.month_end
     </select>
 
-    <!-- 7) 출근 통계 조회 (이번 달) -->
+    <!-- 7) 출근 통계 조회 -->
     <select id="selectAttendanceStats" resultType="com.c4.hero.domain.dashboard.dto.AttendanceStatsDTO" parameterType="map">
         SELECT
             SUM(CASE WHEN att.state = '정상' THEN 1 ELSE 0 END) AS normalDays,
@@ -169,7 +167,7 @@
           AND att.work_date BETWEEN #{startDate} AND #{endDate}
     </select>
 
-    <!-- 8) 휴가 현황 조회 (이번 달) -->
+    <!-- 8) 휴가 현황 조회 -->
     <select id="selectVacationStats" resultType="com.c4.hero.domain.dashboard.dto.VacationStatsDTO" parameterType="map">
         SELECT
             SUM(
@@ -212,10 +210,30 @@
     <!-- 9) 결재 현황 조회 -->
     <select id="selectApprovalStats" resultType="com.c4.hero.domain.dashboard.dto.ApprovalStatsDTO" parameterType="map">
         SELECT
-            SUM(CASE WHEN doc.doc_status IN ('INPROGRESSED', 'PENDING') THEN 1 ELSE 0 END) AS pendingCount,
+            SUM(CASE WHEN doc.doc_status IN ('INPROGRESS') THEN 1 ELSE 0 END) AS pendingCount,
             SUM(CASE WHEN doc.doc_status = 'APPROVED' THEN 1 ELSE 0 END) AS approvedCount,
             SUM(CASE WHEN doc.doc_status = 'REJECTED' THEN 1 ELSE 0 END) AS rejectedCount
         FROM tbl_approval_document doc
         WHERE doc.drafter_id = #{employeeId}
+    </select>
+
+    <!-- 10) 근무제 템플릿 정보 조회 -->
+    <select id="selectWorkSystemTemplate" resultType="com.c4.hero.domain.dashboard.dto.WorkSystemTemplateDTO">
+        SELECT
+            work_system_template_id AS workSystemTemplateId,
+            start_time AS startTime,
+            end_time AS endTime,
+            break_min_minutes AS breakMinMinutes,
+            reason,
+            work_system_type_id AS workSystemTypeId
+        FROM tbl_work_system_template
+        WHERE work_system_template_id = #{workSystemTemplateId}
+    </select>
+
+    <!-- 11) 사원의 기본 근무제 템플릿 ID 조회 -->
+    <select id="selectEmployeeDefaultTemplateId" resultType="java.lang.Integer">
+        SELECT default_work_system_template_id
+        FROM tbl_employee
+        WHERE employee_id = #{employeeId}
     </select>
 </mapper>

@@ -46,6 +46,13 @@ public interface DashboardMapper {
     );
 
     /**
+     * 근무제 템플릿 정보 조회
+     * @param workSystemTemplateId 근무제 템플릿 ID
+     * @return 근무제 템플릿 정보
+     */
+    WorkSystemTemplateDTO selectWorkSystemTemplate(@Param("workSystemTemplateId") Integer workSystemTemplateId);
+
+    /**
      * 오늘 출퇴근 상태 조회
      * @param employeeId 사원 ID
      * @param workDate 근무 일자
@@ -116,4 +123,9 @@ public interface DashboardMapper {
     ApprovalStatsDTO selectApprovalStats(
             @Param("employeeId") Integer employeeId
     );
+
+    /**
+     * 사원의 기본 근무제 템플릿 ID 조회
+     */
+    Integer selectEmployeeDefaultTemplateId(@Param("employeeId") Integer employeeId);
 }

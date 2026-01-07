@@ -72,10 +72,12 @@
                 <where>
                     e.status != 'R'
                     <if test="params.query != null and params.query != ''">
-                        e.employee_name LIKE CONCAT('%', #{params.query}, '%')
-                        OR d.department_name LIKE CONCAT('%', #{params.query}, '%')
-                        OR g.grade LIKE CONCAT('%', #{params.query}, '%')
-                        OR jt.job_title LIKE CONCAT('%', #{params.query}, '%')
+                        AND (
+                            e.employee_name LIKE CONCAT('%', #{params.query}, '%')
+                            OR d.department_name LIKE CONCAT('%', #{params.query}, '%')
+                            OR g.grade LIKE CONCAT('%', #{params.query}, '%')
+                            OR jt.job_title LIKE CONCAT('%', #{params.query}, '%')
+                        )
                     </if>
                 </where>
                 ORDER BY e.employee_id
@@ -98,11 +100,14 @@
         LEFT JOIN
             tbl_job_title jt ON e.job_title_id = jt.job_title_id
         <where>
+            e.status != 'R'
             <if test="params.query != null and params.query != ''">
-                e.employee_name LIKE CONCAT('%', #{params.query}, '%')
-                OR d.department_name LIKE CONCAT('%', #{params.query}, '%')
-                OR g.grade LIKE CONCAT('%', #{params.query}, '%')
-                OR jt.job_title LIKE CONCAT('%', #{params.query}, '%')
+                AND (
+                    e.employee_name LIKE CONCAT('%', #{params.query}, '%')
+                    OR d.department_name LIKE CONCAT('%', #{params.query}, '%')
+                    OR g.grade LIKE CONCAT('%', #{params.query}, '%')
+                    OR jt.job_title LIKE CONCAT('%', #{params.query}, '%')
+                )
             </if>
         </where>
     </select>

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
 /**
@@ -46,21 +47,35 @@ public class DashboardServiceImpl implements DashboardService {
         // 1. 오늘 이미 출근 기록이 있는지 확인
         ClockStatusDTO status = dashboardMapper.selectTodayStatus(employeeId, dto.getWorkDate());
         if (status != null && status.getIsClockedIn()) {
-            log.warn("이미 출근 처리되었습니다. attendanceId: {}", status.getAttendanceId());
             throw new BusinessException(ErrorCode.ALREADY_CLOCKED_IN);
         }
 
-        // 2. 출근 시각을 초 단위로 자르기 (마이크로초 제거)
+        // 2. ✅ null 체크 및 기본값 설정
+        if (dto.getWorkSystemTypeId() == null) {
+            log.warn("⚠️ workSystemTypeId가 null! 기본값 1 설정");
+            dto.setWorkSystemTypeId(1);
+        }
+
+        if (dto.getWorkSystemTemplateId() == null) {
+            log.warn("⚠️ workSystemTemplateId가 null! 기본값 1 설정");
+            dto.setWorkSystemTemplateId(1);
+        }
+
+        // 3. ✅ 최종 값 로그 출력
+        log.info("✅ INSERT 직전 - typeId: {}, templateId: {}",
+                dto.getWorkSystemTypeId(), dto.getWorkSystemTemplateId());
+
+        // 4. 출근 시각을 초 단위로 자르기
         dto.setStartTime(dto.getStartTime().withNano(0));
 
-        // 3. 출근 기록 INSERT
+        // 5. 출근 기록 INSERT
         int result = dashboardMapper.insertClockIn(employeeId, departmentId, dto);
         if (result != 1) {
-            log.error("출근 INSERT 실패. result: {}", result);
+            log.error("❌ 출근 INSERT 실패. result: {}", result);
             throw new BusinessException(ErrorCode.CLOCK_IN_FAILED);
         }
 
-        log.info("=== 출근 처리 완료 ===");
+        log.info("=== ✅ 출근 처리 완료 === templateId: {}", dto.getWorkSystemTemplateId());
     }
 
     /**
@@ -71,8 +86,8 @@ public class DashboardServiceImpl implements DashboardService {
     @Override
     @Transactional
     public void clockOut(Integer employeeId, ClockOutRequestDTO dto) {
-        log.info("=== 퇴근 처리 시작 === employeeId: {}, workDate: {}, endTime: {}",
-                employeeId, dto.getWorkDate(), dto.getEndTime());
+        log.info("=== 퇴근 처리 시작 === employeeId: {}, workDate: {}, endTime: {}, includeBreakTime: {}",
+                employeeId, dto.getWorkDate(), dto.getEndTime(), dto.getIncludeBreakTime());
 
         // 1. 오늘 출근 기록 확인
         ClockStatusDTO status = dashboardMapper.selectTodayStatus(employeeId, dto.getWorkDate());
@@ -87,20 +102,53 @@ public class DashboardServiceImpl implements DashboardService {
             throw new BusinessException(ErrorCode.ALREADY_CLOCKED_OUT);
         }
 
-        // 3. DTO에 attendanceId 설정
+        // 3. 근무제 템플릿 정보 조회 (반차 여부 확인)
+        Integer workSystemTemplateId = status.getWorkSystemTemplateId();
+        WorkSystemTemplateDTO template = null;
+        if (workSystemTemplateId != null) {
+            template = dashboardMapper.selectWorkSystemTemplate(workSystemTemplateId);
+        }
+
+        // 4. DTO에 attendanceId 설정
         dto.setAttendanceId(status.getAttendanceId());
 
-        // 4. 퇴근 시각을 초 단위로 자르기 (마이크로초 제거)
+        // 5. 퇴근 시각을 초 단위로 자르기 (마이크로초 제거)
         dto.setEndTime(dto.getEndTime().withNano(0));
 
-        // 5. 퇴근 시각 UPDATE
+        // 6. 근무시간 계산 (분 단위)
+        LocalTime startTime = status.getStartTime();
+        LocalTime endTime = dto.getEndTime();
+
+        long workMinutes = java.time.Duration.between(startTime, endTime).toMinutes();
+
+        // 7. 휴게시간 차감 로직
+        if (Boolean.TRUE.equals(dto.getIncludeBreakTime())) {
+            // 오후 1시 이후 퇴근 → 휴게시간 차감
+            Integer breakMinutes = (template != null && template.getBreakMinMinutes() != null)
+                    ? template.getBreakMinMinutes()
+                    : 60; // 기본 60분
+
+            workMinutes -= breakMinutes;
+            log.info("휴게시간 차감: {}분, 최종 근무시간: {}분", breakMinutes, workMinutes);
+        }
+
+        // 음수 방지
+        if (workMinutes < 0) {
+            workMinutes = 0;
+        }
+
+        // 8. DTO에 근무시간 설정
+        dto.setWorkDuration((int) workMinutes);
+
+        // 9. 퇴근 시각 및 근무시간 UPDATE
         int result = dashboardMapper.updateClockOut(employeeId, dto);
         if (result != 1) {
             log.error("퇴근 UPDATE 실패. result: {}", result);
             throw new BusinessException(ErrorCode.CLOCK_OUT_FAILED);
         }
 
-        log.info("=== 퇴근 처리 완료 ===");
+        log.info("=== 퇴근 처리 완료 === 근무시간: {}분 ({}시간 {}분)",
+                workMinutes, workMinutes / 60, workMinutes % 60);
     }
 
     /**
@@ -253,5 +301,25 @@ public class DashboardServiceImpl implements DashboardService {
                 stats.getPendingCount(), stats.getApprovedCount());
 
         return stats;
+    }
+
+    @Override
+    public WorkSystemTemplateDTO getWorkSystemTemplate(Integer templateId) {
+        return dashboardMapper.selectWorkSystemTemplate(templateId);
+    }
+
+    @Override
+    public WorkSystemTemplateDTO getEmployeeDefaultTemplate(Integer employeeId) {
+        log.info("=== 사원 기본 템플릿 조회 === employeeId: {}", employeeId);
+
+        // 사원의 기본 템플릿 ID 조회
+        Integer templateId = dashboardMapper.selectEmployeeDefaultTemplateId(employeeId);
+
+        if (templateId == null) {
+            log.warn("⚠️ 사원의 기본 템플릿이 없습니다. 기본값 1 사용");
+            templateId = 1; // 기본 템플릿
+        }
+
+        return dashboardMapper.selectWorkSystemTemplate(templateId);
     }
 }

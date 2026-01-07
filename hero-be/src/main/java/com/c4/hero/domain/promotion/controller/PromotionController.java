@@ -17,6 +17,12 @@ import com.c4.hero.domain.promotion.dto.response.PromotionPlanForReviewResponseD
 import com.c4.hero.domain.promotion.dto.response.PromotionPlanResponseDTO;
 import com.c4.hero.domain.promotion.service.PromotionCommandService;
 import com.c4.hero.domain.promotion.service.PromotionQueryService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +52,7 @@ import java.util.List;
  * 2025/12/23 (승건) 심사 관련 API 추가
  * 2025/12/24 (승건) 심사 목록 조회 API 추가
  * 2025/12/28 (승건) 즉시 승진 API 추가
+ * 2026/01/07 (승건) 스웨거 작성
  * </pre>
  *
  * @author 승건
@@ -54,6 +61,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/promotion")
 @RequiredArgsConstructor
+@Tag(name = "승진 API", description = "승진 계획, 추천, 심사 및 즉시 승진 관련 API")
 public class PromotionController {
 
     private final PromotionCommandService promotionCommandService;
@@ -67,6 +75,11 @@ public class PromotionController {
      * @param request 등록할 승진 계획 정보
      * @return 성공 응답
      */
+    @Operation(summary = "승진 계획 등록", description = "새로운 승진 계획을 등록합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "등록 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PostMapping("/plan")
     public ResponseEntity<CustomResponse<Void>> registerPromotionPlan(@Valid @RequestBody PromotionPlanRequestDTO request) {
         promotionCommandService.registerPromotionPlan(request);
@@ -80,6 +93,11 @@ public class PromotionController {
      * @param pageable   페이징 정보 (ex: ?page=0&size=10)
      * @return 페이징된 승진 계획 목록
      */
+    @Operation(summary = "승진 계획 목록 조회", description = "승진 계획 목록을 페이징하여 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/plan")
     public ResponseEntity<CustomResponse<PageResponse<PromotionPlanResponseDTO>>> getPromotionPlan(
             @RequestParam(required = false) Boolean isFinished,
@@ -94,6 +112,11 @@ public class PromotionController {
      * @param promotionId 조회할 승진 계획의 ID
      * @return 승진 계획 상세 정보
      */
+    @Operation(summary = "승진 계획 상세 조회", description = "특정 승진 계획의 상세 정보를 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/plan/{promotionId}")
     public ResponseEntity<CustomResponse<PromotionPlanDetailResponseDTO>> getPromotionPlanDetail(
             @PathVariable int promotionId) {
@@ -106,6 +129,11 @@ public class PromotionController {
      *
      * @return 부서 트리 구조와 직급 목록
      */
+    @Operation(summary = "승진 계획 등록 옵션 조회", description = "승진 계획 등록 시 필요한 부서 및 직급 옵션을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/plan/options")
     public ResponseEntity<CustomResponse<PromotionOptionsResponseDTO>> getPromotionOptions() {
         PromotionOptionsResponseDTO response = promotionQueryService.getPromotionOptions();
@@ -118,6 +146,11 @@ public class PromotionController {
      * @param request HTTP 요청 (토큰 추출용)
      * @return 추천 가능한 승진 계획 목록
      */
+    @Operation(summary = "추천 가능 승진 계획 조회 (팀장용)", description = "팀장이 추천 가능한 승진 계획 목록을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/nominations")
     public ResponseEntity<CustomResponse<List<PromotionPlanResponseDTO>>> getRecommendPromotionPlan(
             HttpServletRequest request
@@ -140,6 +173,11 @@ public class PromotionController {
      * @param request     HTTP 요청 (토큰 추출용)
      * @return 필터링된 승진 계획 상세 정보
      */
+    @Operation(summary = "추천용 승진 계획 상세 조회 (팀장용)", description = "팀장이 추천을 위해 특정 승진 계획의 상세 정보를 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/nominations/{promotionId}")
     public ResponseEntity<CustomResponse<PromotionPlanDetailResponseDTO>> getRecommendPromotionPlanDetail(
             @PathVariable Integer promotionId,
@@ -163,6 +201,11 @@ public class PromotionController {
      * @param request     HTTP 요청 (토큰 추출용)
      * @return 성공 응답
      */
+    @Operation(summary = "승진 후보자 추천", description = "승진 후보자를 추천합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "추천 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PostMapping("/nominations")
     public ResponseEntity<CustomResponse<Void>> nominateCandidate(
             @Valid @RequestBody PromotionNominationRequestDTO requestDTO,
@@ -185,6 +228,11 @@ public class PromotionController {
      * @param request     HTTP 요청 (토큰 추출용)
      * @return 성공 응답
      */
+    @Operation(summary = "승진 후보자 추천 취소", description = "승진 후보자 추천을 취소합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "취소 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @DeleteMapping("/nominations/{candidateId}")
     public ResponseEntity<CustomResponse<Void>> cancelNomination(
             @PathVariable Integer candidateId,
@@ -206,6 +254,11 @@ public class PromotionController {
      *
      * @return 심사 대상 승진 계획 목록
      */
+    @Operation(summary = "심사 대상 승진 계획 목록 조회 (인사팀용)", description = "심사가 필요한 승진 계획 목록을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/reviews")
     public ResponseEntity<CustomResponse<List<PromotionPlanResponseDTO>>> getPromotionPlansForReview() {
         List<PromotionPlanResponseDTO> response = promotionQueryService.getPromotionPlansForReviewList();
@@ -218,6 +271,11 @@ public class PromotionController {
      * @param promotionId 승진 계획 ID
      * @return 심사용 승진 계획 상세 정보 (승인 현황 포함)
      */
+    @Operation(summary = "심사용 승진 계획 상세 조회 (인사팀용)", description = "심사를 위해 승진 계획의 상세 정보를 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/review/{promotionId}")
     public ResponseEntity<CustomResponse<PromotionPlanForReviewResponseDTO>> getReviewPromotionDetail(
             @PathVariable Integer promotionId
@@ -232,6 +290,11 @@ public class PromotionController {
      * @param request 심사 요청 정보
      * @return 성공 응답
      */
+    @Operation(summary = "승진 후보자 심사", description = "승진 후보자를 승인하거나 반려합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "심사 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PostMapping("/review")
     public ResponseEntity<CustomResponse<Void>> reviewCandidate(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -247,6 +310,11 @@ public class PromotionController {
      * @param request 심사 요청 정보
      * @return 성공 응답
      */
+    @Operation(summary = "최종 승인 처리", description = "승진 심사를 최종 승인 처리합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "처리 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PostMapping("/review/final")
     public ResponseEntity<CustomResponse<Void>> confirmFinalApproval(
             @RequestBody PromotionReviewRequestDTO request
@@ -261,6 +329,11 @@ public class PromotionController {
      * @param request 즉시 승진 요청 정보
      * @return 성공 응답
      */
+    @Operation(summary = "즉시 승진 (특별 승진)", description = "특정 직원을 즉시 승진시킵니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "승진 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PostMapping("/direct")
     public ResponseEntity<CustomResponse<Void>> promoteDirectly(
             @AuthenticationPrincipal CustomUserDetails userDetails,

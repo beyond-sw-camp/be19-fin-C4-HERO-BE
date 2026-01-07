@@ -1,6 +1,7 @@
 package com.c4.hero.domain.dashboard.controller;
 
 import com.c4.hero.common.response.CustomResponse;
+import com.c4.hero.domain.dashboard.dto.WorkSystemTemplateDTO;
 import com.c4.hero.domain.notification.service.AttendanceNotificationEventService;
 import com.c4.hero.domain.auth.security.CustomUserDetails;
 import com.c4.hero.domain.dashboard.dto.ApprovalStatsDTO;
@@ -73,7 +74,8 @@ public class DashboardController {
         ClockInRequestDTO dto = new ClockInRequestDTO();
         dto.setWorkDate(LocalDate.now());
         dto.setStartTime(LocalTime.now());
-        dto.setWorkSystemTypeId(1); // 기본 근무제
+        dto.setWorkSystemTypeId(1);
+        dto.setWorkSystemTemplateId(1);
 
         // 출근 처리
         timeClockService.clockIn(employeeId, departmentId, dto);
@@ -265,5 +267,34 @@ public class DashboardController {
         ApprovalStatsDTO stats = timeClockService.getApprovalStats(employeeId);
 
         return ResponseEntity.ok(CustomResponse.success(stats));
+    }
+
+    /**
+     * 근무제 템플릿 정보 조회
+     * GET /api/dashboard/work-system-template/{templateId}
+     */
+    @GetMapping("/work-system-template/{templateId}")
+    public ResponseEntity<CustomResponse<WorkSystemTemplateDTO>> getWorkSystemTemplate(
+            @PathVariable("templateId") Integer templateId) {
+
+        WorkSystemTemplateDTO template = timeClockService.getWorkSystemTemplate(templateId);
+
+        return ResponseEntity.ok(CustomResponse.success(template));
+    }
+
+    /**
+     * 내 기본 근무제 템플릿 정보 조회
+     * GET /api/dashboard/my-default-template
+     */
+    @GetMapping("/my-default-template")
+    public ResponseEntity<CustomResponse<WorkSystemTemplateDTO>> getMyDefaultTemplate(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        Integer employeeId = userDetails.getEmployeeId();
+        log.info("=== 기본 템플릿 조회 API 호출 === 사원ID: {}", employeeId);
+
+        WorkSystemTemplateDTO template = timeClockService.getEmployeeDefaultTemplate(employeeId);
+
+        return ResponseEntity.ok(CustomResponse.success(template));
     }
 }

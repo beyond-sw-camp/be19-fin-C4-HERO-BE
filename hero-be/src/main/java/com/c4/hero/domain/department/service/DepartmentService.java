@@ -249,7 +249,7 @@ public class DepartmentService {
                         .employeeId(h.getEmployee().getEmployeeId())
                         .changedBy(h.getChangedBy())
                         .changedAt(h.getChangedAt())
-                        .changeType(h.getChangeType())
+                        .changeType(h.getChangeType().getDescription())
                         .departmentName(h.getDepartmentName())
                         .build())
                 .collect(Collectors.toList());
@@ -269,7 +269,7 @@ public class DepartmentService {
                         .employeeId(h.getEmployee().getEmployeeId())
                         .changedBy(h.getChangedBy())
                         .changedAt(h.getChangedAt())
-                        .changeType(h.getChangeType())
+                        .changeType(h.getChangeType().getDescription())
                         .gradeName(h.getGradeName())
                         .build())
                 .collect(Collectors.toList());

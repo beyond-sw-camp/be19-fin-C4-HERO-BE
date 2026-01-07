@@ -3,6 +3,12 @@ package com.c4.hero.domain.auth.controller;
 import com.c4.hero.common.response.CustomResponse;
 import com.c4.hero.domain.auth.service.AuthService;
 import com.c4.hero.domain.auth.security.JwtUtil;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -26,6 +32,7 @@ import java.util.Map;
  * 2025-12-09 (이승건) 최초 작성
  * 2025-12-10 (이승건) Refresh Token을 쿠키에서 읽도록 수정
  * 2025-12-10 (이승건) 로그아웃 기능 추가
+ * 2026/01/07 (승건) 스웨거 작성
  * </pre>
  *
  * @author 이승건
@@ -35,6 +42,7 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "인증 API", description = "인증(로그인, 로그아웃, 토큰 재발급) 관련 API")
 public class AuthController {
 
     private final AuthService authService;
@@ -44,6 +52,7 @@ public class AuthController {
      *
      * @return "test success" 문자열
      */
+    @Operation(summary = "토큰 검증 테스트", description = "토큰의 유효성을 검증하고 포함된 정보를 로그로 출력합니다.")
     @GetMapping("/test")
     public String test(HttpServletRequest request) {
 
@@ -72,6 +81,12 @@ public class AuthController {
      * @param refreshToken HttpOnly 쿠키에 담긴 Refresh Token
      * @return 새로 발급된 Access Token
      */
+    @Operation(summary = "Access Token 재발급", description = "Refresh Token을 사용하여 새로운 Access Token을 발급합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "재발급 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class))),
+            @ApiResponse(responseCode = "401", description = "유효하지 않은 Refresh Token", content = @Content)
+    })
     @PostMapping("/refresh")
     public ResponseEntity<CustomResponse<Map<String, String>>> refreshAccessToken(
             @CookieValue(JwtUtil.REFRESH_TOKEN_COOKIE_NAME) String refreshToken) {
@@ -89,6 +104,11 @@ public class AuthController {
      * @param response HttpServletResponse
      * @return 성공 메시지
      */
+    @Operation(summary = "로그아웃", description = "Refresh Token 쿠키를 만료시켜 로그아웃 처리합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "로그아웃 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PostMapping("/logout")
     public ResponseEntity<CustomResponse<Void>> logout(HttpServletResponse response) {
         // Refresh Token이 담긴 쿠키를 만료시켜 클라이언트에서 삭제하도록 함

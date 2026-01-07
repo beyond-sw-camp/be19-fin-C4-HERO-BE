@@ -24,6 +24,11 @@ import com.c4.hero.domain.settings.service.SettingsQueryService;
 import com.c4.hero.domain.settings.dto.response.SettingWorkSystemResponseDTO;
 import com.c4.hero.domain.settings.dto.request.SettingWorkSystemRequestDTO;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
@@ -52,6 +57,7 @@ import java.util.List;
  * 2025/12/22 (혜원) 관리자 알림 발송 및 관리 기능 추가
  * 2025/12/24 (혜원) 서비스 파일명 변경 수정, @PreAuthorize로 설정에 진입 가능한 권한체크
  * 2025/12/29 (지윤) 근태 설정 조회 및 삽입문 기능 추가
+ * 2026/01/07 (승건) 스웨거 작성
  * </pre>
  *
  * @author 승건
@@ -62,6 +68,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 @PreAuthorize("hasAnyRole('SYSTEM_ADMIN', 'HR_MANAGER')")
+@Tag(name = "환경설정 API", description = "부서, 직급, 직책, 권한, 알림, 근태 등 시스템 환경설정 API")
 public class SettingsController {
 
     private final SettingsCommandService settingsCommandService;
@@ -76,6 +83,11 @@ public class SettingsController {
      *
      * @return 부서 트리 구조 목록
      */
+    @Operation(summary = "부서 목록 조회 (트리)", description = "부서 목록을 트리 구조로 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/departments")
     public ResponseEntity<CustomResponse<List<SettingsDepartmentResponseDTO>>> getDepartments() {
         List<SettingsDepartmentResponseDTO> departmentTree = settingsQueryService.getDepartmentTree();
@@ -90,6 +102,11 @@ public class SettingsController {
      * @param departments 저장 또는 수정할 부서 정보 목록
      * @return 성공 메시지
      */
+    @Operation(summary = "부서 정보 일괄 저장/수정", description = "부서 정보를 트리 구조로 일괄 저장하거나 수정합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "저장 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PostMapping("/departments/tree")
     public ResponseEntity<CustomResponse<String>> saveOrUpdateDepartments(@RequestBody List<SettingsDepartmentRequestDTO> departments) {
         settingsCommandService.updateDepartments(departments);
@@ -101,6 +118,11 @@ public class SettingsController {
      *
      * @return 전체 직급 목록
      */
+    @Operation(summary = "직급 목록 조회", description = "전체 직급 목록을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/grades")
     public ResponseEntity<CustomResponse<List<Grade>>> getGrades() {
         List<Grade> grades = settingsQueryService.getAllGrades();
@@ -115,6 +137,11 @@ public class SettingsController {
      * @param grades 수정할 직급 정보 목록
      * @return 성공 메시지
      */
+    @Operation(summary = "직급 정보 일괄 저장/수정", description = "직급 정보를 일괄 저장, 수정 또는 삭제합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "저장 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PostMapping("/grades/batch")
     public ResponseEntity<CustomResponse<String>> updateGrades(@RequestBody List<SettingsGradeRequestDTO> grades) {
         settingsCommandService.updateGrades(grades);
@@ -126,6 +153,11 @@ public class SettingsController {
      *
      * @return 전체 직책 목록
      */
+    @Operation(summary = "직책 목록 조회", description = "전체 직책 목록을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/job-titles")
     public ResponseEntity<CustomResponse<List<JobTitle>>> getJobTitles() {
         List<JobTitle> jobTitles = settingsQueryService.getAllJobTitles();
@@ -140,6 +172,11 @@ public class SettingsController {
      * @param jobTitles 수정할 직책 정보 목록
      * @return 성공 메시지
      */
+    @Operation(summary = "직책 정보 일괄 저장/수정", description = "직책 정보를 일괄 저장, 수정 또는 삭제합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "저장 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PostMapping("/job-titles/batch")
     public ResponseEntity<CustomResponse<String>> updateJobTitles(@RequestBody List<SettingsJobTitleRequestDTO> jobTitles) {
         settingsCommandService.updateJobTitles(jobTitles);
@@ -151,6 +188,11 @@ public class SettingsController {
      *
      * @return 로그인 정책 값
      */
+    @Operation(summary = "로그인 정책 조회", description = "현재 설정된 로그인 정책(예: 비밀번호 변경 주기 등)을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/login-policy")
     public ResponseEntity<CustomResponse<Integer>> getLoginPolicy() {
         Integer loginPolicy = settingsQueryService.getLoginPolicy();
@@ -163,6 +205,11 @@ public class SettingsController {
      * @param policy 설정할 로그인 정책
      * @return 성공 메시지
      */
+    @Operation(summary = "로그인 정책 설정", description = "로그인 정책을 설정합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "설정 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PutMapping("/login-policy")
     public ResponseEntity<CustomResponse<String>> setLoginPolicy(@RequestBody SettingsLoginPolicyRequestDTO policy) {
         settingsCommandService.setLoginPolicy(policy);
@@ -176,6 +223,11 @@ public class SettingsController {
      * @param query    검색어
      * @return 각 사원들이 들고 있는 권한 정보 List
      */
+    @Operation(summary = "사원 권한 목록 조회", description = "사원별 권한 정보를 페이징하여 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/permissions")
     public ResponseEntity<CustomResponse<PageResponse<SettingsPermissionsResponseDTO>>> getPermissions(
             Pageable pageable,
@@ -189,6 +241,11 @@ public class SettingsController {
      *
      * @return 전체 권한 목록
      */
+    @Operation(summary = "전체 권한 목록 조회", description = "시스템에 정의된 모든 권한 목록을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/roles")
     public ResponseEntity<CustomResponse<List<Role>>> getRoles() {
         List<Role> roles = settingsQueryService.getAllRoles();
@@ -201,6 +258,11 @@ public class SettingsController {
      * @param dto 권한 설정 요청 정보
      * @return 성공 메시지
      */
+    @Operation(summary = "사원 권한 설정", description = "특정 사원의 권한을 설정합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "설정 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PutMapping("/permissions")
     public ResponseEntity<CustomResponse<String>> updatePermissions(@RequestBody SettingsPermissionsRequestDTO dto) {
         settingsCommandService.updatePermissions(dto);
@@ -271,6 +333,11 @@ public class SettingsController {
      * @param request 알림 내용
      * @return 발송 결과
      */
+    @Operation(summary = "전체 알림 발송", description = "전체 직원에게 알림을 발송합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "발송 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PostMapping("/notifications/broadcast")
     public ResponseEntity<CustomResponse<String>> broadcastNotification(
             @RequestBody SettingsNotificationBroadcastRequestDTO request) {
@@ -284,6 +351,11 @@ public class SettingsController {
      * @param request 알림 내용 및 대상 그룹
      * @return 발송 결과
      */
+    @Operation(summary = "그룹 알림 발송", description = "특정 부서나 직급 그룹에게 알림을 발송합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "발송 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PostMapping("/notifications/group")
     public ResponseEntity<CustomResponse<String>> sendGroupNotification(
             @RequestBody SettingsNotificationGroupRequestDTO request) {
@@ -297,6 +369,11 @@ public class SettingsController {
      * @param request 알림 내용 및 대상 직원 목록
      * @return 발송 결과
      */
+    @Operation(summary = "개별 알림 발송", description = "선택한 개별 직원들에게 알림을 발송합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "발송 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PostMapping("/notifications/individual")
     public ResponseEntity<CustomResponse<String>> sendIndividualNotification(
             @RequestBody SettingsNotificationIndividualRequestDTO request) {
@@ -337,6 +414,11 @@ public class SettingsController {
      * @param type      알림 타입 (optional)
      * @return 발송 이력 목록
      */
+    @Operation(summary = "알림 발송 이력 조회", description = "알림 발송 이력을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/notifications/history")
     public ResponseEntity<CustomResponse<PageResponse<SettingsNotificationHistoryResponseDTO>>> getNotificationHistory(
             Pageable pageable,
@@ -355,6 +437,11 @@ public class SettingsController {
      *
      * @return 발송 통계 정보
      */
+    @Operation(summary = "알림 발송 통계 조회", description = "알림 발송 통계 정보를 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/notifications/statistics")
     public ResponseEntity<CustomResponse<SettingsNotificationStatisticsResponseDTO>> getNotificationStatistics() {
         SettingsNotificationStatisticsResponseDTO statistics =
@@ -368,6 +455,11 @@ public class SettingsController {
      *
      * @return WebSocket 연결 상태 정보
      */
+    @Operation(summary = "WebSocket 상태 확인", description = "WebSocket 연결 상태를 확인합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "확인 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/notifications/health")
     public ResponseEntity<CustomResponse<SettingsWebSocketHealthResponseDTO>> checkWebSocketHealth() {
         SettingsWebSocketHealthResponseDTO health =
@@ -381,6 +473,11 @@ public class SettingsController {
      *
      * @return 근무제 템플릿 목록
      */
+    @Operation(summary = "근무제 템플릿 목록 조회", description = "등록된 근무제 템플릿 목록을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/attendance/work-system-templates")
     public ResponseEntity<CustomResponse<List<SettingWorkSystemResponseDTO>>> getWorkSystemTemplates() {
         List<SettingWorkSystemResponseDTO> list = settingsAttendanceService.getWorkSystemTemplates();
@@ -395,6 +492,11 @@ public class SettingsController {
      * @param requestList 저장/수정할 근무제 템플릿 목록
      * @return 성공 메시지
      */
+    @Operation(summary = "근무제 템플릿 저장/수정", description = "근무제 템플릿을 저장하거나 수정합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "저장 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PutMapping("/attendance/work-system-templates")
     public ResponseEntity<CustomResponse<String>> upsertWorkSystemTemplates(
             @RequestBody List<SettingWorkSystemRequestDTO> requestList

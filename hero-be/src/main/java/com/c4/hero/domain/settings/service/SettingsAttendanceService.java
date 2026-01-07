@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -26,12 +27,11 @@ import java.util.stream.Collectors;
  * Description: 근태 설정(근무제 템플릿/근무제 유형) 관련 비즈니스 로직을 처리하는 서비스 클래스
  *
  * History
- * 2025/12/29 (이지윤) 최초 작성 및 컨벤션 적용
+ * 2025/12/29 (지윤) 최초 작성 및 컨벤션 적용
+ * 2026/01/07 (혜원) 신규 근무제 생성 시 WorkSystemType도 함께 생성하도록 수정
  * </pre>
  *
- * 근무제 템플릿(WorkSystemTemplate)에 대한 조회 및 일괄 저장(Upsert) 기능을 제공합니다.
- * - 조회: MyBatis Mapper를 이용하여 현재 설정된 템플릿 목록을 조회
- * - 저장: JPA Repository를 이용하여 신규 템플릿 추가/기존 템플릿 수정 수행
+ * 근무제 템플릿(WorkSystemTemplate)에 대한 조회 및 일괄 저장(Upsert, Insert) 기능을 제공합니다.
  */
 @Slf4j
 @Service
@@ -70,31 +70,28 @@ public class SettingsAttendanceService {
      *
      * <p>규칙</p>
      * <ul>
-     *     <li>신규 템플릿: {@code workSystemTemplateId == null} → INSERT</li>
+     *     <li>신규 템플릿: {@code workSystemTemplateId == null} → INSERT (WorkSystemType도 함께 생성)</li>
      *     <li>기존 템플릿: {@code workSystemTemplateId != null} → UPDATE</li>
      * </ul>
      *
      * <p>처리 순서</p>
      * <ol>
      *     <li>요청 리스트 유효성 검증</li>
-     *     <li>필요한 근무제 유형(WorkSystemType) 일괄 로딩 및 존재 여부 검증</li>
-     *     <li>수정 대상 템플릿(WorkSystemTemplate) 일괄 로딩</li>
-     *     <li>INSERT/UPDATE 분기 처리 후 saveAll로 일괄 저장</li>
+     *     <li>신규: WorkSystemType 생성 후 WorkSystemTemplate 생성</li>
+     *     <li>수정: 기존 템플릿 로딩 후 업데이트</li>
+     *     <li>saveAll로 일괄 저장</li>
      * </ol>
      *
      * @param requestList 근무제 템플릿 저장 요청 리스트
      */
-    @Transactional // 클래스 레벨 readOnly=true를 override
+    @Transactional
     public void upsertWorkSystemTemplates(List<SettingWorkSystemRequestDTO> requestList) {
-        if (requestList == null) {
+        if (requestList == null || requestList.isEmpty()) {
             return;
         }
 
         // 1) 기본 유효성 검증
         for (SettingWorkSystemRequestDTO dto : requestList) {
-            if (dto.getWorkSystemTypeId() == null) {
-                throw new IllegalArgumentException("workSystemTypeId는 필수입니다.");
-            }
             if (dto.getStartTime() == null || dto.getEndTime() == null) {
                 throw new IllegalArgumentException("startTime/endTime은 필수입니다.");
             }
@@ -106,74 +103,107 @@ public class SettingsAttendanceService {
             }
         }
 
-        // 2) 한 번에 필요한 WorkSystemType 로딩 (N+1 방지)
-        Set<Integer> typeIds = requestList.stream()
-                .map(SettingWorkSystemRequestDTO::getWorkSystemTypeId)
-                .collect(Collectors.toSet());
-
-        Map<Integer, WorkSystemType> typeMap =
-                settingAttTypeRepository.findAllById(typeIds).stream()
-                        .collect(Collectors.toMap(WorkSystemType::getWorkSystemTypeId, t -> t));
-
-        // 존재하지 않는 타입이 있으면 에러
-        for (Integer typeId : typeIds) {
-            if (!typeMap.containsKey(typeId)) {
-                throw new NoSuchElementException("존재하지 않는 workSystemTypeId=" + typeId);
-            }
-        }
-
-        // 3) 기존 템플릿도 한 번에 로딩 (UPDATE 대상)
-        List<Integer> existingIds = requestList.stream()
-                .map(SettingWorkSystemRequestDTO::getWorkSystemTemplateId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-
-        Map<Integer, WorkSystemTemplate> existingTemplateMap =
-                settingAttTemplateRepository.findAllById(existingIds).stream()
-                        .collect(Collectors.toMap(WorkSystemTemplate::getId, t -> t));
-
-        // 4) INSERT/UPDATE 분기 처리
         List<WorkSystemTemplate> toSave = new ArrayList<>();
 
-        for (SettingWorkSystemRequestDTO dto : requestList) {
-            WorkSystemType type = typeMap.get(dto.getWorkSystemTypeId());
+        // 2) 신규와 수정 분리
+        List<SettingWorkSystemRequestDTO> newRequests = requestList.stream()
+                .filter(dto -> dto.getWorkSystemTemplateId() == null)
+                .toList();
 
-            // (A) INSERT: workSystemTemplateId == null
-            if (dto.getWorkSystemTemplateId() == null) {
-                WorkSystemTemplate created = WorkSystemTemplate.create(
+        List<SettingWorkSystemRequestDTO> updateRequests = requestList.stream()
+                .filter(dto -> dto.getWorkSystemTemplateId() != null)
+                .toList();
+
+        // 3) 신규 생성 처리 (WorkSystemType도 함께 생성)
+        for (SettingWorkSystemRequestDTO dto : newRequests) {
+            // WorkSystemType 먼저 생성
+            WorkSystemType newType = WorkSystemType.create(
+                    dto.getReason(),  // name으로 사용
+                    dto.getStartTime(),  // flexStartMin
+                    dto.getStartTime(),  // flexStartMax
+                    true  // isFixedSchedule (고정 근무제)
+            );
+            WorkSystemType savedType = settingAttTypeRepository.save(newType);
+
+            log.info("신규 WorkSystemType 생성 완료 - ID: {}, Name: {}",
+                    savedType.getWorkSystemTypeId(), savedType.getWorkSystemName());
+
+            // WorkSystemTemplate 생성
+            WorkSystemTemplate newTemplate = WorkSystemTemplate.create(
+                    dto.getStartTime(),
+                    dto.getEndTime(),
+                    dto.getBreakMinMinutes(),
+                    dto.getReason(),
+                    savedType
+            );
+            toSave.add(newTemplate);
+
+            log.info("신규 WorkSystemTemplate 생성 준비 - Reason: {}", dto.getReason());
+        }
+
+        // 4) 기존 템플릿 수정 처리
+        if (!updateRequests.isEmpty()) {
+            // 필요한 WorkSystemType 로딩
+            Set<Integer> typeIds = updateRequests.stream()
+                    .map(SettingWorkSystemRequestDTO::getWorkSystemTypeId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+
+            Map<Integer, WorkSystemType> typeMap = settingAttTypeRepository.findAllById(typeIds).stream()
+                    .collect(Collectors.toMap(WorkSystemType::getWorkSystemTypeId, t -> t));
+
+            // 기존 템플릿 로딩
+            List<Integer> existingIds = updateRequests.stream()
+                    .map(SettingWorkSystemRequestDTO::getWorkSystemTemplateId)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .toList();
+
+            Map<Integer, WorkSystemTemplate> existingTemplateMap =
+                    settingAttTemplateRepository.findAllById(existingIds).stream()
+                            .collect(Collectors.toMap(WorkSystemTemplate::getId, t -> t));
+
+            // 수정 처리
+            for (SettingWorkSystemRequestDTO dto : updateRequests) {
+                if (dto.getWorkSystemTypeId() == null) {
+                    throw new IllegalArgumentException("수정 시 workSystemTypeId는 필수입니다.");
+                }
+
+                WorkSystemType type = typeMap.get(dto.getWorkSystemTypeId());
+                if (type == null) {
+                    throw new NoSuchElementException(
+                            "존재하지 않는 workSystemTypeId=" + dto.getWorkSystemTypeId()
+                    );
+                }
+
+                WorkSystemTemplate target = existingTemplateMap.get(dto.getWorkSystemTemplateId());
+                if (target == null) {
+                    throw new NoSuchElementException(
+                            "존재하지 않는 workSystemTemplateId=" + dto.getWorkSystemTemplateId()
+                    );
+                }
+
+                target.update(
                         dto.getStartTime(),
                         dto.getEndTime(),
                         dto.getBreakMinMinutes(),
                         dto.getReason(),
                         type
                 );
-                toSave.add(created);
-                continue;
+
+                // WorkSystemType의 name도 업데이트
+                type.updateName(dto.getReason());
+
+                toSave.add(target);
+
+                log.info("WorkSystemTemplate 수정 완료 - ID: {}", dto.getWorkSystemTemplateId());
             }
-
-            // (B) UPDATE: workSystemTemplateId != null
-            WorkSystemTemplate target = existingTemplateMap.get(dto.getWorkSystemTemplateId());
-            if (target == null) {
-                throw new NoSuchElementException(
-                        "존재하지 않는 workSystemTemplateId=" + dto.getWorkSystemTemplateId()
-                );
-            }
-
-            target.update(
-                    dto.getStartTime(),
-                    dto.getEndTime(),
-                    dto.getBreakMinMinutes(),
-                    dto.getReason(),
-                    type
-            );
-
-            // JPA dirty checking으로도 업데이트가 반영되지만,
-            // saveAll에 함께 넘겨 명시적으로 처리해도 무방합니다.
-            toSave.add(target);
         }
 
-        // 5) 저장
+        // 5) 일괄 저장
         settingAttTemplateRepository.saveAll(toSave);
+
+        log.info("근무제 템플릿 저장 완료 - 총 {}건 (신규: {}건, 수정: {}건)",
+                toSave.size(), newRequests.size(), updateRequests.size());
     }
 }
