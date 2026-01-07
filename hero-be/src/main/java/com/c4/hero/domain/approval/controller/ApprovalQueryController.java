@@ -197,11 +197,9 @@ public class ApprovalQueryController {
     )
     @GetMapping("/organization/tree")
     public ResponseEntity<OrganizationTreeResponseDTO> getOrganizationTree() {
-        log.info("조직도 전체 조회 요청");
 
         OrganizationTreeResponseDTO response = organizationService.getOrganizationTree();
 
-        log.info("조직도 조회 완료");
         return ResponseEntity.ok().body(response);
     }
 
@@ -225,8 +223,6 @@ public class ApprovalQueryController {
             @RequestParam(required = false) Integer departmentId,
             @RequestParam(required = false) Integer gradeId
     ) {
-        log.info("직원 검색 요청 - keyword: {}, departmentId: {}, gradeId: {}",
-                keyword, departmentId, gradeId);
 
         EmployeeSearchRequestDTO requestDTO = EmployeeSearchRequestDTO.builder()
                 .keyword(keyword)
@@ -236,7 +232,6 @@ public class ApprovalQueryController {
 
         EmployeeSearchResponseDTO response = organizationService.searchEmployees(requestDTO);
 
-        log.info("직원 검색 완료 - 결과: {}건", response.getTotalCount());
         return ResponseEntity.ok().body(response);
     }
 
@@ -256,11 +251,9 @@ public class ApprovalQueryController {
     public ResponseEntity<List<OrganizationEmployeeDTO>> getDepartmentEmployees(
             @PathVariable Integer departmentId
     ) {
-        log.info("부서별 직원 조회 요청 - departmentId: {}", departmentId);
 
         List<OrganizationEmployeeDTO> employees = organizationService.getDepartmentEmployees(departmentId);
 
-        log.info("부서별 직원 조회 완료 - 결과: {}명", employees.size());
         return ResponseEntity.ok().body(employees);
     }
 

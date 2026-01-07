@@ -11,6 +11,7 @@ import com.c4.hero.domain.approval.dto.response.ApprovalActionResponseDTO;
 import com.c4.hero.domain.approval.entity.*;
 import com.c4.hero.domain.approval.event.ApprovalCompletedEvent;
 import com.c4.hero.domain.approval.event.ApprovalRejectedEvent;
+import com.c4.hero.domain.approval.exception.*;
 import com.c4.hero.domain.approval.repository.*;
 import com.c4.hero.domain.employee.repository.EmployeeRepository;
 import com.c4.hero.domain.notification.event.approval.ApprovalNotificationEvent;
@@ -71,7 +72,7 @@ public class ApprovalCommandService {
     private final ApprovalSequenceRepository sequenceRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final S3Service s3Service;
-    private final EmployeeRepository employeeRepository;  // 추가
+    private final EmployeeRepository employeeRepository;
 
 
     /**
@@ -91,14 +92,14 @@ public class ApprovalCommandService {
 
         if (bookmark.isPresent()) {
             bookmarkRepository.delete(bookmark.get());
-            return false; // 즐겨찾기 해제
+            return false;
         } else {
             ApprovalBookmark newBookmark = ApprovalBookmark.builder()
                     .empId(empId)
                     .templateId(templateId)
                     .build();
             bookmarkRepository.save(newBookmark);
-            return true; // 즐겨찾기 등록
+            return true;
         }
     }
 
@@ -121,6 +122,8 @@ public class ApprovalCommandService {
      * @param files      첨부 파일 목록
      * @param status     문서 상태 (DRAFT: 임시저장 / INPROGRESS: 상신)
      * @return 생성된 문서 ID
+     * @throws ApprovalFileUploadException S3 파일 업로드 실패 시
+     * @throws BusinessException           문서번호 생성 실패 시
      */
     @Transactional
     public Integer createDocument(
@@ -129,50 +132,40 @@ public class ApprovalCommandService {
             List<MultipartFile> files,
             String status
     ) {
-        log.info("문서 생성 시작 - employeeId: {}, status: {}", employeeId, status);
 
-        // 1. 문서 본문 저장
         ApprovalDocument document = createApprovalDocument(employeeId, dto, status);
         ApprovalDocument savedDoc = documentRepository.save(document);
-        log.info("문서 저장 완료 - docId: {}", savedDoc.getDocId());
 
-        // 2. 결재선 저장
         if (dto.getLines() != null && !dto.getLines().isEmpty()) {
             saveApprovalLines(savedDoc.getDocId(), dto.getLines());
-            log.info("결재선 저장 완료 - 결재자 수: {}", dto.getLines().size());
         }
 
-        // 3. 참조자 저장
         if (dto.getReferences() != null && !dto.getReferences().isEmpty()) {
             saveReferences(savedDoc.getDocId(), dto.getReferences());
-            log.info("참조자 저장 완료 - 참조자 수: {}", dto.getReferences().size());
         }
 
-        // 4. 첨부파일 저장 (S3)
         if (files != null && !files.isEmpty()) {
             saveFilesToS3(files, savedDoc);
-            log.info("첨부파일 저장 완료 - 파일 수: {}", files.size());
         }
 
-        // 5. 상신(INPROGRESS)인 경우 결재선 확인 및 자동 승인 처리
         if ("INPROGRESS".equals(status)) {
             List<ApprovalLine> lines = lineRepository.findByDocIdOrderBySeqAsc(savedDoc.getDocId());
             boolean onlyDrafter = lines.stream()
                     .allMatch(line -> line.getSeq() == 1);
 
             if (onlyDrafter) {
-                // 결재선이 기안자(seq=1)만 있는 경우 자동 승인
                 savedDoc.complete();
-                String docNo = generateDocNo();
-                savedDoc.assignDocNo(docNo);
+                try {
+                    String docNo = generateDocNo();
+                    savedDoc.assignDocNo(docNo);
+                } catch (BusinessException e) {
+                    throw new ApprovalDocumentNumberFailedException(ErrorCode.DOC_NO_GENERATION_ERROR);
+                }
+
                 documentRepository.save(savedDoc);
 
-                log.info("결재선이 1단계만 존재 - 자동 승인 처리 완료, 문서번호: {}", docNo);
-
-                // 승인 완료 이벤트 발행
                 publishApprovalCompletedEvent(savedDoc);
             } else {
-                // 첫 번째 결재자에게 알림
                 ApprovalLine firstApprover = lines.stream()
                         .filter(line -> line.getSeq() == 2)
                         .findFirst()
@@ -184,7 +177,6 @@ public class ApprovalCommandService {
             }
         }
 
-        log.info("문서 생성 완료 - docId: {}", savedDoc.getDocId());
         return savedDoc.getDocId();
     }
 
@@ -212,26 +204,19 @@ public class ApprovalCommandService {
      * @return 생성된 문서 번호 (예: HERO-2026-00001)
      */
     private String generateDocNo() {
-        // 1. 채번 키 생성 (예: HERO-2026)
         String currentYear = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy"));
         String seqType = "HERO-" + currentYear;
 
-        // 2. 비관적 락을 걸고 시퀀스 조회 (없으면 새로 생성)
-        // findBySeqTypeWithLock 호출 시점부터 SELECT ... FOR UPDATE 쿼리가 실행되어 다른 접근을 막음
         ApprovalSequence sequence = sequenceRepository.findBySeqTypeWithLock(seqType)
                 .orElseGet(() -> ApprovalSequence.builder()
                         .seqType(seqType)
-                        .currentVal(0L) // 없으면 0부터 시작
+                        .currentVal(0L)
                         .build());
 
-        // 3. 번호 증가 (메모리 상 변경)
         sequence.increment();
 
-        // 4. 변경 사항 저장
-        // (트랜잭션 커밋 시점에 DB에 반영되고 락이 풀림)
         sequenceRepository.save(sequence);
 
-        // 5. 포맷팅하여 반환 (HERO-2026-00001)
         return seqType + "-" + String.format("%05d", sequence.getCurrentVal());
     }
 
@@ -290,8 +275,6 @@ public class ApprovalCommandService {
             ApprovalLine line = builder.build();
             lineRepository.save(line);
 
-            log.debug("결재선 저장 - seq: {}, approverId: {}, status: {}",
-                    lineDTO.getSeq(), lineDTO.getApproverId(), initialStatus);
         }
     }
 
@@ -313,7 +296,6 @@ public class ApprovalCommandService {
                     .build();
 
             referenceRepository.save(reference);
-            log.debug("참조자 저장 - empId: {}", refDTO.getReferencerId());
         }
     }
 
@@ -329,15 +311,13 @@ public class ApprovalCommandService {
      *
      * @param files    업로드할 파일 목록
      * @param document 문서 엔티티
-     * @throws RuntimeException 파일 업로드 실패 시
+     * @throws ApprovalFileUploadException S3 파일 업로드 실패 시
      */
     private void saveFilesToS3(List<MultipartFile> files, ApprovalDocument document) {
         for (MultipartFile file : files) {
             try {
-                // S3에 파일 업로드
                 String s3Key = s3Service.uploadFile(file, "approval");
 
-                // DB에 첨부파일 정보 저장
                 ApprovalAttachment attachment = ApprovalAttachment.builder()
                         .document(document)
                         .originName(file.getOriginalFilename())
@@ -346,12 +326,9 @@ public class ApprovalCommandService {
                         .build();
 
                 attachmentRepository.save(attachment);
-                log.info("S3 파일 업로드 및 DB 저장 완료 - 원본명: {}, S3 Key: {}",
-                        file.getOriginalFilename(), s3Key);
 
-            } catch (Exception e) {
-                log.error("파일 업로드 실패 - 파일명: {}", file.getOriginalFilename(), e);
-                throw new RuntimeException("파일 업로드에 실패했습니다: " + file.getOriginalFilename(), e);
+            } catch (BusinessException e) {
+                throw new ApprovalFileUploadException(ErrorCode.FILE_UPLOAD_ERROR);
             }
         }
     }
@@ -377,8 +354,11 @@ public class ApprovalCommandService {
      * @param dto        수정할 내용
      * @param files      새 첨부파일 목록
      * @return 수정된 문서 ID
-     * @throws BusinessException        문서를 찾을 수 없는 경우
-     * @throws IllegalArgumentException 임시저장 상태가 아니거나 작성자가 아닌 경우
+     * @throws ApprovalDocumentNotFoundException 문서를 찾을 수 없는 경우
+     * @throws InvalidApprovalStateException     문서 상태가 DRAFT가 아닌 경우
+     * @throws ApprovalLineAuthorityException    작성자 본인이 아닌 경우
+     * @throws ApprovalFileDeleteException       S3 파일 삭제 실패 시
+     * @throws ApprovalFileUploadException       S3 파일 업로드 실패 시
      */
     @Transactional
     public Integer updateDraftDocument(
@@ -387,49 +367,37 @@ public class ApprovalCommandService {
             ApprovalRequestDTO dto,
             List<MultipartFile> files
     ) {
-        log.info("임시저장 문서 수정 시작 - docId: {}, employeeId: {}", docId, employeeId);
 
-        // 1. 문서 조회 및 검증
         ApprovalDocument document = documentRepository.findById(docId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND, "문서를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ApprovalDocumentNotFoundException(docId));
 
         if (!"DRAFT".equals(document.getDocStatus())) {
-            throw new IllegalArgumentException("임시저장 상태의 문서만 수정 가능합니다.");
+            throw new InvalidApprovalStateException(ErrorCode.DOCUMENT_NOT_DRAFT);
         }
 
         if (!document.getDrafterId().equals(employeeId)) {
-            throw new IllegalArgumentException("문서 작성자만 수정할 수 있습니다.");
+            throw new ApprovalLineAuthorityException(ErrorCode.NOT_THE_DRAFTER);
         }
 
-        // 2. 문서 본문 업데이트
         document.updateTitle(dto.getTitle());
         document.updateDetails(dto.getDetails());
-        log.info("문서 본문 업데이트 완료 - docId: {}", docId);
 
-        // 3. 기존 결재선 삭제 후 재생성
         lineRepository.deleteByDocId(docId);
         if (dto.getLines() != null && !dto.getLines().isEmpty()) {
             saveApprovalLines(docId, dto.getLines());
-            log.info("결재선 업데이트 완료 - 결재자 수: {}", dto.getLines().size());
         }
 
-        // 4. 기존 참조자 삭제 후 재생성
         referenceRepository.deleteByDocId(docId);
         if (dto.getReferences() != null && !dto.getReferences().isEmpty()) {
             saveReferences(docId, dto.getReferences());
-            log.info("참조자 업데이트 완료 - 참조자 수: {}", dto.getReferences().size());
         }
 
-        // 5. 기존 첨부파일 삭제 (S3 및 DB)
         deleteAttachments(docId);
 
-        // 6. 새 파일 업로드 (S3)
         if (files != null && !files.isEmpty()) {
             saveFilesToS3(files, document);
-            log.info("첨부파일 업데이트 완료 - 파일 수: {}", files.size());
         }
 
-        log.info("임시저장 문서 수정 완료 - docId: {}", docId);
         return docId;
     }
 
@@ -440,29 +408,22 @@ public class ApprovalCommandService {
      * 1. DB에서 첨부파일 목록 조회
      * 2. 각 파일에 대해 S3에서 삭제
      * 3. DB에서 첨부파일 레코드 삭제
-     *
-     * 주의: S3 삭제 실패 시에도 DB 삭제는 진행
      * </pre>
      *
      * @param docId 문서 ID
+     * @throws ApprovalFileDeleteException S3 파일 삭제 실패 시
      */
     private void deleteAttachments(Integer docId) {
         List<ApprovalAttachment> existingFiles = attachmentRepository.findByDocumentDocId(docId);
 
         for (ApprovalAttachment attachment : existingFiles) {
-            // S3에서 파일 삭제
             try {
                 s3Service.deleteFile(attachment.getSavePath());
-                log.info("S3 파일 삭제 완료 - S3 Key: {}", attachment.getSavePath());
-            } catch (Exception e) {
-                log.error("S3 파일 삭제 실패 - S3 Key: {}", attachment.getSavePath(), e);
-                // S3 삭제 실패해도 계속 진행
+            } catch (BusinessException e) {
+                throw new ApprovalFileDeleteException(ErrorCode.FILE_DELETE_ERROR);
             }
         }
-
-        // DB에서 첨부파일 레코드 삭제
         attachmentRepository.deleteByDocumentDocId(docId);
-        log.info("첨부파일 DB 레코드 삭제 완료 - docId: {}", docId);
     }
 
     /* ========================================== */
@@ -495,8 +456,11 @@ public class ApprovalCommandService {
      * @param dto        수정할 내용
      * @param files      새 첨부파일 목록
      * @return 상신된 문서 ID
-     * @throws BusinessException        문서를 찾을 수 없는 경우
-     * @throws IllegalArgumentException 임시저장 상태가 아니거나 작성자가 아닌 경우
+     * @throws ApprovalDocumentNotFoundException  문서를 찾을 수 없는 경우
+     * @throws InvalidApprovalStateException      문서 상태가 DRAFT가 아닌 경우
+     * @throws ApprovalDocumentAuthorityException 작성자 본인이 아닌 경우
+     * @throws ApprovalFileDeleteException        S3 파일 삭제 실패 시
+     * @throws ApprovalFileUploadException        S3 파일 업로드 실패 시
      */
     @Transactional
     public Integer submitDraftDocument(
@@ -505,67 +469,49 @@ public class ApprovalCommandService {
             ApprovalRequestDTO dto,
             List<MultipartFile> files
     ) {
-        log.info("임시저장 문서 상신 시작 - docId: {}, employeeId: {}", docId, employeeId);
 
-        // 1. 문서 조회 및 검증
         ApprovalDocument document = documentRepository.findById(docId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND, "문서를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ApprovalDocumentNotFoundException(docId));
 
         if (!"DRAFT".equals(document.getDocStatus())) {
-            throw new IllegalArgumentException("임시저장 상태의 문서만 상신 가능합니다.");
+            throw new InvalidApprovalStateException(ErrorCode.DOCUMENT_NOT_DRAFT);
         }
 
         if (!document.getDrafterId().equals(employeeId)) {
-            throw new IllegalArgumentException("문서 작성자만 상신할 수 있습니다.");
+            throw new ApprovalDocumentAuthorityException(ErrorCode.NOT_THE_DRAFTER);
         }
 
-        // 2. 문서 본문 업데이트
         document.updateTitle(dto.getTitle());
         document.updateDetails(dto.getDetails());
-        log.info("문서 본문 업데이트 완료 - docId: {}", docId);
 
-        // 3. 기존 결재선 삭제 후 재생성
         lineRepository.deleteByDocId(docId);
         if (dto.getLines() != null && !dto.getLines().isEmpty()) {
             saveApprovalLines(docId, dto.getLines());
-            log.info("결재선 업데이트 완료 - 결재자 수: {}", dto.getLines().size());
         }
 
-        // 4. 기존 참조자 삭제 후 재생성
         referenceRepository.deleteByDocId(docId);
         if (dto.getReferences() != null && !dto.getReferences().isEmpty()) {
             saveReferences(docId, dto.getReferences());
-            log.info("참조자 업데이트 완료 - 참조자 수: {}", dto.getReferences().size());
         }
 
-        // 5. 기존 첨부파일 삭제 (S3 및 DB)
         deleteAttachments(docId);
 
-        // 6. 새 파일 업로드 (S3)
         if (files != null && !files.isEmpty()) {
             saveFilesToS3(files, document);
-            log.info("첨부파일 업데이트 완료 - 파일 수: {}", files.size());
         }
 
-        // 7. 결재선 확인 및 상태 처리
         List<ApprovalLine> lines = lineRepository.findByDocIdOrderBySeqAsc(docId);
         boolean onlyDrafter = lines.stream()
                 .allMatch(line -> line.getSeq() == 1);
 
         if (onlyDrafter) {
-            // 결재선이 기안자(seq=1)만 있는 경우 자동 승인
             document.complete();
             String docNo = generateDocNo();
             document.assignDocNo(docNo);
             documentRepository.save(document);
 
-            log.info("결재선이 1단계만 존재 - 자동 승인 처리 완료, 문서번호: {}", docNo);
-
-            // 승인 완료 이벤트 발행
             publishApprovalCompletedEvent(document);
         } else {
-            // 결재선이 2단계 이상인 경우 진행중 상태로 변경
-            // 첫 번째 결재자에게 알림
             ApprovalLine firstApprover = lines.stream()
                     .filter(line -> line.getSeq() == 2)
                     .findFirst()
@@ -577,10 +523,8 @@ public class ApprovalCommandService {
 
             document.changeStatus("INPROGRESS");
             documentRepository.save(document);
-            log.info("문서 상태 변경 완료 - docId: {}, status: INPROGRESS", docId);
         }
 
-        log.info("임시저장 문서 상신 완료 - docId: {}", docId);
         return docId;
     }
 
@@ -609,45 +553,44 @@ public class ApprovalCommandService {
      * @param request    결재 처리 요청 (docId, lineId, action, comment)
      * @param employeeId 결재자 ID
      * @return 처리 결과 (성공 여부, 메시지, 문서 상태, 문서 번호)
-     * @throws IllegalArgumentException 유효성 검증 실패 시
+     * @throws InvalidApprovalStateException     유효하지 않은 액션이거나 반려 사유 누락 시
+     * @throws ApprovalLineNotFoundException     결재선을 찾을 수 없는 경우
+     * @throws ApprovalLineAuthorityException    결재자 본인이 아닌 경우
+     * @throws InvalidApprovalStateException     결재선 상태가 PENDING이 아닌 경우 (이미 처리됨)
+     * @throws ApprovalDocumentNotFoundException 문서를 찾을 수 없는 경우
+     * @throws InvalidApprovalStateException     문서 상태가 INPROGRESS가 아닌 경우
      */
     @Transactional
     public ApprovalActionResponseDTO processApproval(
             ApprovalActionRequestDTO request,
             Integer employeeId
     ) {
-        // 1. 유효성 검증
         validateApprovalAction(request);
 
-        // 2. 결재선 조회 및 권한 확인
         ApprovalLine line = lineRepository.findById(request.getLineId())
-                .orElseThrow(() -> new IllegalArgumentException("결재선을 찾을 수 없음"));
+                .orElseThrow(() -> new ApprovalLineNotFoundException(ErrorCode.LINE_NOT_FOUND));
 
         if (!line.getApproverId().equals(employeeId)) {
-            throw new IllegalArgumentException("결재 권한 없음");
+            throw new ApprovalLineAuthorityException(ErrorCode.NOT_THE_APPROVER);
         }
 
         if (!"PENDING".equals(line.getLineStatus())) {
-            throw new IllegalArgumentException("이미 처리된 결재임");
+            throw new InvalidApprovalStateException(ErrorCode.ALREADY_PROCESSED_APPROVAL);
         }
 
-        // 3. 문서 조회 및 상태 확인
         ApprovalDocument document = documentRepository.findById(request.getDocId())
-                .orElseThrow(() -> new IllegalArgumentException("문서를 찾을 수 없음"));
+                .orElseThrow(() -> new ApprovalDocumentNotFoundException(request.getDocId()));
 
         if (!"INPROGRESS".equals(document.getDocStatus())) {
-            throw new IllegalArgumentException("진행중인 문서가 아님");
+            throw new InvalidApprovalStateException(ErrorCode.DOCUMENT_NOT_IN_PROGRESS);
         }
 
-        // 4. 결재 처리
         if ("REJECT".equals(request.getAction())) {
-            // 반려 처리
             line.reject(request.getComment());
             document.reject();
 
             publishApprovalRejectedEvent(document, request.getComment());
 
-            // 반려 알림 이벤트 추가
             publishApprovalRejectedNotificationEvent(document, request.getComment(), employeeId);
 
             return ApprovalActionResponseDTO.builder()
@@ -656,27 +599,22 @@ public class ApprovalCommandService {
                     .docStatus("REJECTED")
                     .build();
         } else {
-            // 승인 처리
             line.approve();
 
-            // 5. 모든 결재자 승인 확인
             List<ApprovalLine> allLines = lineRepository.findByDocIdOrderBySeqAsc(request.getDocId());
             boolean allApproved = allLines.stream()
                     .filter(l -> l.getSeq() > 0)
                     .allMatch(l -> "APPROVED".equals(l.getLineStatus()));
 
             if (allApproved) {
-                // 최종 승인 완료
                 document.complete();
 
-                // 문서 번호가 없으면 생성 (상신 시점에 생성되었을 것이므로 일반적으로 실행 안됨)
                 if (document.getDocNo() == null || document.getDocNo().isEmpty()) {
                     String docNo = generateDocNo();
                     document.assignDocNo(docNo);
-                    log.info("최종 승인 완료 - 문서 번호 생성됨: {}", docNo);
                 }
 
-                publishApprovalCompletedEvent(document); // 결재 완료 발행
+                publishApprovalCompletedEvent(document);
 
                 publishApprovalCompletedNotificationEvent(document, employeeId);
 
@@ -687,8 +625,7 @@ public class ApprovalCommandService {
                         .docNo(document.getDocNo())
                         .build();
             } else {
-                // 아직 대기중인 결재자 있음
-                // 다음 결재자에게 알림
+
                 ApprovalLine nextApprover = allLines.stream()
                         .filter(l -> "PENDING".equals(l.getLineStatus()))
                         .findFirst()
@@ -727,9 +664,6 @@ public class ApprovalCommandService {
                 document.getTitle()
         );
 
-        log.info("결재 완료 이벤트 발행 - docId: {}, templateKey: {}",
-                document.getDocId(), template.getTemplateKey());
-
         eventPublisher.publishEvent(event);
     }
 
@@ -752,9 +686,6 @@ public class ApprovalCommandService {
                 comment
         );
 
-        log.info("결재 반려 이벤트 발행 - docId: {}, templateKey: {}",
-                document.getDocId(), template.getTemplateKey());
-
         eventPublisher.publishEvent(event);
     }
 
@@ -767,16 +698,16 @@ public class ApprovalCommandService {
      * </pre>
      *
      * @param request 결재 처리 요청
-     * @throws IllegalArgumentException 유효성 검증 실패 시
+     * @throws InvalidApprovalStateException 유효하지 않은 액션이거나 반려 사유 누락 시
      */
     private void validateApprovalAction(ApprovalActionRequestDTO request) {
         if (!"APPROVE".equals(request.getAction()) && !"REJECT".equals(request.getAction())) {
-            throw new IllegalArgumentException("유효하지 않은 결재 액션");
+            throw new InvalidApprovalStateException(ErrorCode.INVALID_ACTION);
         }
 
         if ("REJECT".equals(request.getAction()) &&
                 (request.getComment() == null || request.getComment().trim().isEmpty())) {
-            throw new IllegalArgumentException("반려 시 반려 사유 필수");
+            throw new InvalidApprovalStateException(ErrorCode.MISSING_REJECTION_COMMENT);
         }
     }
 
@@ -791,24 +722,22 @@ public class ApprovalCommandService {
      * </pre>
      *
      * @param docId 문서 ID
-     * @return 성공 메시지/실패 메시지
-     * @throws BusinessException        문서를 찾을 수 없는 경우
-     * @throws IllegalArgumentException 진행 중인 문서가 아닌 경우
+     * @return 성공 메시지
+     * @throws ApprovalDocumentNotFoundException 문서를 찾을 수 없는 경우
+     * @throws InvalidApprovalStateException     문서 상태가 INPROGRESS가 아닌 경우
      */
     @Transactional
     public String cancelDocument(Integer docId) {
         ApprovalDocument document = documentRepository.findById(docId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.ENTITY_NOT_FOUND, "문서를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ApprovalDocumentNotFoundException(docId));
 
         if (!"INPROGRESS".equals(document.getDocStatus())) {
-            throw new IllegalArgumentException("진행 중인 문서만 회수할 수 있습니다.");
+            throw new InvalidApprovalStateException(ErrorCode.DOCUMENT_NOT_IN_PROGRESS);
         }
 
         document.changeStatus("DRAFT");
-        log.info("문서 회수 완료 - docId: {}, status: DRAFT", docId);
         documentRepository.save(document);
 
-        // 회수 완료 알림
         publishApprovalRecalledEvent(document);
 
         return "회수가 완료되었습니다.";
@@ -828,30 +757,22 @@ public class ApprovalCommandService {
      * </pre>
      *
      * @param docId 문서 ID
-     * @return 성공 메시지/실패 메시지
-     * @throws BusinessException 삭제 실패 시
+     * @return 성공 메시지
+     * @throws ApprovalFileDeleteException S3 파일 삭제 실패 시
      */
     @Transactional
     public String deleteDocument(Integer docId) {
         try {
-            // 1. 첨부파일 삭제 (S3 및 DB)
             deleteAttachments(docId);
 
-            // 2. 결재선 삭제
             lineRepository.deleteByDocId(docId);
-            log.info("결재선 삭제 완료 - docId: {}", docId);
 
-            // 3. 참조자 삭제
             referenceRepository.deleteByDocId(docId);
-            log.info("참조자 삭제 완료 - docId: {}", docId);
 
-            // 4. 문서 삭제
             documentRepository.deleteById(docId);
-            log.info("문서 삭제 완료 - docId: {}", docId);
 
-        } catch (Exception ex) {
-            log.error("문서 삭제 실패 - docId: {}", docId, ex);
-            throw new BusinessException(ErrorCode.ENTITY_NOT_FOUND, "삭제실패");
+        } catch (BusinessException ex) {
+            throw new ApprovalFileDeleteException(ErrorCode.FILE_DELETE_ERROR);
         }
 
         return "삭제를 성공하였습니다.";
@@ -905,9 +826,6 @@ public class ApprovalCommandService {
                         .requestedAt(LocalDateTime.now())
                         .build();
 
-        log.info("[알림 발행] 결재 요청 - docId: {}, approverId: {}",
-                document.getDocId(), approver.getApproverId());
-
         eventPublisher.publishEvent(event);
     }
 
@@ -932,15 +850,13 @@ public class ApprovalCommandService {
                         .docId(document.getDocId())
                         .templateKey(template.getTemplateKey())
                         .title(document.getTitle())
-                        .drafterId(document.getDrafterId()) // 수신자: 기안자
+                        .drafterId(document.getDrafterId())
                         .rejecterId(rejecterId)
                         .rejecterName(getDrafterName(rejecterId))
                         .comment(comment)
                         .rejectedAt(LocalDateTime.now())
                         .build();
 
-        log.info("[알림 발행] 결재 반려 - docId: {}, drafterId: {}",
-                document.getDocId(), document.getDrafterId());
         eventPublisher.publishEvent(event);
     }
 
@@ -964,14 +880,12 @@ public class ApprovalCommandService {
                         .docId(document.getDocId())
                         .templateKey(template.getTemplateKey())
                         .title(document.getTitle())
-                        .drafterId(document.getDrafterId()) // 수신자: 기안자
+                        .drafterId(document.getDrafterId())
                         .approverId(finalApproverId)
                         .approverName(getDrafterName(finalApproverId))
                         .completedAt(LocalDateTime.now())
                         .build();
 
-        log.info("[알림 발행] 결재 승인 완료 - docId: {}, drafterId: {}",
-                document.getDocId(), document.getDrafterId());
         eventPublisher.publishEvent(event);
     }
 
@@ -998,7 +912,6 @@ public class ApprovalCommandService {
                         .recalledAt(LocalDateTime.now())
                         .build();
 
-        log.info("[알림 발행] 회수 완료 - docId: {}", document.getDocId());
         eventPublisher.publishEvent(event);
     }
 
@@ -1031,11 +944,8 @@ public class ApprovalCommandService {
                         .drafterName(getDrafterName(document.getDrafterId()))
                         .approverId(approver.getApproverId())
                         .waitingDays(waitingDays)
-                        .requestedAt(document.getCreatedAt()) // 문서 생성일시 사용
+                        .requestedAt(document.getCreatedAt())
                         .build();
-
-        log.info("[알림 발행] 결재 독촉 - docId: {}, approverId: {}, waitingDays: {}",
-                document.getDocId(), approver.getApproverId(), waitingDays);
 
         eventPublisher.publishEvent(event);
     }

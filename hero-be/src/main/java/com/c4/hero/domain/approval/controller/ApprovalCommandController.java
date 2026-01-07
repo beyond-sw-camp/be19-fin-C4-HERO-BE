@@ -58,8 +58,8 @@ public class ApprovalCommandController {
             @PathVariable Integer templateId,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        Integer employeeId = userDetails.getEmployeeId();
-        boolean isBookmarked = approvalCommandService.toggleBookmark(employeeId, templateId);
+        boolean isBookmarked =
+                approvalCommandService.toggleBookmark(userDetails.getEmployeeId(), templateId);
 
         return ResponseEntity.ok(isBookmarked);
     }
@@ -86,8 +86,8 @@ public class ApprovalCommandController {
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
 
-        Integer employeeId = userDetails.getEmployeeId();
-        Integer docId = approvalCommandService.createDocument(employeeId, dto, files, "DRAFT");
+        Integer docId =
+                approvalCommandService.createDocument(userDetails.getEmployeeId(), dto, files, "DRAFT");
 
         return ResponseEntity.ok().body("임시저장 완료. ID: " + docId);
     }
@@ -114,8 +114,8 @@ public class ApprovalCommandController {
     ) {
 
 
-        Integer employeeId = userDetails.getEmployeeId();
-        Integer docId = approvalCommandService.createDocument(employeeId, dto, files, "INPROGRESS");
+        Integer docId =
+                approvalCommandService.createDocument(userDetails.getEmployeeId(), dto, files, "INPROGRESS");
 
         return ResponseEntity.ok().body("상신 완료. ID: " + docId);
     }
@@ -138,10 +138,8 @@ public class ApprovalCommandController {
             @RequestPart(value = "files", required = false) List<MultipartFile> files,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        log.info("임시저장 문서 업데이트 요청 - docId: {}", docId);
-
-        Integer employeeId = userDetails.getEmployeeId();
-        Integer updatedDocId = approvalCommandService.updateDraftDocument(employeeId, docId, request, files);
+        Integer updatedDocId =
+                approvalCommandService.updateDraftDocument(userDetails.getEmployeeId(), docId, request, files);
 
         return ResponseEntity.ok(updatedDocId);
     }
@@ -167,10 +165,8 @@ public class ApprovalCommandController {
             @RequestPart(value = "files", required = false) List<MultipartFile> files,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        log.info("임시저장 문서 상신 요청 - docId: {}", docId);
-
-        Integer employeeId = userDetails.getEmployeeId();
-        Integer submittedDocId = approvalCommandService.submitDraftDocument(employeeId, docId, data, files);
+        Integer submittedDocId =
+                approvalCommandService.submitDraftDocument(userDetails.getEmployeeId(), docId, data, files);
 
         return ResponseEntity.ok().body("상신 완료. ID: " + submittedDocId);
     }
@@ -191,16 +187,9 @@ public class ApprovalCommandController {
             @RequestBody ApprovalActionRequestDTO request,
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        Integer employeeId = userDetails.getEmployeeId();
-        log.info("결재 처리 요청 - docId: {}, lineId: {}, action: {}, employeeId: {}",
-                request.getDocId(), request.getLineId(), request.getAction(), employeeId);
+        ApprovalActionResponseDTO response =
+                approvalCommandService.processApproval(request, userDetails.getEmployeeId());
 
-        ApprovalActionResponseDTO response = approvalCommandService.processApproval(
-                request, employeeId
-        );
-
-        log.info("결재 처리 완료 - success: {}, docStatus: {}",
-                response.isSuccess(), response.getDocStatus());
         return ResponseEntity.ok().body(response);
     }
 
@@ -234,11 +223,9 @@ public class ApprovalCommandController {
     )
     @DeleteMapping("/{docId}")
     public ResponseEntity<?> deleteDocument(@PathVariable Integer docId) {
-        log.info("임시저장 문서 삭제 요청 - docId: {}", docId);
 
         String message = approvalCommandService.deleteDocument(docId);
 
-        log.info("문서 삭제 완료 - docId: {}", docId);
         return ResponseEntity.ok().body(message);
     }
 
