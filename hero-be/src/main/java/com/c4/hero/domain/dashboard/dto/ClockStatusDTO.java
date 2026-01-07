@@ -49,4 +49,8 @@ public class ClockStatusDTO {
 
     /** 근무시간(분) - 퇴근 후 DB에 저장된 값 */
     private Integer workDuration;
+
+    private Integer workSystemTemplateId;  // 근무제 템플릿 ID 추가
+
+
 }

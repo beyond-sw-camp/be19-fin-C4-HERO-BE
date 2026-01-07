@@ -34,4 +34,8 @@ public class ClockInRequestDTO {
 
     /** 근무제 타입 ID (기본값: 1 - 일반근무제) */
     private Integer workSystemTypeId = 1;
+
+    /** 근무제 템플릿 ID (기본값: 1 - 기본 템플릿) */
+    private Integer workSystemTemplateId = 1;
+
 }

@@ -8,6 +8,7 @@ import com.c4.hero.domain.dashboard.dto.ClockStatusDTO;
 import com.c4.hero.domain.dashboard.dto.MonthlySummaryDTO;
 import com.c4.hero.domain.dashboard.dto.VacationStatsDTO;
 import com.c4.hero.domain.dashboard.dto.WeeklyStatsDTO;
+import com.c4.hero.domain.dashboard.dto.WorkSystemTemplateDTO;
 
 import java.time.LocalDate;
 
@@ -83,4 +84,10 @@ public interface DashboardService {
      */
     ApprovalStatsDTO getApprovalStats(Integer employeeId);
 
+    WorkSystemTemplateDTO getWorkSystemTemplate(Integer templateId);
+
+    /**
+     * 사원의 기본 근무제 템플릿 조회
+     */
+    WorkSystemTemplateDTO getEmployeeDefaultTemplate(Integer employeeId);
 }
