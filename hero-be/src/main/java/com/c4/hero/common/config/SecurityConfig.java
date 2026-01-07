@@ -4,7 +4,6 @@ import com.c4.hero.domain.auth.security.AuthenticationFilter;
 import com.c4.hero.domain.auth.security.JwtUtil;
 import com.c4.hero.domain.auth.security.JwtVerificationFilter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -24,7 +23,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.Arrays;
-import java.util.List;
 
 /**
  * <pre>
@@ -94,24 +92,75 @@ public class SecurityConfig {
 
                 // URL별 권한 설정
                 .authorizeHttpRequests(auth -> auth
-//                                .requestMatchers("/ws/**").permitAll()
-//                                .requestMatchers("/api/notifications/**").permitAll()  // 알림 API 추가
-//                                .requestMatchers("/api/test/**").permitAll()  // 테스트 API
-//                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Preflight 요청은 모두 허용
-//                                .requestMatchers("/api/auth/**").permitAll()      // 인증 API는 모두 허용
-//                                .requestMatchers("/api/auth/test").hasRole("EMPLOYEE")
-//                                .anyRequest().permitAll()
-//                        .requestMatchers("/api/public/**").permitAll()    // 공개 API 허용
-                        //급여 권한 인가 처리 할때 요부분부터 (주석 해제할때 해당 텍스트 제거)
-                        .requestMatchers("/api/admin/payroll/**")
-                        .hasAnyRole("SYSTEM_ADMIN", "HR_MANAGER", "HR_PAYROLL") //관리자만 접근가능
-                        .requestMatchers("/api/settings/payroll/**")
-                        .hasAnyRole("SYSTEM_ADMIN", "HR_MANAGER", "HR_PAYROLL") //관리자만 접근가능
-                       .requestMatchers("/api/me/payroll/**")
-                        .authenticated() //로그인해야 접근 가능
-                        // 급여 권한 인가 처리 할때 요기까지 (주석 해제할때 해당 텍스트 제거)
-//                        .requestMatchers("/api/admin/**").hasRole("ADMIN") // 관리자만 접근
-//                        .anyRequest().authenticated()                      // 나머지는 인증 필요
+//                         WebsSocket
+                                .requestMatchers("/ws/**").permitAll()
+//                         Preflight 요청은 모두 허용
+                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+//                         auth 필요한 것만 permitAll
+                                .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                                .requestMatchers(HttpMethod.POST, "/api/auth/refresh").permitAll()
+                                .requestMatchers(HttpMethod.POST, "/api/auth/password/reset-request").permitAll()
+                                .requestMatchers(HttpMethod.POST, "/api/auth/password/reset").permitAll()
+
+//                        payroll - HR
+                                .requestMatchers("/api/admin/payroll/**")
+                                .hasAnyRole("SYSTEM_ADMIN", "HR_MANAGER", "HR_PAYROLL")
+                                .requestMatchers("/api/settings/payroll/**")
+                                .hasAnyRole("SYSTEM_ADMIN", "HR_MANAGER", "HR_PAYROLL")
+
+//                        payroll - employee
+                                .requestMatchers("/api/me/payroll/**")
+                                .authenticated()
+
+//                        evaluation - HR
+                                .requestMatchers(HttpMethod.POST, "/api/evaluation/evaluation-template")
+                                .hasAnyRole("SYSTEM_ADMIN", "HR_MANAGER", "HR_EVALUATION")
+
+                                .requestMatchers(HttpMethod.PUT, "/api/evaluation/evaluation-template")
+                                .hasAnyRole("SYSTEM_ADMIN", "HR_MANAGER", "HR_EVALUATION")
+
+                                .requestMatchers(HttpMethod.DELETE, "/api/evaluation/evaluation-template/**")
+                                .hasAnyRole("SYSTEM_ADMIN", "HR_MANAGER", "HR_EVALUATION")
+
+                                .requestMatchers(HttpMethod.POST, "/api/evaluation/evaluation-guide")
+                                .hasAnyRole("SYSTEM_ADMIN", "HR_MANAGER", "HR_EVALUATION")
+
+                                .requestMatchers(HttpMethod.PUT, "/api/evaluation/evaluation-guide")
+                                .hasAnyRole("SYSTEM_ADMIN", "HR_MANAGER", "HR_EVALUATION")
+
+                                .requestMatchers(HttpMethod.DELETE, "/api/evaluation/evaluation-guide/**")
+                                .hasAnyRole("SYSTEM_ADMIN", "HR_MANAGER", "HR_EVALUATION")
+
+//                        evaluation - MANAGER
+                                .requestMatchers(HttpMethod.POST, "/api/evaluation/evaluation")
+                                .hasAnyRole("SYSTEM_ADMIN", "DEPT_MANAGER")
+
+                                .requestMatchers(HttpMethod.DELETE, "/api/evaluation/evaluation/**")
+                                .hasAnyRole("SYSTEM_ADMIN", "DEPT_MANAGER")
+
+//                        approval - employee
+                                .requestMatchers("/api/approval/**").authenticated()
+
+//                        auth: 나머지는 로그인 필요(혹은 EMPLOYEE role)
+                                .requestMatchers("/api/auth/**").authenticated()
+//                        .requestMatchers("/api/auth/**").hasAnyRole("EMPLOYEE") // EMPLOYEE만 쓰게 할 거면 주석풀기
+
+//                        employee
+                                .requestMatchers("/api/departments/**").hasAnyRole("EMPLOYEE")
+//                        권한 막힐까봐 얜 위
+                                .requestMatchers("/api/employee/signup").hasAnyRole("HR_TRANSFER", "HR_MANAGER")
+                                .requestMatchers("/api/employee/**").hasAnyRole("EMPLOYEE")
+//
+
+                                .requestMatchers("/api/promotion/**").hasAnyRole("HR_TRANSFER", "HR_MANAGER")
+                                .requestMatchers("/api/retirement/**").hasAnyRole("HR_TRANSFER", "HR_MANAGER")
+//
+                                .requestMatchers("/api/promotion/nominations/**").hasAnyRole("DEPT_MANAGER")
+
+//                        systemSetting - Admin
+                                .requestMatchers("/api/settings/**").hasAnyRole("SYSTEM_ADMIN")
+//                        나머지는 인증 필요
+                                .anyRequest().authenticated()
                 )
                 // 커스텀 필터 추가
                 // 1. 로그인 필터: UsernamePasswordAuthenticationFilter 위치에 추가
