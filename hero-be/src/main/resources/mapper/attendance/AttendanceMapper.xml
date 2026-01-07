@@ -115,10 +115,7 @@
         att.state,
         att.start_time,
         att.end_time,
-        COALESCE(
-        TIMESTAMPDIFF(MINUTE, att.start_time, att.end_time),
-        0
-        ) AS work_duration,
+        att.work_duration,
         wst.name AS work_system_name
         FROM tbl_attendance att
         JOIN tbl_work_system_type wst
@@ -452,4 +449,15 @@
         WHERE a.employee_id = #{employeeId}
           AND a.work_date = #{workDate}
     </select>
+
+    <select id="selectBreakMinMinutes" parameterType="_int" resultType="int">
+        SELECT wst.break_min_minutes
+        FROM tbl_attendance a
+                 INNER JOIN tbl_work_system_template wst
+                            ON a.work_system_template_id = wst.work_system_template_id
+                 INNER JOIN tbl_work_system_type wstype
+                            ON wst.work_system_type_id = wstype.work_system_type_id
+        WHERE a.attendance_id = #{attendanceId}
+    </select>
+
 </mapper>

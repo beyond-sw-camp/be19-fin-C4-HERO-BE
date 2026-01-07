@@ -37,6 +37,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
@@ -126,7 +127,27 @@ public class AttendanceService {
                         ));
             }
 
-            attendanceEntity.changeStatus(correctedStart, correctedEnd, "정상");
+            Integer breakMinMinutes = attendanceMapper.selectBreakMinMinutes(attendanceId);
+            log.info("휴게시간{}",breakMinMinutes);
+            if (breakMinMinutes == null) {
+                breakMinMinutes = 0;
+            }
+
+            Integer workDuration = null;
+            if (correctedStart != null && correctedEnd != null) {
+                long totalMinutes = Duration.between(correctedStart, correctedEnd).toMinutes();
+                workDuration = (int) (totalMinutes - breakMinMinutes);
+
+                if (workDuration < 0) {
+                    workDuration = 0;
+                }
+
+                if (totalMinutes < breakMinMinutes) {
+                    workDuration = (int) totalMinutes;
+                }
+            }
+
+            attendanceEntity.changeStatus( "정상", workDuration);
             attendanceEmployeeDashboardRepository.save(attendanceEntity);
         } catch (JsonProcessingException e) {
             log.error("근태 상세정보 JSON 파싱 실패. drafterId={}, details={}",

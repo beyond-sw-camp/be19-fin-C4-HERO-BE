@@ -60,6 +60,10 @@ public class Attendance {
     @Column(name = "end_time")
     private LocalTime endTime;
 
+    /** 근무 시간 */
+    @Column(name = "work_duration")
+    private Integer workDuration;
+
     /** 근태 대상 직원 정보 */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id")
@@ -71,9 +75,8 @@ public class Attendance {
     private WorkSystemType workSystemType;
 
     /** 상태값 변경 메서드 */
-    public void changeStatus(LocalTime correctedStart, LocalTime correctedEnd, String status) {
+    public void changeStatus(String status , Integer workDuration) {
         this.state = status;
-        this.startTime = correctedStart;
-        this.endTime = correctedEnd;
+        this.workDuration = workDuration;
     }
 }
