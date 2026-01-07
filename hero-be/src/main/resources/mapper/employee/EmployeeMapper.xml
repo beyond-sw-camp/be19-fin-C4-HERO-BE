@@ -80,12 +80,13 @@
 
     <sql id="searchConditions">
         <where>
+            e.department_id != 0
             <choose>
                 <when test="resigningExpected == 3">
-                    e.status = 'R' <!-- 퇴사자만 조회 -->
+                    AND e.status = 'R' <!-- 퇴사자만 조회 -->
                 </when>
                 <otherwise>
-                    e.status = 'A' <!-- 기본적으로 재직자 조회 -->
+                    AND e.status = 'A' <!-- 기본적으로 재직자 조회 -->
                     <choose>
                         <when test="resigningExpected == 1">
                             <!-- 미포함: 퇴사 예정이 아닌 직원만 -->
@@ -121,7 +122,8 @@
         <include refid="employeeJoins"/>
         <include refid="searchConditions"/>
         ORDER BY
-        e.hire_date DESC
+                 e.grade_id DESC,
+                 e.hire_date ASC
         LIMIT #{size} OFFSET #{offset}
     </select>
 
