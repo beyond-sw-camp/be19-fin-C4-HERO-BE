@@ -310,7 +310,7 @@ public class PromotionCommandService {
 
             // 3-2. 결재 상신
             try {
-                createRegularPromotionApproval(userDetails, candidate);
+                createRegularPromotionApproval(userDetails, candidate, request.getComment());
             } catch (JsonProcessingException e) {
                 throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "결재 상신 데이터 생성에 실패했습니다.");
             }
@@ -327,7 +327,7 @@ public class PromotionCommandService {
      * @param candidate 승진 후보자 정보
      * @throws JsonProcessingException JSON 변환 실패 시
      */
-    private void createRegularPromotionApproval(CustomUserDetails userDetails, PromotionCandidate candidate) throws JsonProcessingException {
+    private void createRegularPromotionApproval(CustomUserDetails userDetails, PromotionCandidate candidate, String comment) throws JsonProcessingException {
         LocalDateTime now = LocalDateTime.now();
         PromotionPlan plan = candidate.getPromotionDetail().getPromotionPlan();
         Employee employee = candidate.getEmployee();
@@ -356,15 +356,17 @@ public class PromotionCommandService {
         detailsMap.put("employeeName", employee.getEmployeeName());
         detailsMap.put("effectiveDate", plan.getAppointmentAt().toString());
         detailsMap.put("auditTrail", now.format(DateUtil.YYYY_MM_DD));
-        detailsMap.put("departmentBefore", employee.getEmployeeDepartment().getDepartmentName());
-        detailsMap.put("departmentAfter", employee.getEmployeeDepartment().getDepartmentName());
-        detailsMap.put("gradeBefore", employee.getGrade().getGrade());
-        detailsMap.put("gradeAfter", newGrade.getGrade());
-        detailsMap.put("jobtitleBefore", employee.getJobTitle().getJobTitle());
-        detailsMap.put("jobtitleAfter", employee.getJobTitle().getJobTitle());
+        detailsMap.put("departmentBefore", employee.getEmployeeDepartment().getDepartmentId());
+        detailsMap.put("departmentAfter", employee.getEmployeeDepartment().getDepartmentId());
+        detailsMap.put("gradeBefore", employee.getGrade().getGradeId());
+        detailsMap.put("gradeAfter", newGrade.getGradeId());
+        detailsMap.put("jobTitleBefore", employee.getJobTitle().getJobTitleId());
+        detailsMap.put("jobTitleAfter", employee.getJobTitle().getJobTitleId());
         detailsMap.put("status", "재직");
-        detailsMap.put("reason", candidate.getRejectionReason());
+        detailsMap.put("reason", comment);
         String detailsJson = objectMapper.writeValueAsString(detailsMap);
+
+        log.info("reason: {}", detailsMap.get("reason"));
 
         // 결재 요청 DTO 생성
         ApprovalRequestDTO approvalRequest = ApprovalRequestDTO.builder()

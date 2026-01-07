@@ -151,11 +151,10 @@ public class SecurityConfig {
                                 .requestMatchers("/api/employee/signup").hasAnyRole("HR_TRANSFER", "HR_MANAGER")
                                 .requestMatchers("/api/employee/**").hasAnyRole("EMPLOYEE")
 //
-
+                                .requestMatchers("/api/promotion/nominations/**").hasAnyRole("DEPT_MANAGER")
                                 .requestMatchers("/api/promotion/**").hasAnyRole("HR_TRANSFER", "HR_MANAGER")
                                 .requestMatchers("/api/retirement/**").hasAnyRole("HR_TRANSFER", "HR_MANAGER")
 //
-                                .requestMatchers("/api/promotion/nominations/**").hasAnyRole("DEPT_MANAGER")
 
 //                        systemSetting - Admin
                                 .requestMatchers("/api/settings/**").hasAnyRole("SYSTEM_ADMIN")
