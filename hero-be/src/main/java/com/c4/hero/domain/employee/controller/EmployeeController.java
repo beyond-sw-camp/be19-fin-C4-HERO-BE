@@ -25,11 +25,15 @@ import com.c4.hero.domain.employee.service.EmployeeProfileQueryService;
 import com.c4.hero.domain.employee.service.EmployeeQueryService;
 import com.c4.hero.domain.employee.service.EmployeeSealService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -55,6 +59,7 @@ import java.util.List;
  * History
  * 2025/12/09 (승건) 최초 작성 (사원 추가 기능 개발)
  * 2025/12/28 (혜원) 프로필 관련 API 추가
+ * 2026/01/07 (승건) 스웨거 작성
  * </pre>
  *
  * @author 승건
@@ -64,6 +69,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/employee")
 @RequiredArgsConstructor
+@Tag(name = "직원 API", description = "직원 정보 관리(조회, 등록, 수정, 퇴사 등) 및 프로필 API")
 public class EmployeeController {
 
     private final EmployeeCommandService employeeCommandService;
@@ -79,6 +85,11 @@ public class EmployeeController {
      * @param request 회원가입 요청 정보 DTO
      * @return 성공 시 ApiResponse<Void>
      */
+    @Operation(summary = "직원 등록(회원가입)", description = "새로운 직원을 등록합니다. (Multipart/form-data)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "등록 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PostMapping(value = "/signup", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CustomResponse<Void>> signup(
             @Valid @ModelAttribute SignupRequestDTO request
@@ -93,6 +104,11 @@ public class EmployeeController {
      * @param searchDTO 검색 및 페이징 조건
      * @return 페이징된 직원 정보
      */
+    @Operation(summary = "직원 검색 및 목록 조회", description = "조건에 맞는 직원 목록을 페이징하여 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/search")
     public ResponseEntity<CustomResponse<PageResponse<EmployeeListResponseDTO>>> search(@ModelAttribute EmployeeSearchDTO searchDTO) {
         PageResponse<EmployeeListResponseDTO> result = employeeQueryService.getEmployees(searchDTO);
@@ -105,6 +121,11 @@ public class EmployeeController {
      *
      * @return 검색 옵션 목록
      */
+    @Operation(summary = "직원 검색 옵션 조회", description = "직원 검색 필터에 사용할 부서, 직급, 직책 목록을 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/search-options")
     public ResponseEntity<CustomResponse<EmployeeSearchOptionsResponseDTO>> getEmployeeSearchOptions() {
         EmployeeSearchOptionsResponseDTO result = employeeQueryService.getEmployeeSearchOptions();
@@ -118,6 +139,11 @@ public class EmployeeController {
      * @param employeeId 번호(db 인조키)
      * @return 직원의 상세 정보
      */
+    @Operation(summary = "직원 상세 정보 조회", description = "직원 ID로 상세 정보를 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/{employeeId}")
     public ResponseEntity<CustomResponse<EmployeeDetailResponseDTO>> getEmployeeDetail(@PathVariable Integer employeeId) {
         EmployeeDetailResponseDTO result = employeeQueryService.findById(employeeId);
@@ -130,6 +156,11 @@ public class EmployeeController {
      * @param request HttpServletRequest(여기서 액세서 토큰을 빼서 사용)
      * @return 본인 정보
      */
+    @Operation(summary = "내 정보 조회", description = "로그인한 사용자의 간략한 정보를 조회합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/me")
     public ResponseEntity<CustomResponse<MyInfoResponseDTO>> getMyInfo(HttpServletRequest request) {
         String token = jwtUtil.resolveToken(request);
@@ -141,6 +172,11 @@ public class EmployeeController {
     /**
      * 직원 정보 수정 (인사 직원 사용)
      */
+    @Operation(summary = "직원 정보 수정 (관리자용)", description = "관리자가 특정 직원의 정보를 수정합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "수정 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PutMapping("/{employeeId}")
     public ResponseEntity<CustomResponse<Void>> updateEmployee(HttpServletRequest request, @PathVariable Integer employeeId, @RequestBody EmployeeUpdateRequestDTO requestDTO) {
         String token = jwtUtil.resolveToken(request);
@@ -152,6 +188,11 @@ public class EmployeeController {
     /**
      * 직원 정보 수정 (본인 사용)
      */
+    @Operation(summary = "내 정보 수정", description = "로그인한 사용자가 본인의 정보를 수정합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "수정 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PutMapping("/me")
     public ResponseEntity<CustomResponse<Void>> selfUpdateEmployee(HttpServletRequest request, @RequestBody EmployeeSelfUpdateRequestDTO requestDTO) {
         String token = jwtUtil.resolveToken(request);
@@ -163,16 +204,22 @@ public class EmployeeController {
     /**
      * 퇴사한 사람들
      */
-    @GetMapping("/leave")
-    public ResponseEntity<CustomResponse<EmployeeListResponseDTO>> getResignedEmployees() {
-
-        //
-        return null;
-    }
+//    @Operation(summary = "퇴사자 목록 조회", description = "퇴사 처리된 직원 목록을 조회합니다.")
+//    @GetMapping("/leave")
+//    public ResponseEntity<CustomResponse<EmployeeListResponseDTO>> getResignedEmployees() {
+//
+//        //
+//        return null;
+//    }
 
     /**
      * 직원 퇴사 처리
      */
+    @Operation(summary = "직원 퇴사 처리", description = "특정 직원을 퇴사 처리합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "처리 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @DeleteMapping("/{employeeId}")
     public ResponseEntity<CustomResponse<Void>> terminateEmployee(@PathVariable Integer employeeId) {
         // employeeCommandService.terminateEmployee(employeeId);
@@ -182,32 +229,35 @@ public class EmployeeController {
     /**
      * 로그인 로그 확인
      */
-    @GetMapping("/login-log/{employeeId}")
-    public ResponseEntity<CustomResponse<List<LoginHistoryResponseDTO>>> getLoginHistory(@PathVariable Integer employeeId) {
-        // List<LoginHistoryResponseDTO> history = employeeQueryService.getLoginHistory(employeeId);
-        // return ResponseEntity.ok(ApiResponse.success(history));
-        return null; // 임시
-    }
+//    @Operation(summary = "로그인 이력 조회", description = "특정 직원의 로그인 이력을 조회합니다.")
+//    @GetMapping("/login-log/{employeeId}")
+//    public ResponseEntity<CustomResponse<List<LoginHistoryResponseDTO>>> getLoginHistory(@PathVariable Integer employeeId) {
+//        // List<LoginHistoryResponseDTO> history = employeeQueryService.getLoginHistory(employeeId);
+//        // return ResponseEntity.ok(ApiResponse.success(history));
+//        return null; // 임시
+//    }
 
     /**
      * 부서 이동 로그 확인
      */
-    @GetMapping("/department-log/{employeeId}")
-    public ResponseEntity<CustomResponse<List<DepartmentHistoryResponseDTO>>> getDepartmentHistory(@PathVariable Integer employeeId) {
-        // List<DepartmentHistoryResponseDTO> history = employeeQueryService.getDepartmentHistory(employeeId);
-        // return ResponseEntity.ok(ApiResponse.success(history));
-        return null; // 임시
-    }
+//    @Operation(summary = "부서 이동 이력 조회", description = "특정 직원의 부서 이동 이력을 조회합니다.")
+//    @GetMapping("/department-log/{employeeId}")
+//    public ResponseEntity<CustomResponse<List<DepartmentHistoryResponseDTO>>> getDepartmentHistory(@PathVariable Integer employeeId) {
+//        // List<DepartmentHistoryResponseDTO> history = employeeQueryService.getDepartmentHistory(employeeId);
+//        // return ResponseEntity.ok(ApiResponse.success(history));
+//        return null; // 임시
+//    }
 
     /**
      * 직급 로그 확인
      */
-    @GetMapping("/grade-log/{employeeId}")
-    public ResponseEntity<CustomResponse<List<GradeHistoryResponseDTO>>> getGradeHistory(@PathVariable Integer employeeId) {
-        // List<GradeHistoryResponseDTO> history = employeeQueryService.getGradeHistory(employeeId);
-        // return ResponseEntity.ok(ApiResponse.success(history));
-        return null; // 임시
-    }
+//    @Operation(summary = "직급 변경 이력 조회", description = "특정 직원의 직급 변경 이력을 조회합니다.")
+//    @GetMapping("/grade-log/{employeeId}")
+//    public ResponseEntity<CustomResponse<List<GradeHistoryResponseDTO>>> getGradeHistory(@PathVariable Integer employeeId) {
+//        // List<GradeHistoryResponseDTO> history = employeeQueryService.getGradeHistory(employeeId);
+//        // return ResponseEntity.ok(ApiResponse.success(history));
+//        return null; // 임시
+//    }
 
     /**
      * 비밀번호 변경 인증을 위한 로직
@@ -216,22 +266,24 @@ public class EmployeeController {
      *
      * EmployeePasswordChangeServicec에서 처리
      */
-    @PostMapping("/change-password-auth")
-    public ResponseEntity<CustomResponse<Void>> authChangePassword(@Valid @RequestBody SignupRequestDTO request) {
-        // passwordChangeService.sendAuthCode(request.getEmail());
-        return ResponseEntity.ok(CustomResponse.success());
-    }
+//    @Operation(summary = "비밀번호 변경 인증 요청", description = "비밀번호 변경을 위해 이메일로 인증 번호를 발송합니다.")
+//    @PostMapping("/change-password-auth")
+//    public ResponseEntity<CustomResponse<Void>> authChangePassword(@Valid @RequestBody SignupRequestDTO request) {
+//        // passwordChangeService.sendAuthCode(request.getEmail());
+//        return ResponseEntity.ok(CustomResponse.success());
+//    }
 
     /**
      * 비밀번호 재설정
      *
      * EmployeePasswordChangeServicec에서 처리
      */
-    @PostMapping("/change-password")
-    public ResponseEntity<CustomResponse<Void>> changePassword(@Valid @RequestBody PasswordChangeRequestDTO request) {
-        // passwordChangeService.changePassword(request);
-        return ResponseEntity.ok(CustomResponse.success());
-    }
+//    @Operation(summary = "비밀번호 재설정", description = "인증 후 비밀번호를 재설정합니다.")
+//    @PostMapping("/change-password")
+//    public ResponseEntity<CustomResponse<Void>> changePassword(@Valid @RequestBody PasswordChangeRequestDTO request) {
+//        // passwordChangeService.changePassword(request);
+//        return ResponseEntity.ok(CustomResponse.success());
+//    }
 
     /**
      * 직원 프로필 관련
@@ -245,6 +297,10 @@ public class EmployeeController {
      * @return 본인 프로필 정보
      */
     @Operation(summary = "내 프로필 조회", description = "현재 로그인한 사용자의 프로필 정보 조회 (직인 Presigned URL 포함)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/profile")
     public ResponseEntity<CustomResponse<EmployeeProfileResponseDTO>> getMyProfile(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -263,6 +319,10 @@ public class EmployeeController {
      * @return 직원 프로필 정보
      */
     @Operation(summary = "사원번호로 프로필 조회", description = "사원번호를 통한 직원 프로필 조회")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/number/{employeeNumber}")
     public ResponseEntity<CustomResponse<EmployeeProfileResponseDTO>> getEmployeeProfileByNumber(
             @PathVariable String employeeNumber) {
@@ -283,6 +343,10 @@ public class EmployeeController {
      * @return 성공 응답
      */
     @Operation(summary = "연락처 정보 수정", description = "현재 로그인한 사용자의 연락처 정보 수정 (AES 암호화)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "수정 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PutMapping("/contact")
     public ResponseEntity<CustomResponse<Void>> updateContactInfo(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -305,6 +369,10 @@ public class EmployeeController {
      * @return 성공 응답
      */
     @Operation(summary = "비밀번호 변경", description = "현재 비밀번호 확인 후 새 비밀번호로 변경 (BCrypt 암호화)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "변경 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PutMapping("/password")
     public ResponseEntity<CustomResponse<Void>> changePassword(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -327,6 +395,10 @@ public class EmployeeController {
      * @return 성공 응답
      */
     @Operation(summary = "텍스트 직인 저장", description = "텍스트를 이미지로 생성하여 S3에 업로드")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "저장 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PutMapping("/seal/text")
     public ResponseEntity<CustomResponse<Void>> updateSealText(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -347,6 +419,10 @@ public class EmployeeController {
      * @return 성공 응답
      */
     @Operation(summary = "이미지 직인 업로드", description = "직인 이미지를 S3에 업로드 (기존 직인 삭제)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "업로드 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PostMapping("/seal/image")
     public ResponseEntity<CustomResponse<Void>> uploadSealImage(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -366,6 +442,10 @@ public class EmployeeController {
      * @return 성공 응답
      */
     @Operation(summary = "직인 삭제", description = "S3 파일 및 DB 레코드 삭제")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "삭제 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @DeleteMapping("/seal")
     public ResponseEntity<CustomResponse<Void>> deleteSeal(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -386,6 +466,10 @@ public class EmployeeController {
      * @author 혜원
      */
     @Operation(summary = "내 직인 자동 생성", description = "직인이 없을 때 이름으로 직인 자동 생성 (이미 있으면 skip)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "생성 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @PostMapping("/seal/generate")
     public ResponseEntity<CustomResponse<Void>> generateMySeal(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
@@ -406,6 +490,10 @@ public class EmployeeController {
      * @return 직인 이미지 Presigned URL
      */
     @Operation(summary = "내 직인 이미지 조회", description = "현재 로그인한 사용자의 직인 이미지 URL 조회")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = CustomResponse.class)))
+    })
     @GetMapping("/seal")
     public ResponseEntity<CustomResponse<String>> getMySeal(
             @AuthenticationPrincipal CustomUserDetails userDetails) {

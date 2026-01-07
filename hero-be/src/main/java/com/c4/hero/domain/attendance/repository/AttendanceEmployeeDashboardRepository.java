@@ -69,4 +69,6 @@ public interface AttendanceEmployeeDashboardRepository extends JpaRepository<Att
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
+
+    Attendance findByEmployee_EmployeeIdAndWorkDate(Integer employeeId, LocalDate targetDate);
 }

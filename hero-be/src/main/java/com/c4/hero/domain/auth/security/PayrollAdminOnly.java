@@ -21,6 +21,6 @@ import java.lang.annotation.Target;
  */
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-@PreAuthorize("hasAnyAuthority('SYSTEM_ADMIN','HR_MANAGER','HR_PAYROLL')")
+@PreAuthorize("hasAnyRole('SYSTEM_ADMIN','HR_MANAGER','HR_PAYROLL')")
 public @interface PayrollAdminOnly {
 }

@@ -147,8 +147,8 @@ public class EmployeePasswordService {
             helper.setTo(toEmail);
             helper.setSubject("[Hero 시스템] 비밀번호 재설정 안내");
 
-            // TODO: 프론트엔드 URL로 변경 필요
-            String resetLink = "http://localhost:5173/reset-password?token=" + token;
+            // 주의: 프론트엔드 URL로 변경 필요!!
+            String resetLink = "http://hero-hr.site/reset-password?token=" + token;
 
             String emailContent = String.format(
                     "안녕하세요, Hero 시스템입니다.<br><br>" +

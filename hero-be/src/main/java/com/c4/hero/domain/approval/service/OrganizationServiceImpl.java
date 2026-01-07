@@ -72,31 +72,21 @@ public class OrganizationServiceImpl implements OrganizationService {
      */
     @Override
     public OrganizationTreeResponseDTO getOrganizationTree() {
-        log.info("조직도 전체 조회 시작");
 
-        // 1. 모든 부서 조회
         List<OrganizationDepartmentDTO> departments = organizationMapper.selectAllDepartments();
-        log.info("  - 조회된 부서 수: {}", departments.size());
 
-        // 2. 모든 직원 조회
         List<OrganizationEmployeeDTO> employees = organizationMapper.selectAllEmployees();
-        log.info("  - 조회된 직원 수: {}", employees.size());
 
-        // 3. 부서별 직원 그룹핑
         Map<Integer, List<OrganizationEmployeeDTO>> employeesByDept = employees.stream()
                 .collect(Collectors.groupingBy(OrganizationEmployeeDTO::getDepartmentId));
 
-        // 4. 가상 루트 노드 생성 (depth=1인 모든 부서를 children으로)
         List<OrganizationTreeNodeDTO> rootChildren = new ArrayList<>();
 
-        // depth=1인 부서들만 필터링 (실제 최상위 부서)
         List<OrganizationDepartmentDTO> topLevelDepts = departments.stream()
                 .filter(dept -> dept.getDepth() != null && dept.getDepth() == 1)
                 .collect(Collectors.toList());
 
-        log.info("  - 최상위 부서 수 (depth=1): {}", topLevelDepts.size());
 
-        // 각 최상위 부서를 트리로 구성
         for (OrganizationDepartmentDTO topDept : topLevelDepts) {
             OrganizationTreeNodeDTO deptNode = buildDepartmentNode(topDept, departments, employeesByDept);
             if (deptNode != null) {
@@ -104,7 +94,6 @@ public class OrganizationServiceImpl implements OrganizationService {
             }
         }
 
-        // 5. 가상 루트 생성
         OrganizationTreeNodeDTO virtualRoot = OrganizationTreeNodeDTO.builder()
                 .type("department")
                 .departmentId(0)
@@ -114,7 +103,6 @@ public class OrganizationServiceImpl implements OrganizationService {
                 .children(rootChildren)
                 .build();
 
-        log.info("조직도 전체 조회 완료");
 
         return OrganizationTreeResponseDTO.builder()
                 .root(virtualRoot)
@@ -149,7 +137,6 @@ public class OrganizationServiceImpl implements OrganizationService {
     ) {
         List<OrganizationTreeNodeDTO> children = new ArrayList<>();
 
-        // 1. 하위 부서 추가
         List<OrganizationDepartmentDTO> subDepartments = allDepartments.stream()
                 .filter(d -> dept.getDepartmentId().equals(d.getParentDepartmentId()))
                 .collect(Collectors.toList());
@@ -158,7 +145,6 @@ public class OrganizationServiceImpl implements OrganizationService {
             children.add(buildDepartmentNode(subDept, allDepartments, employeesByDept));
         }
 
-        // 2. 소속 직원 추가
         List<OrganizationEmployeeDTO> deptEmployees = employeesByDept.getOrDefault(
                 dept.getDepartmentId(),
                 new ArrayList<>()
@@ -173,7 +159,6 @@ public class OrganizationServiceImpl implements OrganizationService {
             ));
         }
 
-        // 3. 부서 노드 생성
         return OrganizationTreeNodeDTO.createDepartmentNode(
                 dept.getDepartmentId(),
                 dept.getDepartmentName(),
@@ -202,7 +187,6 @@ public class OrganizationServiceImpl implements OrganizationService {
      */
     @Override
     public EmployeeSearchResponseDTO searchEmployees(EmployeeSearchRequestDTO requestDTO) {
-        log.info("직원 검색 시작 - keyword: {}", requestDTO.getKeyword());
 
         List<OrganizationEmployeeDTO> employees = organizationMapper.searchEmployees(
                 requestDTO.getKeyword(),
@@ -210,7 +194,6 @@ public class OrganizationServiceImpl implements OrganizationService {
                 requestDTO.getGradeId()
         );
 
-        log.info("직원 검색 완료 - 결과: {}건", employees.size());
 
         return EmployeeSearchResponseDTO.builder()
                 .employees(employees)
@@ -231,11 +214,8 @@ public class OrganizationServiceImpl implements OrganizationService {
      */
     @Override
     public List<OrganizationEmployeeDTO> getDepartmentEmployees(Integer departmentId) {
-        log.info("부서별 직원 조회 시작 - departmentId: {}", departmentId);
 
         List<OrganizationEmployeeDTO> employees = organizationMapper.selectEmployeesByDepartment(departmentId);
-
-        log.info("부서별 직원 조회 완료 - 결과: {}명", employees.size());
 
         return employees;
     }

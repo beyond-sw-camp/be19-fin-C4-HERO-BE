@@ -1,5 +1,7 @@
 package com.c4.hero.domain.attendance.service;
 
+import com.c4.hero.common.exception.EntityNotFoundException;
+import com.c4.hero.common.exception.ErrorCode;
 import com.c4.hero.common.pagination.PageCalculator;
 import com.c4.hero.common.pagination.PageInfo;
 import com.c4.hero.common.response.PageResponse;
@@ -14,6 +16,7 @@ import com.c4.hero.domain.attendance.dto.CorrectionDTO;
 import com.c4.hero.domain.attendance.dto.DeptWorkSystemDTO;
 import com.c4.hero.domain.attendance.dto.OvertimeDTO;
 import com.c4.hero.domain.attendance.dto.PersonalDTO;
+import com.c4.hero.domain.attendance.entity.Attendance;
 import com.c4.hero.domain.attendance.mapper.AttendanceMapper;
 import com.c4.hero.domain.attendance.repository.AttendanceDashboardRepository;
 import com.c4.hero.domain.attendance.repository.AttendanceDashboardSummaryRepository;
@@ -22,12 +25,21 @@ import com.c4.hero.domain.attendance.repository.DeptWorkSystemRepository;
 import com.c4.hero.domain.attendance.type.AttendanceHalfType;
 import com.c4.hero.domain.employee.entity.Employee;
 import com.c4.hero.domain.employee.repository.EmployeeRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,6 +55,7 @@ import java.util.stream.Collectors;
  * History
  * 2025/12/09 (이지윤) 최초 작성
  * 2025/12/24 (이지윤) 대시보드/반기 대시보드/요약 카드 로직 추가 및 컨벤션 정리
+ * 2026/01/07 (민철) 근태 이력 수정 로직 추가
  * </pre>
  *
  * 개인/부서 단위의 근태 이력 및 각종 요약/대시보드 데이터를 조회하는 도메인 서비스입니다.
@@ -55,6 +68,7 @@ import java.util.stream.Collectors;
  * @author 이지윤
  * @version 1.2
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AttendanceService {
@@ -76,6 +90,86 @@ public class AttendanceService {
 
     /** 직원 기본 정보 조회용 JPA 레포지토리 */
     private final EmployeeRepository employeeRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
+
+    /** 근태 이력 수정 (지각, 결근 -> 정상) */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void changeStatus(Integer drafterId, String detailsJson) {
+        try {
+            JsonNode root = objectMapper.readTree(detailsJson);
+
+            int attendanceId = root.path("attendanceId").asInt(0);
+            String targetDateStr = root.path("targetDate").asText("");
+            String correctedStartStr = root.path("correctedStart").asText("00:00");
+            String correctedEndStr = root.path("correctedEnd").asText("00:00");
+
+            LocalDate targetDate = LocalDate.parse(targetDateStr);
+            LocalTime correctedStart = parseLocalTimeOrNull(correctedStartStr);
+            LocalTime correctedEnd = parseLocalTimeOrNull(correctedEndStr);
+
+
+            Attendance attendanceEntity;
+            if (attendanceId == 0) {
+                attendanceEntity = attendanceEmployeeDashboardRepository
+                        .findByEmployee_EmployeeIdAndWorkDate(drafterId, targetDate);
+
+                if (attendanceEntity == null) {
+                    throw new EntityNotFoundException(
+                            ErrorCode.ENTITY_NOT_FOUND,
+                            "해당 날짜의 근태 기록을 찾을 수 없습니다. employeeId=" + drafterId + ", date=" + targetDate
+                    );
+                }
+            } else {
+                attendanceEntity = attendanceEmployeeDashboardRepository.findById(attendanceId)
+                        .orElseThrow(() -> new EntityNotFoundException(
+                                ErrorCode.ENTITY_NOT_FOUND,
+                                "근태 기록을 찾을 수 없습니다. attendanceId=" + attendanceId
+                        ));
+            }
+
+            Integer breakMinMinutes = attendanceMapper.selectBreakMinMinutes(attendanceId);
+            log.info("휴게시간{}",breakMinMinutes);
+            if (breakMinMinutes == null) {
+                breakMinMinutes = 0;
+            }
+
+            Integer workDuration = null;
+            if (correctedStart != null && correctedEnd != null) {
+                long totalMinutes = Duration.between(correctedStart, correctedEnd).toMinutes();
+                workDuration = (int) (totalMinutes - breakMinMinutes);
+
+                if (workDuration < 0) {
+                    workDuration = 0;
+                }
+
+                if (totalMinutes < breakMinMinutes) {
+                    workDuration = (int) totalMinutes;
+                }
+            }
+
+            attendanceEntity.changeStatus( "정상", workDuration);
+            attendanceEmployeeDashboardRepository.save(attendanceEntity);
+        } catch (JsonProcessingException e) {
+            log.error("근태 상세정보 JSON 파싱 실패. drafterId={}, details={}",
+                    drafterId, detailsJson, e);
+            throw new IllegalArgumentException("근태이력 수정 데이터 형식이 올바르지 않습니다.", e);
+        } catch (Exception e) {
+            log.error("근태이력 수정 처리 실패. drafterId={}, details={}",
+                    drafterId, detailsJson, e);
+            throw new IllegalStateException("근태이력 수정 중 오류가 발생했습니다.", e);
+        }
+    }
+
+    /** 시간 파싱 */
+    private LocalTime parseLocalTimeOrNull(String hhmm) {
+        if (hhmm == null || hhmm.isBlank()) {
+            return null;
+        }
+        if ("00:00".equals(hhmm)) {
+            return null;
+        }
+        return LocalTime.parse(hhmm);
+    }
 
     /**
      * 근태 조회용 기간(startDate, endDate)을 표현하는 내부 레코드입니다.

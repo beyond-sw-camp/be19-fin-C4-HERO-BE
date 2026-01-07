@@ -39,7 +39,7 @@ public class EvaluationNotificationEventListener {
                     .type("evaluation")
                     .title("새로운 평가 시작")
                     .message(String.format("'%s' 평가가 시작되었습니다.", event.getEvaluationName()))
-                    .link("/evaluation/detail/" + event.getEvaluationId())
+                    .link("/evaluation/evaluation/" + event.getEvaluationId())
                     .evaluationId(event.getEvaluationId())
                     .build();
 
@@ -63,7 +63,7 @@ public class EvaluationNotificationEventListener {
                 .title("평가 결과 등록")
                 .message(String.format("'%s' 평가 결과가 등록되었습니다. (등급: %s)",
                         event.getEvaluationName(), event.getGrade()))
-                .link("/evaluation/form/" + event.getEvaluationId() + "/" + event.getEmployeeId())
+                .link("/evaluation/form/" + event.getFormId())
                 .evaluationId(event.getEvaluationId())
                 .build();
 
@@ -86,7 +86,7 @@ public class EvaluationNotificationEventListener {
                 .type("evaluation")
                 .title("평가 제출 독촉")
                 .message(message)
-                .link("/evaluation/detail/" + event.getEvaluationId())
+                .link("/evaluation/evaluation/" + event.getEvaluationId())
                 .evaluationId(event.getEvaluationId())
                 .build();
 

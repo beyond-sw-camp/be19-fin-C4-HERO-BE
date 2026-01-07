@@ -308,4 +308,6 @@ public interface AttendanceMapper {
      * [출근 시 즉시 호출] 특정 직원의 출근 예정 시간 및 현재 근태 ID 조회
      */
     Map<String, Object> selectCurrentWorkSystem(@Param("employeeId") Integer employeeId, @Param("workDate") LocalDate workDate);
+
+    Integer selectBreakMinMinutes(@Param("attendanceId") int attendanceId);
 }

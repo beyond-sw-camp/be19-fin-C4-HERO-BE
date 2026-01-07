@@ -2,6 +2,7 @@ package com.c4.hero.domain.attendance.event;
 
 import com.c4.hero.domain.approval.event.ApprovalCompletedEvent;
 import com.c4.hero.domain.attendance.service.AttendanceEventService;
+import com.c4.hero.domain.attendance.service.AttendanceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -29,6 +30,7 @@ public class AttendanceApprovalEventListener {
 
     /** 근태 정정 이벤트 처리 서비스 */
     private final AttendanceEventService attendanceEventService;
+    private final AttendanceService attendanceService;
 
     /**
      * 결재 완료 이벤트를 수신하여 근태 정정 요청을 생성합니다.
@@ -49,6 +51,12 @@ public class AttendanceApprovalEventListener {
 
         try {
             if ("modifyworkrecord".equals(templateKey)) {
+
+                attendanceService.changeStatus(
+                        event.getDrafterId(),
+                        event.getDetails()
+                );
+
                 attendanceEventService.createCorrectionRequestFromApproval(
                         event.getDrafterId(),
                         event.getDetails()
@@ -78,6 +86,8 @@ public class AttendanceApprovalEventListener {
             return;
 
         } catch (Exception e) {
+            log.error("근태 이벤트 처리 실패. 수동 처리 필요! docId={}, templateKey={}",
+                    event.getDocId(), templateKey, e);
             log.error(
                     "근태 이벤트 적재 실패. docId={}, templateKey={}, details={}",
                     event.getDocId(),
