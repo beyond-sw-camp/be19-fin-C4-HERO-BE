@@ -2,6 +2,7 @@ package com.c4.hero.domain.attendance.service;
 
 import com.c4.hero.common.response.PageResponse;
 import com.c4.hero.domain.attendance.dto.*;
+import com.c4.hero.domain.attendance.entity.Attendance;
 import com.c4.hero.domain.attendance.mapper.AttendanceMapper;
 import com.c4.hero.domain.attendance.repository.AttendanceDashboardRepository;
 import com.c4.hero.domain.attendance.repository.AttendanceDashboardSummaryRepository;
@@ -12,547 +13,579 @@ import com.c4.hero.domain.employee.entity.Employee;
 import com.c4.hero.domain.employee.repository.EmployeeRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
 
 import java.time.LocalDate;
-import java.time.YearMonth;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.BDDMockito.*;
+import static org.mockito.Mockito.verify;
 
-@ExtendWith(org.mockito.junit.jupiter.MockitoExtension.class)
-@DisplayName("AttendanceService 단위 테스트")
+@Tag("unit")
+@ExtendWith(MockitoExtension.class)
 class AttendanceServiceTest {
 
-    @Mock
-    private AttendanceMapper attendanceMapper;
-
-    @Mock
-    private DeptWorkSystemRepository deptWorkSystemRepository;
-
-    @Mock
-    private AttendanceDashboardRepository attendanceDashboardRepository;
-
-    @Mock
-    private AttendanceDashboardSummaryRepository attendanceDashboardSummaryRepository;
-
-    @Mock
-    private AttendanceEmployeeDashboardRepository attendanceEmployeeDashboardRepository;
-
-    @Mock
-    private EmployeeRepository employeeRepository;
+    @Mock private AttendanceMapper attendanceMapper;
+    @Mock private DeptWorkSystemRepository deptWorkSystemRepository;
+    @Mock private AttendanceDashboardRepository attendanceDashboardRepository;
+    @Mock private AttendanceDashboardSummaryRepository attendanceDashboardSummaryRepository;
+    @Mock private AttendanceEmployeeDashboardRepository attendanceEmployeeDashboardRepository;
+    @Mock private EmployeeRepository employeeRepository;
 
     @InjectMocks
     private AttendanceService attendanceService;
 
-    /* =========================
-       Fixtures
-       ========================= */
-
-    private AttendanceEmployeeMonthlyStatDTO stat(int month, long workDays, long tardy, long absence) {
-        return new AttendanceEmployeeMonthlyStatDTO(month, workDays, tardy, absence);
-    }
-
-    private Employee mockEmployee(String employeeNumber, String employeeName) {
-        Employee employee = mock(Employee.class);
-        when(employee.getEmployeeNumber()).thenReturn(employeeNumber);
-        when(employee.getEmployeeName()).thenReturn(employeeName);
-        return employee;
-    }
-
-    /* =========================
-       개인 요약
-       ========================= */
-
+    // =========================================================
+    // changeStatus
+    // =========================================================
     @Nested
-    @DisplayName("개인 근태 요약 카드(getPersonalSummary)")
-    class GetPersonalSummaryTest {
+    @DisplayName("changeStatus()")
+    class ChangeStatusTests {
 
         @Test
-        @DisplayName("기간이 null이면 이번 달 1일~오늘로 보정하여 Mapper를 호출한다")
-        void getPersonalSummary_NullPeriod_ResolveToThisMonthAndToday() {
-            // Given
-            Integer employeeId = 1;
+        @DisplayName("attendanceId가 있으면 findById로 조회 → '정상' 변경 → save")
+        void changeStatus_whenAttendanceIdProvided_thenUpdateAndSave() {
+            // given
+            int drafterId = 2;
+            int attendanceId = 10;
+            String json = detailsJson(attendanceId, "2026-01-01", "09:00", "18:00");
 
-            LocalDate today = LocalDate.now();
-            LocalDate expectedStart = today.withDayOfMonth(1);
-            LocalDate expectedEnd = today;
+            Attendance attendance = mock(Attendance.class);
 
-            AttSummaryDTO summary = mock(AttSummaryDTO.class);
-            when(attendanceMapper.selectPersonalSummary(eq(employeeId), any(LocalDate.class), any(LocalDate.class)))
-                    .thenReturn(summary);
+            given(attendanceEmployeeDashboardRepository.findById(attendanceId))
+                    .willReturn(Optional.of(attendance));
+            given(attendanceMapper.selectBreakMinMinutes(attendanceId)).willReturn(60);
 
-            // When
-            AttSummaryDTO result = attendanceService.getPersonalSummary(employeeId, null, null);
+            // when
+            attendanceService.changeStatus(drafterId, json);
 
-            // Then
-            assertThat(result).isSameAs(summary);
-
-            ArgumentCaptor<LocalDate> startCaptor = ArgumentCaptor.forClass(LocalDate.class);
-            ArgumentCaptor<LocalDate> endCaptor = ArgumentCaptor.forClass(LocalDate.class);
-
-            verify(attendanceMapper).selectPersonalSummary(eq(employeeId), startCaptor.capture(), endCaptor.capture());
-
-            assertThat(startCaptor.getValue()).isEqualTo(expectedStart);
-            assertThat(endCaptor.getValue()).isEqualTo(expectedEnd);
+            // then (540 - 60 = 480)
+            verify(attendance).changeStatus("정상", 480);
+            verify(attendanceEmployeeDashboardRepository).save(attendance);
+            then(attendanceMapper).should().selectBreakMinMinutes(attendanceId);
         }
 
         @Test
-        @DisplayName("employeeId는 인증단에서 보장된다고 가정하며, 서비스는 Mapper에 그대로 전달한다")
-        void getPersonalSummary_NullEmployeeId_PassThroughToMapper() {
-            // Given
-            AttSummaryDTO summary = mock(AttSummaryDTO.class);
+        @DisplayName("attendanceId=0이면 (employeeId, targetDate)로 조회 → '정상' 변경 → save (breakMin 조회는 0으로 호출)")
+        void changeStatus_whenAttendanceIdZero_thenFindByEmployeeAndDateUpdateAndSave() {
+            // given
+            int drafterId = 2;
+            int attendanceId = 0;
+            LocalDate targetDate = LocalDate.of(2026, 1, 1);
+            String json = detailsJson(attendanceId, targetDate.toString(), "10:00", "12:00");
 
-            when(attendanceMapper.selectPersonalSummary(
-                    isNull(),
-                    any(LocalDate.class),
-                    any(LocalDate.class)
-            )).thenReturn(summary);
+            Attendance attendance = mock(Attendance.class);
 
-            // When
-            AttSummaryDTO result = attendanceService.getPersonalSummary(null, null, null);
+            given(attendanceEmployeeDashboardRepository.findByEmployee_EmployeeIdAndWorkDate(drafterId, targetDate))
+                    .willReturn(attendance);
+            given(attendanceMapper.selectBreakMinMinutes(attendanceId)).willReturn(30);
 
-            // Then
-            assertThat(result).isSameAs(summary);
-            verify(attendanceMapper).selectPersonalSummary(isNull(), any(LocalDate.class), any(LocalDate.class));
+            // when
+            attendanceService.changeStatus(drafterId, json);
+
+            // then (120 - 30 = 90)
+            verify(attendance).changeStatus("정상", 90);
+            verify(attendanceEmployeeDashboardRepository).save(attendance);
+            then(attendanceMapper).should().selectBreakMinMinutes(0);
         }
 
-    }
+        @Test
+        @DisplayName("시간이 '00:00'이면 null 처리되어 workDuration=null로 저장")
+        void changeStatus_whenTimeIsZero_thenWorkDurationNull() {
+            // given
+            int drafterId = 2;
+            int attendanceId = 10;
+            String json = detailsJson(attendanceId, "2026-01-01", "00:00", "00:00");
 
-    /* =========================
-       개인/초과/정정/변경 리스트(페이지네이션)
-       ========================= */
+            Attendance attendance = mock(Attendance.class);
+            given(attendanceEmployeeDashboardRepository.findById(attendanceId))
+                    .willReturn(Optional.of(attendance));
 
-    @Nested
-    @DisplayName("개인/초과/정정/변경 목록(페이지네이션)")
-    class PersonalListPagingTest {
+            // when
+            attendanceService.changeStatus(drafterId, json);
+
+            // then
+            verify(attendance).changeStatus("정상", null);
+            verify(attendanceEmployeeDashboardRepository).save(attendance);
+        }
 
         @Test
-        @DisplayName("개인 근태 목록: count 조회 후 page 조회를 수행한다")
-        void getPersonalList_CountThenPageQuery() {
-            // Given
-            Integer employeeId = 1;
+        @DisplayName("breakMinMinutes가 null이면 0으로 보정")
+        void changeStatus_whenBreakMinIsNull_thenTreatAsZero() {
+            // given
+            int drafterId = 2;
+            int attendanceId = 10;
+            String json = detailsJson(attendanceId, "2026-01-01", "09:00", "10:00"); // 60분
+
+            Attendance attendance = mock(Attendance.class);
+            given(attendanceEmployeeDashboardRepository.findById(attendanceId))
+                    .willReturn(Optional.of(attendance));
+            given(attendanceMapper.selectBreakMinMinutes(attendanceId)).willReturn(null);
+
+            // when
+            attendanceService.changeStatus(drafterId, json);
+
+            // then (60 - 0 = 60)
+            verify(attendance).changeStatus("정상", 60);
+            verify(attendanceEmployeeDashboardRepository).save(attendance);
+        }
+
+        @Test
+        @DisplayName("휴게시간이 총 근무시간보다 크면 workDuration=totalMinutes로 보정(현재 구현 로직 기준)")
+        void changeStatus_whenBreakGreaterThanTotal_thenClampToTotal() {
+            // given
+            int drafterId = 2;
+            int attendanceId = 10;
+            String json = detailsJson(attendanceId, "2026-01-01", "09:00", "10:00"); // total=60
+
+            Attendance attendance = mock(Attendance.class);
+            given(attendanceEmployeeDashboardRepository.findById(attendanceId))
+                    .willReturn(Optional.of(attendance));
+            given(attendanceMapper.selectBreakMinMinutes(attendanceId)).willReturn(90);
+
+            // when
+            attendanceService.changeStatus(drafterId, json);
+
+            // then
+            // total 60 - break 90 => 음수 -> 0 보정
+            // total < break 이므로 workDuration = total(60)
+            verify(attendance).changeStatus("정상", 60);
+            verify(attendanceEmployeeDashboardRepository).save(attendance);
+        }
+
+        @Test
+        @DisplayName("근태 조회 실패(EntityNotFound 등 포함) 시 IllegalStateException으로 래핑되어 던져진다(현재 구현)")
+        void changeStatus_whenNotFound_thenThrowIllegalState() {
+            // given
+            int drafterId = 2;
+            int attendanceId = 0;
+            LocalDate targetDate = LocalDate.of(2026, 1, 1);
+            String json = detailsJson(attendanceId, targetDate.toString(), "09:00", "18:00");
+
+            given(attendanceEmployeeDashboardRepository.findByEmployee_EmployeeIdAndWorkDate(drafterId, targetDate))
+                    .willReturn(null);
+
+            // when & then
+            assertThatThrownBy(() -> attendanceService.changeStatus(drafterId, json))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("근태이력 수정 중 오류가 발생했습니다.");
+
+            then(attendanceEmployeeDashboardRepository).should(never()).save(any());
+        }
+
+        @Test
+        @DisplayName("JSON 파싱 실패 시 IllegalArgumentException을 던진다")
+        void changeStatus_whenJsonInvalid_thenThrowIllegalArgument() {
+            // given
+            int drafterId = 2;
+            String invalidJson = "{ invalid json ";
+
+            // when & then
+            assertThatThrownBy(() -> attendanceService.changeStatus(drafterId, invalidJson))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("근태이력 수정 데이터 형식이 올바르지 않습니다.");
+        }
+    }
+
+    // =========================================================
+    // getPersonalSummary
+    // =========================================================
+    @Nested
+    @DisplayName("getPersonalSummary()")
+    class GetPersonalSummaryTests {
+
+        @Test
+        @DisplayName("start/end를 명시하면 해당 기간으로 mapper를 호출한다(현재월/오늘 default 로직 회피)")
+        void getPersonalSummary_whenDatesProvided_thenCallMapperWithDates() {
+            // given
+            Integer employeeId = 2;
+            LocalDate start = LocalDate.of(2026, 1, 1);
+            LocalDate end = LocalDate.of(2026, 1, 7);
+
+            AttSummaryDTO dto = mock(AttSummaryDTO.class);
+            given(attendanceMapper.selectPersonalSummary(employeeId, start, end)).willReturn(dto);
+
+            // when
+            AttSummaryDTO result = attendanceService.getPersonalSummary(employeeId, start, end);
+
+            // then
+            assertThat(result).isSameAs(dto);
+            then(attendanceMapper).should().selectPersonalSummary(employeeId, start, end);
+        }
+    }
+
+    // =========================================================
+    // getPersonalList / getOvertimeList / getCorrectionList / getChangeLogList
+    // =========================================================
+    @Nested
+    @DisplayName("페이지네이션(MyBatis 기반) 조회")
+    class PagingListTests {
+
+        @Test
+        @DisplayName("getPersonalList: totalCount → PageCalculator → selectPersonalPage 호출 후 PageResponse 반환")
+        void getPersonalList_basic() {
+            // given
+            int employeeId = 2;
+            int page = 1;
+            int size = 10;
+            LocalDate start = LocalDate.of(2026, 1, 1);
+            LocalDate end = LocalDate.of(2026, 1, 31);
+
+            given(attendanceMapper.selectPersonalCount(employeeId, start, end)).willReturn(15);
+
+            // PageCalculator 계산값에 맞춰 stub
+            var expectedPageInfo = com.c4.hero.common.pagination.PageCalculator.calculate(page, size, 15);
+
+            List<PersonalDTO> items = List.of(mock(PersonalDTO.class), mock(PersonalDTO.class));
+            given(attendanceMapper.selectPersonalPage(employeeId,
+                    expectedPageInfo.getOffset(),
+                    expectedPageInfo.getSize(),
+                    start,
+                    end
+            )).willReturn(items);
+
+            // when
+            PageResponse<PersonalDTO> result = attendanceService.getPersonalList(employeeId, page, size, start, end);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getContent()).isEqualTo(items);
+            assertThat(result.getTotalElements()).isEqualTo(15);
+            assertThat(result.getSize()).isEqualTo(expectedPageInfo.getSize());
+            assertThat(result.getPage()).isEqualTo(expectedPageInfo.getPage() - 1);
+
+            then(attendanceMapper).should().selectPersonalCount(employeeId, start, end);
+            then(attendanceMapper).should().selectPersonalPage(employeeId,
+                    expectedPageInfo.getOffset(),
+                    expectedPageInfo.getSize(),
+                    start,
+                    end
+            );
+        }
+
+        @Test
+        @DisplayName("getOvertimeList: count/page 호출 후 PageResponse 반환")
+        void getOvertimeList_basic() {
+            // given
+            int employeeId = 2;
             int page = 2;
-            Integer size = 10;
+            int size = 5;
+            LocalDate start = LocalDate.of(2026, 1, 1);
+            LocalDate end = LocalDate.of(2026, 1, 31);
 
-            LocalDate startDate = LocalDate.of(2025, 1, 1);
-            LocalDate endDate = LocalDate.of(2025, 1, 31);
+            given(attendanceMapper.selectOvertimeCount(employeeId, start, end)).willReturn(9);
+            var expectedPageInfo = com.c4.hero.common.pagination.PageCalculator.calculate(page, size, 9);
 
-            when(attendanceMapper.selectPersonalCount(employeeId, startDate, endDate)).thenReturn(25);
-            when(attendanceMapper.selectPersonalPage(eq(employeeId), anyInt(), anyInt(), eq(startDate), eq(endDate)))
-                    .thenReturn(List.of(mock(PersonalDTO.class)));
+            List<OvertimeDTO> items = List.of(mock(OvertimeDTO.class));
+            given(attendanceMapper.selectOvertimePage(employeeId,
+                    expectedPageInfo.getOffset(),
+                    expectedPageInfo.getSize(),
+                    start,
+                    end
+            )).willReturn(items);
 
-            // When
-            PageResponse<PersonalDTO> result =
-                    attendanceService.getPersonalList(employeeId, page, size, startDate, endDate);
+            // when
+            PageResponse<OvertimeDTO> result = attendanceService.getOvertimeList(employeeId, page, size, start, end);
 
-            // Then
-            assertThat(result).isNotNull();
+            // then
+            assertThat(result.getContent()).isEqualTo(items);
+            assertThat(result.getTotalElements()).isEqualTo(9);
 
-            ArgumentCaptor<Integer> offsetCaptor = ArgumentCaptor.forClass(Integer.class);
-            ArgumentCaptor<Integer> sizeCaptor = ArgumentCaptor.forClass(Integer.class);
-
-            verify(attendanceMapper).selectPersonalCount(employeeId, startDate, endDate);
-            verify(attendanceMapper).selectPersonalPage(eq(employeeId), offsetCaptor.capture(), sizeCaptor.capture(), eq(startDate), eq(endDate));
-
-            // PageCalculator가 통상 offset=(page-1)*size 로 계산한다고 가정(프로젝트 대부분 동일)
-            assertThat(offsetCaptor.getValue()).isEqualTo((page - 1) * size);
-            assertThat(sizeCaptor.getValue()).isEqualTo(size);
+            then(attendanceMapper).should().selectOvertimeCount(employeeId, start, end);
+            then(attendanceMapper).should().selectOvertimePage(employeeId,
+                    expectedPageInfo.getOffset(),
+                    expectedPageInfo.getSize(),
+                    start,
+                    end
+            );
         }
 
         @Test
-        @DisplayName("초과 근무 목록: count 조회 후 page 조회를 수행한다")
-        void getOvertimeList_CountThenPageQuery() {
-            // Given
-            Integer employeeId = 1;
-            Integer page = 1;
-            Integer size = 20;
+        @DisplayName("getCorrectionList: count/page 호출 후 PageResponse 반환")
+        void getCorrectionList_basic() {
+            // given
+            int employeeId = 2;
+            int page = 1;
+            int size = 10;
+            LocalDate start = LocalDate.of(2026, 1, 1);
+            LocalDate end = LocalDate.of(2026, 1, 31);
 
-            when(attendanceMapper.selectOvertimeCount(employeeId, null, null)).thenReturn(0);
-            when(attendanceMapper.selectOvertimePage(eq(employeeId), anyInt(), anyInt(), isNull(), isNull()))
-                    .thenReturn(List.of());
+            given(attendanceMapper.selectCorrectionCount(employeeId, start, end)).willReturn(0);
+            var expectedPageInfo = com.c4.hero.common.pagination.PageCalculator.calculate(page, size, 0);
 
-            // When
-            PageResponse<OvertimeDTO> result =
-                    attendanceService.getOvertimeList(employeeId, page, size, null, null);
+            List<CorrectionDTO> items = List.of();
+            given(attendanceMapper.selectCorrectionPage(employeeId,
+                    expectedPageInfo.getOffset(),
+                    expectedPageInfo.getSize(),
+                    start,
+                    end
+            )).willReturn(items);
 
-            // Then
-            assertThat(result).isNotNull();
+            // when
+            PageResponse<CorrectionDTO> result = attendanceService.getCorrectionList(employeeId, page, size, start, end);
 
-            verify(attendanceMapper).selectOvertimeCount(employeeId, null, null);
-            verify(attendanceMapper).selectOvertimePage(employeeId, 0, size, null, null);
+            // then
+            assertThat(result.getContent()).isEmpty();
+            assertThat(result.getTotalElements()).isZero();
         }
 
         @Test
-        @DisplayName("근태 정정 목록: count 조회 후 page 조회를 수행한다")
-        void getCorrectionList_CountThenPageQuery() {
-            // Given
-            Integer employeeId = 1;
-            Integer page = 3;
-            Integer size = 5;
+        @DisplayName("getChangeLogList: count/page 호출 후 PageResponse 반환")
+        void getChangeLogList_basic() {
+            // given
+            int employeeId = 2;
+            int page = 1;
+            int size = 10;
+            LocalDate start = LocalDate.of(2026, 1, 1);
+            LocalDate end = LocalDate.of(2026, 1, 31);
 
-            when(attendanceMapper.selectCorrectionCount(employeeId, null, null)).thenReturn(13);
-            when(attendanceMapper.selectCorrectionPage(eq(employeeId), anyInt(), anyInt(), isNull(), isNull()))
-                    .thenReturn(List.of(mock(CorrectionDTO.class)));
+            given(attendanceMapper.selectChangeLogCount(employeeId, start, end)).willReturn(3);
+            var expectedPageInfo = com.c4.hero.common.pagination.PageCalculator.calculate(page, size, 3);
 
-            // When
-            PageResponse<CorrectionDTO> result =
-                    attendanceService.getCorrectionList(employeeId, page, size, null, null);
+            List<ChangeLogDTO> items = List.of(mock(ChangeLogDTO.class));
+            given(attendanceMapper.selectChangeLogPage(employeeId,
+                    expectedPageInfo.getOffset(),
+                    expectedPageInfo.getSize(),
+                    start,
+                    end
+            )).willReturn(items);
 
-            // Then
-            assertThat(result).isNotNull();
+            // when
+            PageResponse<ChangeLogDTO> result = attendanceService.getChangeLogList(employeeId, page, size, start, end);
 
-            verify(attendanceMapper).selectCorrectionCount(employeeId, null, null);
-            verify(attendanceMapper).selectCorrectionPage(employeeId, (page - 1) * size, size, null, null);
-        }
-
-        @Test
-        @DisplayName("근무제 변경 이력 목록: count 조회 후 page 조회를 수행한다")
-        void getChangeLogList_CountThenPageQuery() {
-            // Given
-            Integer employeeId = 1;
-            Integer page = 1;
-            Integer size = 10;
-
-            when(attendanceMapper.selectChangeLogCount(employeeId, null, null)).thenReturn(1);
-            when(attendanceMapper.selectChangeLogPage(eq(employeeId), anyInt(), anyInt(), isNull(), isNull()))
-                    .thenReturn(List.of(mock(ChangeLogDTO.class)));
-
-            // When
-            PageResponse<ChangeLogDTO> result =
-                    attendanceService.getChangeLogList(employeeId, page, size, null, null);
-
-            // Then
-            assertThat(result).isNotNull();
-
-            verify(attendanceMapper).selectChangeLogCount(employeeId, null, null);
-            verify(attendanceMapper).selectChangeLogPage(employeeId, 0, size, null, null);
+            // then
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getTotalElements()).isEqualTo(3);
         }
     }
 
-    /* =========================
-       부서 근태 현황
-       ========================= */
-
+    // =========================================================
+    // getDeptWorkSystemList
+    // =========================================================
     @Nested
-    @DisplayName("부서 근태 현황(getDeptWorkSystemList)")
-    class DeptWorkSystemTest {
+    @DisplayName("getDeptWorkSystemList()")
+    class DeptWorkSystemTests {
 
         @Test
-        @DisplayName("workDate가 주어지면 해당 날짜로 Repository를 호출한다")
-        void getDeptWorkSystemList_WithWorkDate_CallsRepository() {
-            // Given
-            Integer employeeId = 1;
-            Integer departmentId = 10;
-            LocalDate workDate = LocalDate.of(2025, 12, 1);
+        @DisplayName("workDate 명시 시 해당 날짜 + 0-based pageable로 repository 호출")
+        void getDeptWorkSystemList_whenDateProvided_thenCallsRepository() {
+            // given
+            Integer employeeId = 2;
+            Integer departmentId = 6;
+            LocalDate workDate = LocalDate.of(2026, 1, 7);
             int page = 1;
             int size = 10;
 
-            Page<DeptWorkSystemDTO> pageResult = new PageImpl<>(
-                    List.of(mock(DeptWorkSystemDTO.class)),
-                    PageRequest.of(0, size),
-                    1
-            );
+            List<DeptWorkSystemDTO> content = List.of(mock(DeptWorkSystemDTO.class));
+            Page<DeptWorkSystemDTO> pageResult = new PageImpl<>(content, PageRequest.of(0, size), 1);
 
-            when(deptWorkSystemRepository.findDeptWorkSystemRows(
-                    eq(employeeId), eq(departmentId), eq(workDate), any(Pageable.class)
-            )).thenReturn(pageResult);
+            given(deptWorkSystemRepository.findDeptWorkSystemRows(eq(employeeId), eq(departmentId), eq(workDate), any(Pageable.class)))
+                    .willReturn(pageResult);
 
-            // When
+            ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+
+            // when
             PageResponse<DeptWorkSystemDTO> result =
                     attendanceService.getDeptWorkSystemList(employeeId, departmentId, workDate, page, size);
 
-            // Then
-            assertThat(result).isNotNull();
+            // then
+            assertThat(result.getContent()).isEqualTo(content);
+            assertThat(result.getTotalElements()).isEqualTo(1);
+
+            then(deptWorkSystemRepository).should()
+                    .findDeptWorkSystemRows(eq(employeeId), eq(departmentId), eq(workDate), pageableCaptor.capture());
+
+            Pageable captured = pageableCaptor.getValue();
+            assertThat(captured.getPageNumber()).isEqualTo(0);
+            assertThat(captured.getPageSize()).isEqualTo(size);
+        }
+
+        @Test
+        @DisplayName("page가 0 이하로 들어오면 0페이지로 보정된다")
+        void getDeptWorkSystemList_whenPageIsZero_thenClampToZero() {
+            // given
+            Integer employeeId = 2;
+            Integer departmentId = 6;
+            LocalDate workDate = LocalDate.of(2026, 1, 7);
+            int page = 0;
+            int size = 10;
+
+            Page<DeptWorkSystemDTO> pageResult = new PageImpl<>(List.of(), PageRequest.of(0, size), 0);
+
+            given(deptWorkSystemRepository.findDeptWorkSystemRows(eq(employeeId), eq(departmentId), eq(workDate), any(Pageable.class)))
+                    .willReturn(pageResult);
 
             ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
 
-            verify(deptWorkSystemRepository).findDeptWorkSystemRows(
-                    eq(employeeId), eq(departmentId), eq(workDate), pageableCaptor.capture()
-            );
+            // when
+            attendanceService.getDeptWorkSystemList(employeeId, departmentId, workDate, page, size);
 
-            assertThat(pageableCaptor.getValue()).isEqualTo(PageRequest.of(0, size));
+            // then
+            then(deptWorkSystemRepository).should()
+                    .findDeptWorkSystemRows(eq(employeeId), eq(departmentId), eq(workDate), pageableCaptor.capture());
+
+            assertThat(pageableCaptor.getValue().getPageNumber()).isEqualTo(0);
         }
     }
 
-    /* =========================
-       월 대시보드 / 요약
-       ========================= */
-
+    // =========================================================
+    // getAttendanceDashboardList / Summary
+    // =========================================================
     @Nested
-    @DisplayName("근태 점수 대시보드(getAttendanceDashboardList / getAttendanceDashboardSummary)")
-    class DashboardTest {
+    @DisplayName("근태 점수 대시보드")
+    class AttendanceDashboardTests {
 
         @Test
-        @DisplayName("month가 주어지면 해당 월 start/end로 Repository를 호출한다")
-        void getAttendanceDashboardList_WithMonth_UsesMonthRange() {
-            // Given
-            Integer departmentId = 10;
-            String month = "2024-02"; // 현재 월과 무관한 안정 테스트
-            String scoreSort = "ASC";
-            int page = 2;
-            int size = 5;
-
-            YearMonth ym = YearMonth.parse(month);
-            LocalDate expectedStart = ym.atDay(1);
-            LocalDate expectedEnd = ym.atEndOfMonth();
-
-            Page<AttendanceDashboardDTO> pageResult = new PageImpl<>(
-                    List.of(mock(AttendanceDashboardDTO.class)),
-                    PageRequest.of(page - 1, size),
-                    1
-            );
-
-            when(attendanceDashboardRepository.findAttendanceDashboard(
-                    eq(departmentId),
-                    any(LocalDate.class),
-                    any(LocalDate.class),
-                    anyString(),
-                    any(Pageable.class)
-            )).thenReturn(pageResult);
-
-            // When
-            PageResponse<AttendanceDashboardDTO> result =
-                    attendanceService.getAttendanceDashboardList(departmentId, month, scoreSort, page, size);
-
-            // Then
-            assertThat(result).isNotNull();
-
-            ArgumentCaptor<LocalDate> startCaptor = ArgumentCaptor.forClass(LocalDate.class);
-            ArgumentCaptor<LocalDate> endCaptor = ArgumentCaptor.forClass(LocalDate.class);
-            ArgumentCaptor<String> sortCaptor = ArgumentCaptor.forClass(String.class);
-            ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
-
-            verify(attendanceDashboardRepository).findAttendanceDashboard(
-                    eq(departmentId),
-                    startCaptor.capture(),
-                    endCaptor.capture(),
-                    sortCaptor.capture(),
-                    pageableCaptor.capture()
-            );
-
-            assertThat(startCaptor.getValue()).isEqualTo(expectedStart);
-            assertThat(endCaptor.getValue()).isEqualTo(expectedEnd);
-            assertThat(sortCaptor.getValue()).isEqualTo("ASC");
-            assertThat(pageableCaptor.getValue()).isEqualTo(PageRequest.of(page - 1, size));
-        }
-
-        @Test
-        @DisplayName("scoreSort가 null/blank이면 DESC로 보정한다")
-        void getAttendanceDashboardList_BlankSort_DefaultDesc() {
-            // Given
+        @DisplayName("getAttendanceDashboardList: month(YYYY-MM) → start/end 계산 후 repository 호출, sort 기본값 DESC")
+        void getAttendanceDashboardList_whenSortNull_thenDefaultDescAndCallRepo() {
+            // given
             Integer departmentId = null;
-            String month = "2024-03";
-            String scoreSort = "   "; // ✅ blank
+            String month = "2020-02"; // 현재월 회피(클램핑 로직 회피)
+            String scoreSort = null;
             int page = 1;
             int size = 10;
 
-            when(attendanceDashboardRepository.findAttendanceDashboard(
-                    isNull(), any(LocalDate.class), any(LocalDate.class), anyString(), any(Pageable.class)
-            )).thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, size), 0));
+            LocalDate expectedStart = LocalDate.of(2020, 2, 1);
+            LocalDate expectedEnd = LocalDate.of(2020, 2, 29);
 
-            // When
-            attendanceService.getAttendanceDashboardList(departmentId, month, scoreSort, page, size);
+            List<AttendanceDashboardDTO> content = List.of(mock(AttendanceDashboardDTO.class));
+            Page<AttendanceDashboardDTO> repoPage = new PageImpl<>(content, PageRequest.of(0, size), 1);
 
-            // Then
-            ArgumentCaptor<String> sortCaptor = ArgumentCaptor.forClass(String.class);
+            given(attendanceDashboardRepository.findAttendanceDashboard(
+                    isNull(),
+                    eq(expectedStart),
+                    eq(expectedEnd),
+                    eq("DESC"),
+                    any(Pageable.class)
+            )).willReturn(repoPage);
 
-            verify(attendanceDashboardRepository).findAttendanceDashboard(
-                    isNull(), any(LocalDate.class), any(LocalDate.class), sortCaptor.capture(), any(Pageable.class)
+            // when
+            PageResponse<AttendanceDashboardDTO> result =
+                    attendanceService.getAttendanceDashboardList(departmentId, month, scoreSort, page, size);
+
+            // then
+            assertThat(result.getContent()).isEqualTo(content);
+            assertThat(result.getTotalElements()).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("getAttendanceDashboardSummary: total은 month 무관, excellent/risky는 month 기간으로 집계")
+        void getAttendanceDashboardSummary_basic() {
+            // given
+            Integer departmentId = 6;
+            String month = "2020-02";
+
+            LocalDate expectedStart = LocalDate.of(2020, 2, 1);
+            LocalDate expectedEnd = LocalDate.of(2020, 2, 29);
+
+            given(attendanceDashboardSummaryRepository.countTotalEmployees(departmentId)).willReturn(100L);
+            given(attendanceDashboardSummaryRepository.countExcellentEmployees(departmentId, expectedStart, expectedEnd)).willReturn(12L);
+            given(attendanceDashboardSummaryRepository.countRiskyEmployees(departmentId, expectedStart, expectedEnd)).willReturn(3L);
+
+            // when
+            AttendanceDashboardSummaryDTO result = attendanceService.getAttendanceDashboardSummary(departmentId, month);
+
+            // then
+            assertThat(result).isNotNull();
+            assertThat(result.getTotalEmployees()).isEqualTo(100L);
+            assertThat(result.getExcellentEmployees()).isEqualTo(12L);
+            assertThat(result.getRiskyEmployees()).isEqualTo(3L);
+        }
+    }
+
+    // =========================================================
+    // getEmployeeHalfDashboard
+    // =========================================================
+    @Nested
+    @DisplayName("getEmployeeHalfDashboard()")
+    class EmployeeHalfDashboardTests {
+
+        @Test
+        @DisplayName("요약이 null이면 0으로 대체하고, 누락 월은 0으로 채워 H1(1~6월) 리스트를 만든다(과거 연도)")
+        void getEmployeeHalfDashboard_whenSummaryNull_thenFillMonths() {
+            // given
+            int employeeId = 20;
+            int year = 2020; // 현재 연도 회피(미래월 클램핑 회피)
+            AttendanceHalfType halfType = AttendanceHalfType.H1;
+
+            Employee employee = mock(Employee.class);
+            given(employee.getEmployeeNumber()).willReturn("D6-MGR");
+            given(employee.getEmployeeName()).willReturn("최백엔");
+            given(employeeRepository.findById(employeeId)).willReturn(Optional.of(employee));
+
+            LocalDate expectedStart = LocalDate.of(2020, 1, 1);
+            LocalDate expectedEnd = LocalDate.of(2020, 6, 30);
+
+            given(attendanceEmployeeDashboardRepository.findEmployeeHalfSummary(employeeId, expectedStart, expectedEnd))
+                    .willReturn(null);
+
+            List<AttendanceEmployeeMonthlyStatDTO> monthlyRows = List.of(
+                    new AttendanceEmployeeMonthlyStatDTO(1, 20L, 1L, 0L),
+                    new AttendanceEmployeeMonthlyStatDTO(3, 18L, 0L, 1L)
             );
 
-            assertThat(sortCaptor.getValue()).isEqualTo("DESC");
-        }
+            given(attendanceEmployeeDashboardRepository.findEmployeeMonthlyStats(employeeId, expectedStart, expectedEnd))
+                    .willReturn(monthlyRows);
 
-        @Test
-        @DisplayName("요약 조회: total은 month와 무관하게 countTotalEmployees로 조회한다")
-        void getAttendanceDashboardSummary_TotalIndependentOfMonth() {
-            // Given
-            Integer departmentId = 10;
-            String month = "2024-04";
-
-            when(attendanceDashboardSummaryRepository.countTotalEmployees(departmentId)).thenReturn(100L);
-            when(attendanceDashboardSummaryRepository.countExcellentEmployees(eq(departmentId), any(), any()))
-                    .thenReturn(12L);
-            when(attendanceDashboardSummaryRepository.countRiskyEmployees(eq(departmentId), any(), any()))
-                    .thenReturn(5L);
-
-            YearMonth ym = YearMonth.parse(month);
-            LocalDate expectedStart = ym.atDay(1);
-            LocalDate expectedEnd = ym.atEndOfMonth();
-
-            // When
-            AttendanceDashboardSummaryDTO result =
-                    attendanceService.getAttendanceDashboardSummary(departmentId, month);
-
-            // Then
-            assertThat(result).isNotNull();
-
-            verify(attendanceDashboardSummaryRepository).countTotalEmployees(departmentId);
-
-            ArgumentCaptor<LocalDate> startCaptor = ArgumentCaptor.forClass(LocalDate.class);
-            ArgumentCaptor<LocalDate> endCaptor = ArgumentCaptor.forClass(LocalDate.class);
-
-            verify(attendanceDashboardSummaryRepository).countExcellentEmployees(eq(departmentId), startCaptor.capture(), endCaptor.capture());
-            assertThat(startCaptor.getValue()).isEqualTo(expectedStart);
-            assertThat(endCaptor.getValue()).isEqualTo(expectedEnd);
-
-            verify(attendanceDashboardSummaryRepository).countRiskyEmployees(eq(departmentId), any(LocalDate.class), any(LocalDate.class));
-        }
-    }
-
-    /* =========================
-       반기 대시보드
-       ========================= */
-
-    @Nested
-    @DisplayName("직원 반기 대시보드(getEmployeeHalfDashboard)")
-    class EmployeeHalfDashboardTest {
-
-        @Test
-        @DisplayName("직원 정보가 없으면 예외가 발생한다")
-        void getEmployeeHalfDashboard_EmployeeNotFound_ThrowException() {
-            // Given
-            Integer employeeId = 1;
-            Integer year = 2024;
-            AttendanceHalfType halfType = AttendanceHalfType.H1;
-
-            when(employeeRepository.findById(employeeId)).thenReturn(Optional.empty());
-
-            // When & Then
-            assertThatThrownBy(() -> attendanceService.getEmployeeHalfDashboard(employeeId, year, halfType))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("직원 정보 없음");
-
-            verify(employeeRepository).findById(employeeId);
-            verifyNoInteractions(attendanceEmployeeDashboardRepository);
-        }
-
-        @Test
-        @DisplayName("summary가 null이면 0으로 보정하고, H1 누락 월은 0으로 채운다(1~6월)")
-        void getEmployeeHalfDashboard_SummaryNull_FillMissingMonths_H1() {
-            // Given
-            Integer employeeId = 1;
-            Integer year = 2024;
-            AttendanceHalfType halfType = AttendanceHalfType.H1;
-
-            LocalDate expectedStart = LocalDate.of(2024, 1, 1);
-            LocalDate expectedEnd = LocalDate.of(2024, 6, 30);
-
-            Employee employee = mock(Employee.class);
-            when(employee.getEmployeeNumber()).thenReturn("E-0001");
-            when(employee.getEmployeeName()).thenReturn("홍길동");
-            when(employeeRepository.findById(employeeId)).thenReturn(Optional.of(employee));
-
-            when(attendanceEmployeeDashboardRepository.findEmployeeHalfSummary(employeeId, expectedStart, expectedEnd))
-                    .thenReturn(null);
-
-            when(attendanceEmployeeDashboardRepository.findEmployeeMonthlyStats(employeeId, expectedStart, expectedEnd))
-                    .thenReturn(List.of(
-                            new AttendanceEmployeeMonthlyStatDTO(1, 20L, 1L, 0L),
-                            new AttendanceEmployeeMonthlyStatDTO(3, 22L, 0L, 1L)
-                    ));
-
-            // When
+            // when
             AttendanceEmployeeHalfDashboardDTO result =
                     attendanceService.getEmployeeHalfDashboard(employeeId, year, halfType);
 
-            // Then
+            // then
             assertThat(result).isNotNull();
-
-            // ✅ DTO 필드명 기준: employeeNumber/employeeName/year/half
-            assertThat(result.getEmployeeNumber()).isEqualTo("E-0001");
-            assertThat(result.getEmployeeName()).isEqualTo("홍길동");
-            assertThat(result.getYear()).isEqualTo(2024);
+            assertThat(result.getEmployeeId()).isEqualTo(employeeId);
+            assertThat(result.getEmployeeNumber()).isEqualTo("D6-MGR");
+            assertThat(result.getEmployeeName()).isEqualTo("최백엔");
+            assertThat(result.getYear()).isEqualTo(2020);
             assertThat(result.getHalf()).isEqualTo(AttendanceHalfType.H1);
 
-            // ✅ Summary DTO 필드명 기준: totalWorkDays/totalTardyCount/totalAbsenceCount
-            AttendanceEmployeeHalfSummaryDTO summary = result.getSummary();
-            assertThat(summary).isNotNull();
-            assertThat(summary.getTotalWorkDays()).isEqualTo(0L);
-            assertThat(summary.getTotalTardyCount()).isEqualTo(0L);
-            assertThat(summary.getTotalAbsenceCount()).isEqualTo(0L);
+            // summary null -> 0 대체
+            assertThat(result.getSummary()).isEqualTo(new AttendanceEmployeeHalfSummaryDTO(0L, 0L, 0L));
 
-            List<AttendanceEmployeeMonthlyStatDTO> monthlyStats = result.getMonthlyStats();
-            assertThat(monthlyStats).hasSize(6);
+            // H1 => 1~6월 6개
+            assertThat(result.getMonthlyStats()).hasSize(6);
 
-            assertThat(monthlyStats)
-                    .extracting(
-                            AttendanceEmployeeMonthlyStatDTO::getMonth,
-                            AttendanceEmployeeMonthlyStatDTO::getWorkDays,
-                            AttendanceEmployeeMonthlyStatDTO::getTardyCount,
-                            AttendanceEmployeeMonthlyStatDTO::getAbsenceCount
-                    )
-                    .containsExactly(
-                            tuple(1, 20L, 1L, 0L),
-                            tuple(2, 0L, 0L, 0L),
-                            tuple(3, 22L, 0L, 1L),
-                            tuple(4, 0L, 0L, 0L),
-                            tuple(5, 0L, 0L, 0L),
-                            tuple(6, 0L, 0L, 0L)
-                    );
-
-            verify(employeeRepository).findById(employeeId);
-            verify(attendanceEmployeeDashboardRepository).findEmployeeHalfSummary(employeeId, expectedStart, expectedEnd);
-            verify(attendanceEmployeeDashboardRepository).findEmployeeMonthlyStats(employeeId, expectedStart, expectedEnd);
+            // 2월은 누락 -> 0
+            AttendanceEmployeeMonthlyStatDTO feb = result.getMonthlyStats().get(1);
+            assertThat(feb.getMonth()).isEqualTo(2);
+            assertThat(feb.getWorkDays()).isZero();
+            assertThat(feb.getTardyCount()).isZero();
+            assertThat(feb.getAbsenceCount()).isZero();
         }
 
         @Test
-        @DisplayName("월별 집계가 비어 있어도 H2 범위(7~12월)만큼 0 데이터로 채운다")
-        void getEmployeeHalfDashboard_EmptyMonthlyRows_FillZeros_H2() {
-            // Given
-            Integer employeeId = 1;
-            Integer year = 2024;
-            AttendanceHalfType halfType = AttendanceHalfType.H2;
+        @DisplayName("직원 정보가 없으면 IllegalArgumentException을 던진다")
+        void getEmployeeHalfDashboard_whenEmployeeNotFound_thenThrow() {
+            // given
+            int employeeId = 999;
+            given(employeeRepository.findById(employeeId)).willReturn(Optional.empty());
 
-            LocalDate expectedStart = LocalDate.of(2024, 7, 1);
-            LocalDate expectedEnd = LocalDate.of(2024, 12, 31);
-
-            Employee employee = mock(Employee.class);
-            when(employee.getEmployeeNumber()).thenReturn("E-0002");
-            when(employee.getEmployeeName()).thenReturn("김철수");
-            when(employeeRepository.findById(employeeId)).thenReturn(Optional.of(employee));
-
-            AttendanceEmployeeHalfSummaryDTO summary =
-                    new AttendanceEmployeeHalfSummaryDTO(10L, 2L, 1L);
-
-            when(attendanceEmployeeDashboardRepository.findEmployeeHalfSummary(employeeId, expectedStart, expectedEnd))
-                    .thenReturn(summary);
-
-            when(attendanceEmployeeDashboardRepository.findEmployeeMonthlyStats(employeeId, expectedStart, expectedEnd))
-                    .thenReturn(List.of());
-
-            // When
-            AttendanceEmployeeHalfDashboardDTO result =
-                    attendanceService.getEmployeeHalfDashboard(employeeId, year, halfType);
-
-            // Then
-            assertThat(result).isNotNull();
-            assertThat(result.getHalf()).isEqualTo(AttendanceHalfType.H2);
-            assertThat(result.getSummary()).isSameAs(summary);
-
-            assertThat(result.getMonthlyStats())
-                    .extracting(
-                            AttendanceEmployeeMonthlyStatDTO::getMonth,
-                            AttendanceEmployeeMonthlyStatDTO::getWorkDays,
-                            AttendanceEmployeeMonthlyStatDTO::getTardyCount,
-                            AttendanceEmployeeMonthlyStatDTO::getAbsenceCount
-                    )
-                    .containsExactly(
-                            tuple(7, 0L, 0L, 0L),
-                            tuple(8, 0L, 0L, 0L),
-                            tuple(9, 0L, 0L, 0L),
-                            tuple(10, 0L, 0L, 0L),
-                            tuple(11, 0L, 0L, 0L),
-                            tuple(12, 0L, 0L, 0L)
-                    );
+            // when & then
+            assertThatThrownBy(() -> attendanceService.getEmployeeHalfDashboard(employeeId, 2020, AttendanceHalfType.H1))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("직원 정보 없음");
         }
     }
 
+    // =========================================================
+    // Helpers
+    // =========================================================
+    private static String detailsJson(int attendanceId, String targetDate, String correctedStart, String correctedEnd) {
+        return """
+               {
+                 "attendanceId": %d,
+                 "targetDate": "%s",
+                 "correctedStart": "%s",
+                 "correctedEnd": "%s"
+               }
+               """.formatted(attendanceId, targetDate, correctedStart, correctedEnd);
+    }
 }

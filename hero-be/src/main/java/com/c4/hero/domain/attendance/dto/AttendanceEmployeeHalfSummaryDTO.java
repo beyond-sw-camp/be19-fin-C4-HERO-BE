@@ -3,6 +3,7 @@ package com.c4.hero.domain.attendance.dto;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.EqualsAndHashCode;
 
 /**
  * <pre>
@@ -16,6 +17,7 @@ import lombok.NoArgsConstructor;
  * @author 이지윤
  * @version 1.0
  */
+@EqualsAndHashCode
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
