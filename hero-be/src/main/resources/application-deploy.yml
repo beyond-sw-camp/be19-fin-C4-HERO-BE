@@ -1,6 +1,8 @@
 ## eb환경 자바플랫폼 nginx 서버를 5000으로 사용하고 있기 때문
 server:
   port: 5000
+  tomcat:
+    max-part-count: 100
 
 ## spring
 spring:
