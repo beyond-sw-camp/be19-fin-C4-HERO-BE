@@ -38,6 +38,10 @@ public class EmployeeProfileQueryService {
 
     // 모든 조회 메서드에서 Presigned URL 변환
     private void convertSealKeyToPresignedUrl(EmployeeProfileResponseDTO profile) {
+        if(profile.getProfileImageUrl() != null) {
+            String presignedUrl = s3Service.generatePresignedUrl(profile.getProfileImageUrl());
+            profile.setProfileImageUrl(presignedUrl);
+        }
         if (profile.getSealImageUrl() != null) {
             String presignedUrl = s3Service.generatePresignedUrl(profile.getSealImageUrl());
             profile.setSealImageUrl(presignedUrl);
@@ -59,6 +63,7 @@ public class EmployeeProfileQueryService {
             log.error("직원 정보를 찾을 수 없음 - employeeId: {}", employeeId);
             throw new IllegalArgumentException("직원 정보를 찾을 수 없습니다. (ID: " + employeeId + ")");
         }
+
 
         convertSealKeyToPresignedUrl(profile);
 
