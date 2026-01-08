@@ -44,11 +44,8 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           ACCESS_EXPIRATION_TIME: ${{ secrets.ACCESS_EXPIRATION_TIME }}
           REFRESH_EXPIRATION_TIME: ${{ secrets.REFRESH_EXPIRATION_TIME }}
-          GOOGLE_CALENDAR_CREDENTIALS_PATH: ${{ secrets.GOOGLE_CALENDAR_CREDENTIALS_PATH }}
-          GOOGLE_CALENDAR_ID: ${{ secrets.GOOGLE_CALENDAR_ID }}
-          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          PYTHON_SERVER_URL: ${{secrets.PYTHON_SERVER_URL}}
         run: |
           envsubst < src/main/resources/application-deploy.yml > /tmp/application-deploy.yml
           mv /tmp/application-deploy.yml src/main/resources/application-deploy.yml
