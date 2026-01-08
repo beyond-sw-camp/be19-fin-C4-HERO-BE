@@ -5,9 +5,10 @@ permissions:
   pull-requests: write
 
 on:
-  push:
-    branches:
-      - "main"
+  pull_request:
+    types: [opened, reopened, synchronize]
+    # opened: PR이 처음 만들어질 때
+    # synchronize: PR이 열려있는 상태에서 내가 추가로 코드를 Push했을 때
 
 jobs:
   deploy-java-17:
