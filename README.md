@@ -16,7 +16,7 @@
 #### [요구사항 명세서](#요구사항-명세서-1)
 #### [DDD](#ddd-1)
 #### [ERD](#erd-1)
-#### [Wire Frame](#wire-frame-1)
+#### [와이어 프레임](#와이어-프레임-1)
 #### [API 명세서](#api-명세서-1)
 #### [단위 테스트](#단위-테스트-1)
 #### [UI / UX 테스트](#ui--ux-단위-테스트)
@@ -250,7 +250,7 @@ HERO는 단순한 기능 나열이 아닌,
 <hr>
 
 
-## Wire Frame
+## 와이어 프레임
 <details>
   <summary>Wire Frame</summary>
 <details>
@@ -608,6 +608,8 @@ HERO는 단순한 기능 나열이 아닌,
 <hr>
 
 ## UI / UX 단위 테스트
+<details> <summary>테스트 목록</summary>
+  
 <details>
 <summary>계정 관리</summary>
   
@@ -1220,6 +1222,7 @@ HERO는 단순한 기능 나열이 아닌,
   </summary>
 </details>
 
+</details>
 <br>
 <div align="right">
   <a href="#목차">🔝 맨 위로</a>
@@ -1389,20 +1392,33 @@ HERO는 단순한 기능 나열이 아닌,
 
 **이번 프로젝트에서 맡은 역할**
 
--
-
+- 알림 도메인 UI/UX 설계
+- 알림 도메인 DB 모델링
+- 알림 도메인 기능 개발
+- CI/CD 구축
+- 시스템 아키텍처 구축
+ 
 **잘한점**
 
--
+- WebSocket 기반 실시간 알림 시스템을 이벤트 기반 아키텍처로 설계 및 구현
+- 알림 타입별 분기 처리 및 관리자 알림 발송 등 확장 가능한 알림 도메인 설계
+- AWS Elastic Beanstalk, RDS 등을 활용한 클라우드 인프라 설계 및 배포 환경 구성
+- GitHub Actions를 활용하여 프론트엔드와 백엔드 자동 배포 파이프라인 구축
+
 
 **아쉬운점**
 
--
+- WebSocket 연결 끊김이나 재연결 시나리오에 대한 상황 대처 미흡
+- 알림 성능 최적화 (대량 알림 발송, 캐싱 전략 등) 고려 부족
 
 
 **배운점**
 
--
+- GitHub Actions를 통한 CI/CD 파이프라인 구축 및 자동화 배포 경험
+- WebSocket과 이벤트 기반 아키텍처를 활용한 실시간 통신 구현 방법
+- AWS 클라우드 인프라(Elastic Beanstalk, RDS) 설계 및 운영 경험
+- 배포 환경에서 발생하는 다양한 이슈(CORS, 타임존, DB 연결) 트러블슈팅 능력 향상
+
 
 
 
